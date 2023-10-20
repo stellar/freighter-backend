@@ -62,6 +62,10 @@ export const query = {
           node {
             amount
             assetNative
+            assetByAsset {
+              code
+              issuer
+            }
             accountBySource {
               publickey
             }
@@ -76,6 +80,10 @@ export const query = {
           node {
             amount
             assetNative
+            assetByAsset {
+              code
+              issuer
+            }
             accountBySource {
               publickey
             }
