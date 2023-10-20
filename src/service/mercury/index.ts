@@ -57,52 +57,6 @@ export class MercuryClient {
     }
   };
 
-  getSubscriptions = async () => {
-    try {
-      const data = await this.urqlClient.query(query.allSubscriptions, {});
-
-      return {
-        data,
-        error: null,
-      };
-    } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(_error);
-      return {
-        data: null,
-        error: _error,
-      };
-    }
-  };
-
-  addNewSubscription = async (subscription: NewSubscriptionPayload) => {
-    try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${this.mercurySession.token}`,
-        },
-      };
-
-      const { data } = await axios.post(
-        this.mercuryNewSubUrl,
-        subscription,
-        config
-      );
-
-      return {
-        data,
-        error: null,
-      };
-    } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(_error);
-      return {
-        data: null,
-        error: _error,
-      };
-    }
-  };
-
   addNewTokenSubscription = async (contractId: string, pubKey: string) => {
     // Token transfer topics are - 1: transfer, 2: from, 3: to, 4: assetName, data(amount)
     const transferToSub = {
@@ -186,10 +140,11 @@ export class MercuryClient {
     }
   };
 
-  getAccountHistory = async (pubKey: string) => {
+  getAccountHistory = async (pubKey: string, contractIds: string[]) => {
     try {
       const data = await this.urqlClient.query(query.getAccountHistory, {
         publicKeyText: pubKey,
+        contractIds,
       });
 
       return {

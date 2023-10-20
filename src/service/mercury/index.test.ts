@@ -1,138 +1,32 @@
-import { Client, fetchExchange } from "@urql/core";
-import pino from "pino";
-
-import { mutation, query } from "./queries";
-import { MercuryClient } from ".";
-
-const testLogger = pino({
-  name: "test-logger",
-  serializers: {
-    req: pino.stdSerializers.req,
-    err: pino.stdSerializers.err,
-    error: pino.stdSerializers.err,
-  },
-  transport: {
-    target: "pino-pretty",
-    options: {
-      colorize: true,
-    },
-  },
-});
-
-const client = new Client({
-  url: `::1:5000/graphql`,
-  exchanges: [fetchExchange],
-  fetchOptions: () => {
-    return {
-      headers: { authorization: "Bearer JWT" },
-    };
-  },
-});
-const mercurySession = {
-  token: "mercury-token",
-  baseUrl: "mercury-url",
-  email: "user-email",
-  password: "user-password",
-  userId: "1",
-};
-
-const queryMockResponse = {
-  [mutation.authenticate]: "mercury-token",
-};
-
-jest.spyOn(client, "query").mockImplementation((_query: any): any => {
-  switch (_query) {
-    case mutation.authenticate: {
-      return Promise.resolve({
-        data: {
-          authenticate: {
-            jwtToken: queryMockResponse[mutation.authenticate],
-          },
-        },
-      });
-    }
-    case mutation.newAccountSubscription: {
-      return Promise.resolve({
-        data: {
-          createFullAccountSubscription: {
-            fullAccountSubscription: {
-              publickey:
-                "GDUBMXMABE7UOZSGYJ5ONE7UYAEHKK3JOX7HZQGNZ7NYTZPPP4AJ2GQJ",
-              id: 28,
-            },
-          },
-        },
-      });
-    }
-    case query.getAccountHistory: {
-      return Promise.resolve({
-        data: {
-          eventByContractId: {
-            edges: [],
-          },
-          createAccountByPublicKey: {
-            edges: [],
-          },
-          createAccountToPublicKey: {
-            edges: [],
-          },
-          paymentsByPublicKey: {
-            edges: [],
-          },
-          paymentsToPublicKey: {
-            edges: [
-              {
-                node: {
-                  amount: "50000000",
-                  assetNative: true,
-                  accountBySource: {
-                    publickey:
-                      "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL",
-                  },
-                  accountByDestination: {
-                    publickey:
-                      "GDUBMXMABE7UOZSGYJ5ONE7UYAEHKK3JOX7HZQGNZ7NYTZPPP4AJ2GQJ",
-                  },
-                },
-              },
-            ],
-          },
-        },
-      });
-    }
-    default:
-      throw new Error("unknown query in mock");
-  }
-});
-
-const mockClient = new MercuryClient(mercurySession, client, testLogger);
+import { mutation } from "./queries";
+import {
+  mockMercuryClient,
+  queryMockResponse,
+  pubKey,
+} from "../../helper/test-helper";
 
 describe("Mercury Service", () => {
   it("can renew a token", async () => {
-    const response = await mockClient.renewMercuryToken();
+    const response = await mockMercuryClient.renewMercuryToken();
     const expected = {
-      data: {
-        authenticate: { jwtToken: queryMockResponse[mutation.authenticate] },
-      },
+      data: queryMockResponse[mutation.authenticate],
       error: null,
     };
     expect(response).toEqual(expected);
-    expect(mockClient.mercurySession.token).toEqual(
-      queryMockResponse[mutation.authenticate]
+    expect(mockMercuryClient.mercurySession.token).toEqual(
+      queryMockResponse[mutation.authenticate].authenticate?.jwtToken
     );
   });
 
   it("can fetch account history with a payment-to in history", async () => {
-    const pubKey = "GDUBMXMABE7UOZSGYJ5ONE7UYAEHKK3JOX7HZQGNZ7NYTZPPP4AJ2GQJ";
-    const { data } = await mockClient.getAccountHistory(pubKey);
+    const { data } = await mockMercuryClient.getAccountHistory(pubKey, []);
     const paymentsToPublicKey = data?.data.paymentsToPublicKey.edges[0].node;
     expect(paymentsToPublicKey.accountByDestination.publickey).toEqual(pubKey);
     expect(paymentsToPublicKey.amount).toBe("50000000");
   });
 
   it("can add new full account subscription", async () => {
-    const pubKey = "GDUBMXMABE7UOZSGYJ5ONE7UYAEHKK3JOX7HZQGNZ7NYTZPPP4AJ2GQJ";
-    const { data } = await mockClient.addNewAccountSubscription(pubKey);
+    const { data } = await mockMercuryClient.addNewAccountSubscription(pubKey);
     expect(pubKey).toEqual(
       data?.data.createFullAccountSubscription.fullAccountSubscription.publickey
     );

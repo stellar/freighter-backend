@@ -19,14 +19,21 @@ export function initApiServer(mercuryClient: MercuryClient) {
         schema: {
           params: {
             ["pub-key"]: { type: "string" },
+            ["contract-ids"]: { type: "array " },
           },
         },
         handler: async (
-          request: FastifyRequest<{ Params: { ["pub-key"]: string } }>,
+          request: FastifyRequest<{
+            Params: { ["pub-key"]: string; ["contract-ids"]: string[] };
+          }>,
           reply
         ) => {
           const pubKey = request.params["pub-key"];
-          const { data, error } = await mercuryClient.getAccountHistory(pubKey);
+          const contractIds = request.params["contract-ids"];
+          const { data, error } = await mercuryClient.getAccountHistory(
+            pubKey,
+            contractIds
+          );
           if (error) {
             reply.code(400).send(error);
           } else {
