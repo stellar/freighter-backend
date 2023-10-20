@@ -185,7 +185,6 @@ export class MercuryClient {
   }
 
   getAccountHistory = async (pubKey: string) => {
-    // this should query for full account sub ops & for user provided tokens by contract ID
     try {
       const data = await this.urqlClient.query(query.getAccountHistory, {publicKeyText: pubKey});
 
