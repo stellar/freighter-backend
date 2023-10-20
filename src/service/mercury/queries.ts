@@ -1,4 +1,3 @@
-
 export const mutation = {
   authenticate: `
     mutation Auth {
@@ -16,8 +15,7 @@ export const mutation = {
       }
     }
   `,
-
-}
+};
 export const query = {
   subscriptionById: `
     query GetSubById {
@@ -103,4 +101,4 @@ export const query = {
       }
     }
   `,
-}
+};
