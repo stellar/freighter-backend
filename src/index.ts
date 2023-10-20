@@ -50,6 +50,7 @@ async function main() {
     baseUrl: conf.mercuryUrl,
     email: conf.mercuryEmail,
     password: conf.mercuryPassword,
+    userId: conf.mercuryUserId,
   };
   const mercuryClient = new MercuryClient(mercurySession, client, logger);
   const server = initApiServer(mercuryClient);

@@ -33,17 +33,15 @@ export const query = {
   `,
   getAccountHistory: `
     query GetAccountHistory {
-        eventByContractId($searchedContractId: CONTRACT_ID!) {
-          edges {
-            node {
-              data
-              ledger
-              ledgerTimestamp
-              topic1
-              topic2
-              topic3
-              topic4
-            }
+      eventByContractIds(($contractIds: [String]!) {
+        edges {
+          node {
+            id,
+            contractId,
+            topic1,
+            topic2,
+            topic3,
+            topic4
           }
         }
       }

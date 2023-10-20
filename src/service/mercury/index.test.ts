@@ -33,6 +33,7 @@ const mercurySession = {
   baseUrl: "mercury-url",
   email: "user-email",
   password: "user-password",
+  userId: "1",
 };
 
 const queryMockResponse = {
@@ -54,7 +55,6 @@ jest.spyOn(client, "query").mockImplementation((_query: any): any => {
       return Promise.resolve({
         data: {
           createFullAccountSubscription: {
-            clientMutationId: null,
             fullAccountSubscription: {
               publickey:
                 "GDUBMXMABE7UOZSGYJ5ONE7UYAEHKK3JOX7HZQGNZ7NYTZPPP4AJ2GQJ",
@@ -109,14 +109,14 @@ const mockClient = new MercuryClient(mercurySession, client, testLogger);
 
 describe("Mercury Service", () => {
   it("can renew a token", async () => {
-    const token = await mockClient.renewMercuryToken();
+    const response = await mockClient.renewMercuryToken();
     const expected = {
       data: {
         authenticate: { jwtToken: queryMockResponse[mutation.authenticate] },
       },
       error: null,
     };
-    expect(token).toEqual(expected);
+    expect(response).toEqual(expected);
     expect(mockClient.mercurySession.token).toEqual(
       queryMockResponse[mutation.authenticate]
     );
@@ -124,15 +124,17 @@ describe("Mercury Service", () => {
 
   it("can fetch account history with a payment-to in history", async () => {
     const pubKey = "GDUBMXMABE7UOZSGYJ5ONE7UYAEHKK3JOX7HZQGNZ7NYTZPPP4AJ2GQJ";
-    const history = await mockClient.getAccountHistory(pubKey);
-    const paymentsToPublicKey =
-      history.data?.data.paymentsToPublicKey.edges[0].node;
+    const { data } = await mockClient.getAccountHistory(pubKey);
+    const paymentsToPublicKey = data?.data.paymentsToPublicKey.edges[0].node;
     expect(paymentsToPublicKey.accountByDestination.publickey).toEqual(pubKey);
     expect(paymentsToPublicKey.amount).toBe("50000000");
   });
 
   it("can add new full account subscription", async () => {
     const pubKey = "GDUBMXMABE7UOZSGYJ5ONE7UYAEHKK3JOX7HZQGNZ7NYTZPPP4AJ2GQJ";
-    const sub = await mockClient.addNewAccountSubscription(pubKey);
+    const { data } = await mockClient.addNewAccountSubscription(pubKey);
+    expect(pubKey).toEqual(
+      data?.data.createFullAccountSubscription.fullAccountSubscription.publickey
+    );
   });
 });
