@@ -50,6 +50,20 @@ jest.spyOn(client, "query").mockImplementation((_query: any): any => {
         },
       });
     }
+    case mutation.newAccountSubscription: {
+      return Promise.resolve({
+        data: {
+          createFullAccountSubscription: {
+            clientMutationId: null,
+            fullAccountSubscription: {
+              publickey:
+                "GDUBMXMABE7UOZSGYJ5ONE7UYAEHKK3JOX7HZQGNZ7NYTZPPP4AJ2GQJ",
+              id: 28,
+            },
+          },
+        },
+      });
+    }
     case query.getAccountHistory: {
       return Promise.resolve({
         data: {
@@ -115,5 +129,10 @@ describe("Mercury Service", () => {
       history.data?.data.paymentsToPublicKey.edges[0].node;
     expect(paymentsToPublicKey.accountByDestination.publickey).toEqual(pubKey);
     expect(paymentsToPublicKey.amount).toBe("50000000");
+  });
+
+  it("can add new full account subscription", async () => {
+    const pubKey = "GDUBMXMABE7UOZSGYJ5ONE7UYAEHKK3JOX7HZQGNZ7NYTZPPP4AJ2GQJ";
+    const sub = await mockClient.addNewAccountSubscription(pubKey);
   });
 });

@@ -7,31 +7,19 @@ export const mutation = {
     }
   `,
   newAccountSubscription: `
-    mutation MyMutation {
+    mutation NewAccountSubscription {
       createFullAccountSubscription(
-        input: {fullAccountSubscription: {$pubKey: PUBKEY!, userId: 1}}
+        input: {fullAccountSubscription: {$pubKey: PUBKEY!, $userId: USER_ID!}}
       ) {
-        clientMutationId
+        fullAccountSubscription {
+          publickey
+          id
+        }
       }
     }
   `,
 };
 export const query = {
-  subscriptionById: `
-    query GetSubById {
-      contractEventById($id: ID!) {
-        id
-        data
-        contractId
-        ledgerTimestamp
-        nodeId
-        topic1
-        topic2
-        topic3
-        topic4
-      }
-    }
-  `,
   allSubscriptions: `
     query AllSubscriptions {
       allContractEventSubscriptions {
@@ -45,8 +33,6 @@ export const query = {
   `,
   getAccountHistory: `
     query GetAccountHistory {
-      // need this to take array of contracts
-      query GetSubById {
         eventByContractId($searchedContractId: CONTRACT_ID!) {
           edges {
             node {

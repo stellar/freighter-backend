@@ -12,9 +12,10 @@ export interface NewSubscriptionPayload {
 
 interface MercurySession {
   baseUrl: string;
-  token: string;
   email: string;
   password: string;
+  token: string;
+  userId: string;
 }
 
 export class MercuryClient {
@@ -41,24 +42,6 @@ export class MercuryClient {
         password: this.mercurySession.password,
       });
       this.mercurySession.token = data.authenticate.jwtToken;
-
-      return {
-        data,
-        error: null,
-      };
-    } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(_error);
-      return {
-        data: null,
-        error: _error,
-      };
-    }
-  };
-
-  getSubscriptionByID = async (id: string) => {
-    try {
-      const data = await this.urqlClient.query(query.subscriptionById, { id });
 
       return {
         data,
@@ -186,7 +169,7 @@ export class MercuryClient {
     try {
       const data = await this.urqlClient.query(
         mutation.newAccountSubscription,
-        { pubKey }
+        { pubKey, userId: this.mercurySession.userId }
       );
 
       return {

@@ -15,11 +15,16 @@ export function buildConfig(config: Record<string, string>) {
     throw new Error("ENV configuration invalid - missing AUTH_PASS");
   }
 
+  if (!config.MERCURY_USER_ID) {
+    throw new Error("ENV configuration invalid - missing MERCURY_USER_ID");
+  }
+
   return {
-    mercuryKey: config.MERCURY_KEY,
-    mercuryUrl: config.MERCURY_URL,
     mercuryEmail: config.AUTH_EMAIL,
+    mercuryKey: config.MERCURY_KEY,
     mercuryPassword: config.AUTH_PASS,
+    mercuryUrl: config.MERCURY_URL,
+    mercuryUserId: config.MERCURY_USER_ID,
   };
 }
 
