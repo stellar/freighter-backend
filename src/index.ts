@@ -1,10 +1,12 @@
 import * as dotEnv from 'dotenv'
 import { expand } from 'dotenv-expand'
+import yargs from 'yargs'
+import { Client, fetchExchange } from '@urql/core'
 
 import { logger } from './logger'
 import { buildConfig } from './config'
-
-import yargs from 'yargs'
+import { MercuryClient } from './service/mercury'
+import { initApiServer } from './route'
 
 interface CliArgs {
   env: string
@@ -16,7 +18,6 @@ async function main() {
   expand(_config)
 
   const config = _config.parsed || {}
-  // @ts-ignore
   const conf = buildConfig(config)
 
   const argv = yargs(process.argv).options({
@@ -32,10 +33,34 @@ async function main() {
     },
   }).argv as CliArgs
 
-  // @ts-ignore
   const env = argv.env || 'development'
-  // @ts-ignore
   const port = argv.port || 3002
+
+  const client = new Client({
+    url: `${conf.mercuryUrl}:5000/graphql`,
+    exchanges: [fetchExchange],
+    fetchOptions: () => {
+      return {
+        headers: { authorization: `Bearer ${conf.mercuryKey}` },
+      };
+    }
+  })
+  const mercurySession = {
+    token: conf.mercuryKey,
+    baseUrl: conf.mercuryUrl,
+    email: conf.mercuryEmail,
+    password: conf.mercuryPassword
+  }
+  const mercuryClient = new MercuryClient(mercurySession, client, logger)
+  const server = initApiServer(mercuryClient)
+
+  try {
+    await server.listen({ port })
+    logger.info(`Running in ${env} mode`)
+  } catch (err) {
+    server.log.error(err)
+    process.exit(1)
+  }
 
   process.on('SIGTERM', () => {
     process.exit(0)
