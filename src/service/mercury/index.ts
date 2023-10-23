@@ -62,20 +62,20 @@ export class MercuryClient {
     const transferToSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: nativeToScVal("transfer").toXDR(),
-      topic2: nativeToScVal(pubKey).toXDR(),
+      topic1: nativeToScVal("transfer").toXDR("base64"),
+      topic2: nativeToScVal(pubKey).toXDR("base64"),
     };
     const transferFromSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: nativeToScVal("transfer").toXDR(),
-      topic3: nativeToScVal(pubKey).toXDR(),
+      topic1: nativeToScVal("transfer").toXDR("base64"),
+      topic3: nativeToScVal(pubKey).toXDR("base64"),
     };
 
     const mintSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: nativeToScVal("mint").toXDR(),
+      topic1: nativeToScVal("mint").toXDR("base64"),
     };
 
     try {
@@ -140,11 +140,10 @@ export class MercuryClient {
     }
   };
 
-  getAccountHistory = async (pubKey: string, contractIds: string[]) => {
+  getAccountHistory = async (pubKey: string) => {
     try {
       const data = await this.urqlClient.query(query.getAccountHistory, {
         publicKeyText: pubKey,
-        contractIds,
       });
 
       return {
