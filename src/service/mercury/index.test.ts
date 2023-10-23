@@ -19,7 +19,7 @@ describe("Mercury Service", () => {
   });
 
   it("can fetch account history with a payment-to in history", async () => {
-    const { data } = await mockMercuryClient.getAccountHistory(pubKey, []);
+    const { data } = await mockMercuryClient.getAccountHistory(pubKey);
     const paymentsToPublicKey = data?.data.paymentsToPublicKey.edges[0].node;
     expect(paymentsToPublicKey.accountByDestination.publickey).toEqual(pubKey);
     expect(paymentsToPublicKey.amount).toBe("50000000");
