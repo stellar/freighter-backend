@@ -1,7 +1,7 @@
 import { Client } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { nativeToScVal } from "soroban-client";
+import { nativeToScVal, xdr } from "soroban-client";
 import { mutation, query } from "./queries";
 
 export interface NewEventSubscriptionPayload {
@@ -150,10 +150,22 @@ export class MercuryClient {
 
   tokenBalanceSubscription = async (contractId: string, pubKey: string) => {
     try {
+      const sigScVal = nativeToScVal(
+        {
+          balance: "Balance",
+          address: pubKey,
+        },
+        {
+          type: {
+            balance: ["symbol", null],
+            address: ["symbol", null],
+          },
+        }
+      );
       const entrySub = {
         contract_id: contractId,
-        max_entry_size: 1000,
-        key_xdr: pubKey, // TODO: build entry for pubkey's balance
+        max_entry_size: 100,
+        key_xdr: xdr.ScVal.scvVec([sigScVal]).toXDR("base64"),
       };
 
       const config = {
