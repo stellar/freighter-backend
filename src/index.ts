@@ -37,7 +37,7 @@ async function main() {
   const port = argv.port || 3002;
 
   const client = new Client({
-    url: `${conf.mercuryUrl}:5000/graphql`,
+    url: conf.mercuryGraphQL,
     exchanges: [fetchExchange],
     fetchOptions: () => {
       return {
@@ -47,7 +47,7 @@ async function main() {
   });
   const mercurySession = {
     token: conf.mercuryKey,
-    baseUrl: conf.mercuryUrl,
+    backend: conf.mercuryBackend,
     email: conf.mercuryEmail,
     password: conf.mercuryPassword,
     userId: conf.mercuryUserId,

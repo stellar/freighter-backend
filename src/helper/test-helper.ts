@@ -31,7 +31,7 @@ const client = new Client({
 
 const mercurySession = {
   token: "mercury-token",
-  baseUrl: "mercury-url",
+  backend: "mercury-url",
   email: "user-email",
   password: "user-password",
   userId: "1",

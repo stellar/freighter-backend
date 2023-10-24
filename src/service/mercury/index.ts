@@ -11,7 +11,7 @@ export interface NewSubscriptionPayload {
 }
 
 interface MercurySession {
-  baseUrl: string;
+  backend: string;
   email: string;
   password: string;
   token: string;
@@ -21,7 +21,7 @@ interface MercurySession {
 export class MercuryClient {
   urqlClient: Client;
   mercurySession: MercurySession;
-  mercuryNewSubUrl: string;
+  eventsURL: string;
   logger: Logger;
 
   constructor(
@@ -30,7 +30,7 @@ export class MercuryClient {
     logger: Logger
   ) {
     this.mercurySession = mercurySession;
-    this.mercuryNewSubUrl = `${mercurySession.baseUrl}:3030/newsubscription`;
+    this.eventsURL = `${mercurySession.backend}/event`;
     this.urqlClient = urqlClient;
     this.logger = logger;
   }
@@ -86,17 +86,17 @@ export class MercuryClient {
       };
 
       const { data: transferFromRes } = await axios.post(
-        this.mercuryNewSubUrl,
+        this.eventsURL,
         transferToSub,
         config
       );
       const { data: transferToRes } = await axios.post(
-        this.mercuryNewSubUrl,
+        this.eventsURL,
         transferFromSub,
         config
       );
       const { data: mintRes } = await axios.post(
-        this.mercuryNewSubUrl,
+        this.eventsURL,
         mintSub,
         config
       );

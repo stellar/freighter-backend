@@ -1,29 +1,25 @@
+const ENV_KEYS = [
+  "MERCURY_KEY",
+  "MERCURY_BACKEND",
+  "MERCURY_GRAPHQL",
+  "MERCURY_USER_ID",
+  "AUTH_EMAIL",
+  "AUTH_PASS",
+];
+
 export function buildConfig(config: Record<string, string>) {
-  if (!config.MERCURY_KEY) {
-    throw new Error("ENV configuration invalid - missing MERCURY_KEY");
-  }
-
-  if (!config.MERCURY_URL) {
-    throw new Error("ENV configuration invalid - missing MERCURY_URL");
-  }
-
-  if (!config.AUTH_EMAIL) {
-    throw new Error("ENV configuration invalid - missing AUTH_EMAIL");
-  }
-
-  if (!config.AUTH_PASS) {
-    throw new Error("ENV configuration invalid - missing AUTH_PASS");
-  }
-
-  if (!config.MERCURY_USER_ID) {
-    throw new Error("ENV configuration invalid - missing MERCURY_USER_ID");
-  }
+  Object.keys(config).forEach((key) => {
+    if (!ENV_KEYS.includes(key)) {
+      throw new Error(`ENV configuration invalid - missing ${key}`);
+    }
+  });
 
   return {
     mercuryEmail: config.AUTH_EMAIL,
     mercuryKey: config.MERCURY_KEY,
     mercuryPassword: config.AUTH_PASS,
-    mercuryUrl: config.MERCURY_URL,
+    mercuryBackend: config.MERCURY_BACKEND,
+    mercuryGraphQL: config.MERCURY_GRAPHQL,
     mercuryUserId: config.MERCURY_USER_ID,
   };
 }
