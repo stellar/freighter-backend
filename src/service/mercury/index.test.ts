@@ -26,7 +26,7 @@ describe("Mercury Service", () => {
   });
 
   it("can add new full account subscription", async () => {
-    const { data } = await mockMercuryClient.addNewAccountSubscription(pubKey);
+    const { data } = await mockMercuryClient.accountSubscription(pubKey);
     expect(pubKey).toEqual(
       data?.data.createFullAccountSubscription.fullAccountSubscription.publickey
     );
