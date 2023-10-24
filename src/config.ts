@@ -1,27 +1,27 @@
+const ENV_KEYS = [
+  "MERCURY_KEY",
+  "MERCURY_BACKEND",
+  "MERCURY_GRAPHQL",
+  "MERCURY_USER_ID",
+  "AUTH_EMAIL",
+  "AUTH_PASS",
+];
 
 export function buildConfig(config: Record<string, string>) {
-  if (!config.MERCURY_KEY) {
-    throw new Error('ENV configuration invalid - missing MERCURY_KEY')
-  }
-
-  if (!config.MERCURY_URL) {
-    throw new Error('ENV configuration invalid - missing MERCURY_URL')
-  }
-
-  if (!config.AUTH_EMAIL) {
-    throw new Error('ENV configuration invalid - missing AUTH_EMAIL')
-  }
-
-  if (!config.AUTH_PASS) {
-    throw new Error('ENV configuration invalid - missing AUTH_PASS')
-  }
+  Object.keys(config).forEach((key) => {
+    if (!ENV_KEYS.includes(key)) {
+      throw new Error(`ENV configuration invalid - missing ${key}`);
+    }
+  });
 
   return {
-    mercuryKey: config.MERCURY_KEY,
-    mercuryUrl: config.MERCURY_URL,
     mercuryEmail: config.AUTH_EMAIL,
-    mercuryPassword: config.AUTH_PASS
-  }
+    mercuryKey: config.MERCURY_KEY,
+    mercuryPassword: config.AUTH_PASS,
+    mercuryBackend: config.MERCURY_BACKEND,
+    mercuryGraphQL: config.MERCURY_GRAPHQL,
+    mercuryUserId: config.MERCURY_USER_ID,
+  };
 }
 
-export type Conf = ReturnType<typeof buildConfig>
+export type Conf = ReturnType<typeof buildConfig>;
