@@ -43,6 +43,22 @@ export class MercuryClient {
     this.logger = logger;
   }
 
+  tokenBalanceKey = (pubKey: string) => {
+    const sigScVal = nativeToScVal(
+      {
+        balance: "Balance",
+        address: pubKey,
+      },
+      {
+        type: {
+          balance: ["symbol", null],
+          address: ["symbol", null],
+        },
+      }
+    );
+    return xdr.ScVal.scvVec([sigScVal]).toXDR("base64");
+  };
+
   renewMercuryToken = async () => {
     try {
       const { data } = await this.urqlClient.query(mutation.authenticate, {
@@ -150,22 +166,10 @@ export class MercuryClient {
 
   tokenBalanceSubscription = async (contractId: string, pubKey: string) => {
     try {
-      const sigScVal = nativeToScVal(
-        {
-          balance: "Balance",
-          address: pubKey,
-        },
-        {
-          type: {
-            balance: ["symbol", null],
-            address: ["symbol", null],
-          },
-        }
-      );
       const entrySub = {
         contract_id: contractId,
         max_entry_size: 100,
-        key_xdr: xdr.ScVal.scvVec([sigScVal]).toXDR("base64"),
+        key_xdr: this.tokenBalanceKey(pubKey),
       };
 
       const config = {
@@ -195,6 +199,27 @@ export class MercuryClient {
       const data = await this.urqlClient.query(query.getAccountHistory, {
         publicKeyText: pubKey,
       });
+
+      return {
+        data,
+        error: null,
+      };
+    } catch (error) {
+      const _error = JSON.stringify(error);
+      this.logger.error(_error);
+      return {
+        data: null,
+        error: _error,
+      };
+    }
+  };
+
+  getAccountBalances = async (pubKey: string, contractIds: string[]) => {
+    try {
+      const data = await this.urqlClient.query(
+        query.getAccountBalances(this.tokenBalanceKey(pubKey), contractIds),
+        {}
+      );
 
       return {
         data,

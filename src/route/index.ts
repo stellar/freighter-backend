@@ -2,12 +2,17 @@ import Fastify, { FastifyRequest } from "fastify";
 import helmet from "@fastify/helmet";
 
 import { MercuryClient } from "../service/mercury";
+import { ajv } from "./validators";
+import { isContractId } from "../helper/validate";
 
 const API_VERSION = "v1";
 
 export function initApiServer(mercuryClient: MercuryClient) {
   const server = Fastify({
     logger: true,
+  });
+  server.setValidatorCompiler(({ schema }) => {
+    return ajv.compile(schema);
   });
 
   server.register(helmet, { global: true });
@@ -29,6 +34,41 @@ export function initApiServer(mercuryClient: MercuryClient) {
         ) => {
           const pubKey = request.params["pub-key"];
           const { data, error } = await mercuryClient.getAccountHistory(pubKey);
+          if (error) {
+            reply.code(400).send(error);
+          } else {
+            reply.code(200).send(data);
+          }
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/account-balances/:pub-key",
+        schema: {
+          params: {
+            ["pub-key"]: { type: "string" },
+          },
+          querystring: {
+            ["contract-ids"]: {
+              type: "string",
+              validator: (qStr: string) => qStr.split(",").some(isContractId),
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Params: { ["pub-key"]: string };
+            Querystring: { ["contract-ids"]: string };
+          }>,
+          reply
+        ) => {
+          const pubKey = request.params["pub-key"];
+          const contractIds = request.query["contract-ids"].split(",");
+          const { data, error } = await mercuryClient.getAccountBalances(
+            pubKey,
+            contractIds
+          );
           if (error) {
             reply.code(400).send(error);
           } else {
