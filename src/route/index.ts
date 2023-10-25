@@ -153,7 +153,7 @@ export function initApiServer(mercuryClient: MercuryClient) {
 
       instance.route({
         method: "POST",
-        url: "/subscription/balance",
+        url: "/subscription/token-balance",
         schema: {
           body: {
             type: "object",

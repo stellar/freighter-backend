@@ -38,6 +38,8 @@ const mercurySession = {
 };
 
 const pubKey = "GDUBMXMABE7UOZSGYJ5ONE7UYAEHKK3JOX7HZQGNZ7NYTZPPP4AJ2GQJ";
+const tokenBalanceLedgerKey =
+  "AAAAEAAAAAEAAAABAAAAEQAAAAEAAAACAAAADwAAAAdiYWxhbmNlAAAAAA4AAAAHQmFsYW5jZQAAAAAPAAAAB2FkZHJlc3MAAAAADgAAADhHRFVCTVhNQUJFN1VPWlNHWUo1T05FN1VZQUVIS0szSk9YN0haUUdOWjdOWVRaUFBQNEFKMkdRSg==";
 
 const queryMockResponse = {
   [mutation.authenticate]: {
@@ -52,6 +54,30 @@ const queryMockResponse = {
         id: 28,
       },
     },
+  },
+  "query.getAccountBalances": {
+    edges: [
+      {
+        node: {
+          contractId: "contract-id-1",
+          keyXdr: tokenBalanceLedgerKey,
+          valueXdr: "value-xdr",
+          ledgerTimestamp: "timestamp",
+          ledger: "1",
+          entryDurability: "persistent",
+        },
+      },
+      {
+        node: {
+          contractId: "contract-id-2",
+          keyXdr: tokenBalanceLedgerKey,
+          valueXdr: "value-xdr",
+          ledgerTimestamp: "timestamp",
+          ledger: "1",
+          entryDurability: "persistent",
+        },
+      },
+    ],
   },
   [query.getAccountHistory]: {
     eventByContractId: {
@@ -87,6 +113,7 @@ const queryMockResponse = {
 };
 
 jest.spyOn(client, "query").mockImplementation((_query: any): any => {
+  console.log(_query);
   switch (_query) {
     case mutation.authenticate: {
       return Promise.resolve({
@@ -103,6 +130,15 @@ jest.spyOn(client, "query").mockImplementation((_query: any): any => {
     case query.getAccountHistory: {
       return Promise.resolve({
         data: queryMockResponse[query.getAccountHistory],
+        error: null,
+      });
+    }
+    case query.getAccountBalances(tokenBalanceLedgerKey, [
+      "contract-id-1",
+      "contract-id-2",
+    ]): {
+      return Promise.resolve({
+        data: queryMockResponse["query.getAccountBalances"],
         error: null,
       });
     }

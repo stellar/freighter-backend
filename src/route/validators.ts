@@ -1,4 +1,8 @@
-import Ajv, { AnySchemaObject, ValidateFunction } from "ajv";
+import Ajv, {
+  AnySchemaObject,
+  ValidateFunction,
+  SchemaValidateFunction,
+} from "ajv";
 
 const ajv = new Ajv({
   removeAdditional: true,
@@ -7,12 +11,12 @@ const ajv = new Ajv({
 });
 
 ajv.addKeyword("validator", {
-  compile: (schema: any, parentSchema: AnySchemaObject) =>
-    function validate(data: ValidateFunction) {
+  compile: (schema: any, parentSchema: AnySchemaObject) => {
+    return function validate(data: ValidateFunction) {
       if (typeof schema === "function") {
         const valid = schema(data);
         if (!valid) {
-          validate.errors = [
+          (validate as SchemaValidateFunction).errors = [
             {
               keyword: "validate",
               message: `: ${data} fails validation`,
@@ -29,7 +33,7 @@ ajv.addKeyword("validator", {
         const [f, errorMessage] = schema;
         const valid = f(data);
         if (!valid) {
-          validate.errors = [
+          (validate as SchemaValidateFunction).errors = [
             {
               keyword: "validate",
               message: ": " + errorMessage(schema, parentSchema, data),
@@ -41,7 +45,8 @@ ajv.addKeyword("validator", {
       } else {
         throw new Error("Invalid definition for custom validator");
       }
-    },
+    };
+  },
   errors: true,
 } as any);
 
