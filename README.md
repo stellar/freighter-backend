@@ -11,6 +11,9 @@ You will need
 
 ## Development
 
+This application relies on a Redis instance, you can either run `docker compose up` to use docker to stand up a Redis or you can start one on the standard port manually.
+
+To start the server in development mode, run:
 `yarn i && yarn start`
 
 ## Production build

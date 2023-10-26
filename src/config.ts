@@ -5,6 +5,9 @@ const ENV_KEYS = [
   "MERCURY_USER_ID",
   "AUTH_EMAIL",
   "AUTH_PASS",
+  "REDIS_CONNECTION_NAME",
+  "REDIS_PORT",
+  "HOSTNAME",
 ];
 
 export function buildConfig(config: Record<string, string>) {
@@ -15,12 +18,15 @@ export function buildConfig(config: Record<string, string>) {
   });
 
   return {
+    hostname: config.HOSTNAME,
     mercuryEmail: config.AUTH_EMAIL,
     mercuryKey: config.MERCURY_KEY,
     mercuryPassword: config.AUTH_PASS,
     mercuryBackend: config.MERCURY_BACKEND,
     mercuryGraphQL: config.MERCURY_GRAPHQL,
     mercuryUserId: config.MERCURY_USER_ID,
+    redisConnectionName: config.REDIS_CONNECTION_NAME,
+    redisPort: Number(config.REDIS_PORT),
   };
 }
 

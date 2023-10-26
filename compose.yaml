@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: freighter-redis
+    hostname: freighter-redis
+    restart: always
+    networks:
+      - freighter
+    ports:
+      - 6379:6379
+
+networks:
+  freighter:
+    driver: bridge

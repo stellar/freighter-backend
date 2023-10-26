@@ -1,18 +1,34 @@
 import Fastify, { FastifyRequest } from "fastify";
 import helmet from "@fastify/helmet";
+import rateLimiter from "@fastify/rate-limit";
+import Redis from "ioredis";
 
 import { MercuryClient } from "../service/mercury";
 import { ajv } from "./validators";
 import { isContractId } from "../helper/validate";
+import { Conf } from "../config";
 
 const API_VERSION = "v1";
 
-export function initApiServer(mercuryClient: MercuryClient) {
+export function initApiServer(mercuryClient: MercuryClient, config: Conf) {
+  const redis = new Redis({
+    connectionName: config.redisConnectionName,
+    host: config.hostname,
+    port: config.redisPort,
+    connectTimeout: 500,
+    maxRetriesPerRequest: 1,
+  });
+
   const server = Fastify({
     logger: true,
   });
   server.setValidatorCompiler(({ schema }) => {
     return ajv.compile(schema);
+  });
+  server.register(rateLimiter, {
+    max: 100,
+    timeWindow: "1 minute",
+    redis,
   });
 
   server.register(helmet, { global: true });
