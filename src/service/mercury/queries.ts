@@ -31,6 +31,25 @@ export const query = {
       }
     }
   `,
+  getAccountBalances: (ledgerKey: string, contractIds: string[]) => `
+    query AccountBalances {
+      ${contractIds.map(
+        (id) =>
+          `
+        entryUpdateByContractIdAndKey(ledgerKey: ${ledgerKey}, contract: ${id}) {
+          nodes {
+            contractId
+            keyXdr
+            valueXdr
+            ledgerTimestamp
+            ledger
+            entryDurability
+          }
+        }
+        `
+      )}
+    }
+  `,
   getAccountHistory: `
     query GetAccountHistory {
       eventByTopic(t1: "AAAADgAAAARtaW50") {

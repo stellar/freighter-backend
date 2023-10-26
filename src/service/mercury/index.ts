@@ -1,13 +1,19 @@
 import { Client } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { nativeToScVal } from "soroban-client";
+import { nativeToScVal, xdr } from "soroban-client";
 import { mutation, query } from "./queries";
 
-export interface NewSubscriptionPayload {
+export interface NewEventSubscriptionPayload {
   contract_id?: string;
   max_single_size: number;
   [key: string]: string | number | undefined;
+}
+
+export interface NewEntrySubscriptionPayload {
+  contract_id?: string;
+  key_xdr?: string;
+  max_entry_size: number;
 }
 
 interface MercurySession {
@@ -22,6 +28,7 @@ export class MercuryClient {
   urqlClient: Client;
   mercurySession: MercurySession;
   eventsURL: string;
+  entryURL: string;
   logger: Logger;
 
   constructor(
@@ -31,9 +38,27 @@ export class MercuryClient {
   ) {
     this.mercurySession = mercurySession;
     this.eventsURL = `${mercurySession.backend}/event`;
+    this.entryURL = `${mercurySession.backend}/entry`;
     this.urqlClient = urqlClient;
     this.logger = logger;
   }
+
+  tokenBalanceKey = (pubKey: string) => {
+    // { "vec": [{ "symbol": "Balance" }, { "Address": <...pubkey...> }] }
+    const sigScVal = nativeToScVal(
+      {
+        balance: "Balance",
+        address: pubKey,
+      },
+      {
+        type: {
+          balance: ["symbol", null],
+          address: ["symbol", null],
+        },
+      }
+    );
+    return xdr.ScVal.scvVec([sigScVal]).toXDR("base64");
+  };
 
   renewMercuryToken = async () => {
     try {
@@ -57,7 +82,7 @@ export class MercuryClient {
     }
   };
 
-  addNewTokenSubscription = async (contractId: string, pubKey: string) => {
+  tokenSubscription = async (contractId: string, pubKey: string) => {
     // Token transfer topics are - 1: transfer, 2: from, 3: to, 4: assetName, data(amount)
     const transferToSub = {
       contract_id: contractId,
@@ -119,7 +144,7 @@ export class MercuryClient {
     }
   };
 
-  addNewAccountSubscription = async (pubKey: string) => {
+  accountSubscription = async (pubKey: string) => {
     try {
       const data = await this.urqlClient.query(
         mutation.newAccountSubscription,
@@ -140,11 +165,63 @@ export class MercuryClient {
     }
   };
 
+  tokenBalanceSubscription = async (contractId: string, pubKey: string) => {
+    try {
+      const entrySub = {
+        contract_id: contractId,
+        max_entry_size: 100,
+        key_xdr: this.tokenBalanceKey(pubKey),
+      };
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${this.mercurySession.token}`,
+        },
+      };
+
+      const { data } = await axios.post(this.entryURL, entrySub, config);
+
+      return {
+        data,
+        error: null,
+      };
+    } catch (error) {
+      const _error = JSON.stringify(error);
+      this.logger.error(_error);
+      return {
+        data: null,
+        error: _error,
+      };
+    }
+  };
+
   getAccountHistory = async (pubKey: string) => {
     try {
       const data = await this.urqlClient.query(query.getAccountHistory, {
         publicKeyText: pubKey,
       });
+
+      return {
+        data,
+        error: null,
+      };
+    } catch (error) {
+      const _error = JSON.stringify(error);
+      this.logger.error(_error);
+      return {
+        data: null,
+        error: _error,
+      };
+    }
+  };
+
+  getAccountBalances = async (pubKey: string, contractIds: string[]) => {
+    // TODO: once classic subs include balance, add query
+    try {
+      const data = await this.urqlClient.query(
+        query.getAccountBalances(this.tokenBalanceKey(pubKey), contractIds),
+        {}
+      );
 
       return {
         data,
