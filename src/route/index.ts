@@ -178,7 +178,6 @@ export function initApiServer(mercuryClient: MercuryClient) {
           reply
         ) => {
           const { pub_key, contract_id } = request.body;
-          // TODO: once classic subs include balance, add query
           const { data, error } = await mercuryClient.tokenBalanceSubscription(
             contract_id,
             pub_key

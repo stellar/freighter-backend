@@ -216,6 +216,7 @@ export class MercuryClient {
   };
 
   getAccountBalances = async (pubKey: string, contractIds: string[]) => {
+    // TODO: once classic subs include balance, add query
     try {
       const data = await this.urqlClient.query(
         query.getAccountBalances(this.tokenBalanceKey(pubKey), contractIds),
