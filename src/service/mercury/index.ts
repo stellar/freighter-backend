@@ -44,6 +44,7 @@ export class MercuryClient {
   }
 
   tokenBalanceKey = (pubKey: string) => {
+    // { "vec": [{ "symbol": "Balance" }, { "Address": <...pubkey...> }] }
     const sigScVal = nativeToScVal(
       {
         balance: "Balance",

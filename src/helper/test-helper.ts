@@ -113,7 +113,6 @@ const queryMockResponse = {
 };
 
 jest.spyOn(client, "query").mockImplementation((_query: any): any => {
-  console.log(_query);
   switch (_query) {
     case mutation.authenticate: {
       return Promise.resolve({
