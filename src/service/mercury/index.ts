@@ -13,7 +13,7 @@ export interface NewEventSubscriptionPayload {
 export interface NewEntrySubscriptionPayload {
   contract_id?: string;
   key_xdr?: string;
-  max_entry_size: number;
+  max_single_size: number;
 }
 
 interface MercurySession {
@@ -45,19 +45,10 @@ export class MercuryClient {
 
   tokenBalanceKey = (pubKey: string) => {
     // { "vec": [{ "symbol": "Balance" }, { "Address": <...pubkey...> }] }
-    const sigScVal = nativeToScVal(
-      {
-        balance: "Balance",
-        address: pubKey,
-      },
-      {
-        type: {
-          balance: ["symbol", null],
-          address: ["symbol", null],
-        },
-      }
-    );
-    return xdr.ScVal.scvVec([sigScVal]).toXDR("base64");
+    return xdr.ScVal.scvVec([
+      nativeToScVal("Balance"),
+      nativeToScVal(pubKey),
+    ]).toXDR("base64");
   };
 
   renewMercuryToken = async () => {
@@ -169,7 +160,7 @@ export class MercuryClient {
     try {
       const entrySub = {
         contract_id: contractId,
-        max_entry_size: 100,
+        max_single_size: 150,
         key_xdr: this.tokenBalanceKey(pubKey),
       };
 
