@@ -77,10 +77,13 @@ export function initApiServer(mercuryClient: MercuryClient, config: Conf) {
         url: "/account-balances/:pubKey",
         schema: {
           params: {
-            ["pubKey"]: { type: "string" },
+            ["pubKey"]: {
+              type: "string",
+              validator: (qStr: string) => isPubKey(qStr),
+            },
           },
           querystring: {
-            ["contractIds"]: {
+            ["contract_ids"]: {
               type: "string",
               validator: (qStr: string) => qStr.split(",").some(isContractId),
             },
@@ -89,12 +92,12 @@ export function initApiServer(mercuryClient: MercuryClient, config: Conf) {
         handler: async (
           request: FastifyRequest<{
             Params: { ["pubKey"]: string };
-            Querystring: { ["contractIds"]: string };
+            Querystring: { ["contract_ids"]: string };
           }>,
           reply
         ) => {
           const pubKey = request.params["pubKey"];
-          const contractIds = request.query["contractIds"].split(",");
+          const contractIds = request.query["contract_ids"].split(",");
           const { data, error } = await mercuryClient.getAccountBalances(
             pubKey,
             contractIds

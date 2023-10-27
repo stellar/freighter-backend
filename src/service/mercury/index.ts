@@ -1,7 +1,7 @@
 import { Client } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { nativeToScVal, xdr } from "soroban-client";
+import { Address, nativeToScVal, xdr } from "soroban-client";
 import { mutation, query } from "./queries";
 
 export interface NewEventSubscriptionPayload {
@@ -45,10 +45,8 @@ export class MercuryClient {
 
   tokenBalanceKey = (pubKey: string) => {
     // { "vec": [{ "symbol": "Balance" }, { "Address": <...pubkey...> }] }
-    return xdr.ScVal.scvVec([
-      nativeToScVal("Balance"),
-      nativeToScVal(pubKey),
-    ]).toXDR("base64");
+    const addr = new Address(pubKey).toScVal();
+    return xdr.ScVal.scvVec([nativeToScVal("Balance"), addr]).toXDR("base64");
   };
 
   renewMercuryToken = async () => {
