@@ -1,10 +1,11 @@
+import { xdr } from "soroban-client";
+
 import { mutation } from "./queries";
 import {
   mockMercuryClient,
   queryMockResponse,
   pubKey,
 } from "../../helper/test-helper";
-import { xdr } from "soroban-client";
 
 describe("Mercury Service", () => {
   it("can renew a token", async () => {

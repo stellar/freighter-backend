@@ -3,6 +3,7 @@ import pino from "pino";
 
 import { mutation, query } from "../service/mercury/queries";
 import { MercuryClient } from "../service/mercury";
+import { initApiServer } from "../route";
 
 const testLogger = pino({
   name: "test-logger",
@@ -147,5 +148,21 @@ jest.spyOn(client, "query").mockImplementation((_query: any): any => {
 });
 
 const mockMercuryClient = new MercuryClient(mercurySession, client, testLogger);
-
-export { pubKey, mockMercuryClient, queryMockResponse };
+async function getDevServer() {
+  const config = {
+    hostname: "localhost",
+    mode: "development",
+    mercuryEmail: "info@mercury.io",
+    mercuryKey: "xxx",
+    mercuryPassword: "pass",
+    mercuryBackend: "backend",
+    mercuryGraphQL: "graph-ql",
+    mercuryUserId: "user-id",
+    redisConnectionName: "freighter",
+    redisPort: 6379,
+  };
+  const server = initApiServer(mockMercuryClient, config);
+  await server.listen();
+  return server;
+}
+export { pubKey, mockMercuryClient, queryMockResponse, getDevServer };
