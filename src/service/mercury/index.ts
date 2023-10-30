@@ -46,7 +46,9 @@ export class MercuryClient {
   tokenBalanceKey = (pubKey: string) => {
     // { "vec": [{ "symbol": "Balance" }, { "Address": <...pubkey...> }] }
     const addr = new Address(pubKey).toScVal();
-    return xdr.ScVal.scvVec([nativeToScVal("Balance"), addr]).toXDR("base64");
+    return xdr.ScVal.scvVec([xdr.ScVal.scvSymbol("Balance"), addr]).toXDR(
+      "base64"
+    );
   };
 
   renewMercuryToken = async () => {
