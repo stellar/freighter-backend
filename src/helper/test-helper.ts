@@ -40,7 +40,7 @@ const mercurySession = {
 
 const pubKey = "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
 const tokenBalanceLedgerKey =
-  "AAAAEAAAAAEAAAACAAAADgAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys";
+  "AAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys";
 
 const queryMockResponse = {
   [mutation.authenticate]: {
