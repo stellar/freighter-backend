@@ -1,18 +1,37 @@
 import Fastify, { FastifyRequest } from "fastify";
 import helmet from "@fastify/helmet";
+import rateLimiter from "@fastify/rate-limit";
+import Redis from "ioredis";
 
 import { MercuryClient } from "../service/mercury";
 import { ajv } from "./validators";
-import { isContractId } from "../helper/validate";
+import { isContractId, isPubKey } from "../helper/validate";
+import { Conf } from "../config";
 
 const API_VERSION = "v1";
 
-export function initApiServer(mercuryClient: MercuryClient) {
+export function initApiServer(mercuryClient: MercuryClient, config: Conf) {
+  let redis = undefined;
+  if (config.mode !== "development") {
+    redis = new Redis({
+      connectionName: config.redisConnectionName,
+      host: config.hostname,
+      port: config.redisPort,
+      connectTimeout: 500,
+      maxRetriesPerRequest: 1,
+    });
+  }
+
   const server = Fastify({
     logger: true,
   });
   server.setValidatorCompiler(({ schema }) => {
     return ajv.compile(schema);
+  });
+  server.register(rateLimiter, {
+    max: 100,
+    timeWindow: "1 minute",
+    redis,
   });
 
   server.register(helmet, { global: true });
@@ -20,19 +39,30 @@ export function initApiServer(mercuryClient: MercuryClient) {
     (instance, _opts, next) => {
       instance.route({
         method: "GET",
-        url: "/account-history/:pub-key",
+        url: "/ping",
+        handler: async (_request, reply) => {
+          reply.code(200).send("Alive!");
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/account-history/:pubKey",
         schema: {
           params: {
-            ["pub-key"]: { type: "string" },
+            ["pubKey"]: {
+              type: "string",
+              validator: (qStr: string) => isPubKey(qStr),
+            },
           },
         },
         handler: async (
           request: FastifyRequest<{
-            Params: { ["pub-key"]: string };
+            Params: { ["pubKey"]: string };
           }>,
           reply
         ) => {
-          const pubKey = request.params["pub-key"];
+          const pubKey = request.params["pubKey"];
           const { data, error } = await mercuryClient.getAccountHistory(pubKey);
           if (error) {
             reply.code(400).send(error);
@@ -44,13 +74,16 @@ export function initApiServer(mercuryClient: MercuryClient) {
 
       instance.route({
         method: "GET",
-        url: "/account-balances/:pub-key",
+        url: "/account-balances/:pubKey",
         schema: {
           params: {
-            ["pub-key"]: { type: "string" },
+            ["pubKey"]: {
+              type: "string",
+              validator: (qStr: string) => isPubKey(qStr),
+            },
           },
           querystring: {
-            ["contract-ids"]: {
+            ["contract_ids"]: {
               type: "string",
               validator: (qStr: string) => qStr.split(",").some(isContractId),
             },
@@ -58,13 +91,13 @@ export function initApiServer(mercuryClient: MercuryClient) {
         },
         handler: async (
           request: FastifyRequest<{
-            Params: { ["pub-key"]: string };
-            Querystring: { ["contract-ids"]: string };
+            Params: { ["pubKey"]: string };
+            Querystring: { ["contract_ids"]: string };
           }>,
           reply
         ) => {
-          const pubKey = request.params["pub-key"];
-          const contractIds = request.query["contract-ids"].split(",");
+          const pubKey = request.params["pubKey"];
+          const contractIds = request.query["contract_ids"].split(",");
           const { data, error } = await mercuryClient.getAccountBalances(
             pubKey,
             contractIds

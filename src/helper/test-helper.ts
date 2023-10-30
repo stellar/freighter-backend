@@ -3,6 +3,7 @@ import pino from "pino";
 
 import { mutation, query } from "../service/mercury/queries";
 import { MercuryClient } from "../service/mercury";
+import { initApiServer } from "../route";
 
 const testLogger = pino({
   name: "test-logger",
@@ -37,9 +38,9 @@ const mercurySession = {
   userId: "1",
 };
 
-const pubKey = "GDUBMXMABE7UOZSGYJ5ONE7UYAEHKK3JOX7HZQGNZ7NYTZPPP4AJ2GQJ";
+const pubKey = "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
 const tokenBalanceLedgerKey =
-  "AAAAEAAAAAEAAAABAAAAEQAAAAEAAAACAAAADwAAAAdiYWxhbmNlAAAAAA4AAAAHQmFsYW5jZQAAAAAPAAAAB2FkZHJlc3MAAAAADgAAADhHRFVCTVhNQUJFN1VPWlNHWUo1T05FN1VZQUVIS0szSk9YN0haUUdOWjdOWVRaUFBQNEFKMkdRSg==";
+  "AAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys";
 
 const queryMockResponse = {
   [mutation.authenticate]: {
@@ -59,7 +60,8 @@ const queryMockResponse = {
     edges: [
       {
         node: {
-          contractId: "contract-id-1",
+          contractId:
+            "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
           keyXdr: tokenBalanceLedgerKey,
           valueXdr: "value-xdr",
           ledgerTimestamp: "timestamp",
@@ -69,7 +71,8 @@ const queryMockResponse = {
       },
       {
         node: {
-          contractId: "contract-id-2",
+          contractId:
+            "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
           keyXdr: tokenBalanceLedgerKey,
           valueXdr: "value-xdr",
           ledgerTimestamp: "timestamp",
@@ -100,7 +103,7 @@ const queryMockResponse = {
             assetNative: true,
             accountBySource: {
               publickey:
-                "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL",
+                "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
             },
             accountByDestination: {
               publickey: pubKey,
@@ -133,8 +136,16 @@ jest.spyOn(client, "query").mockImplementation((_query: any): any => {
       });
     }
     case query.getAccountBalances(tokenBalanceLedgerKey, [
-      "contract-id-1",
-      "contract-id-2",
+      "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+    ]): {
+      return Promise.resolve({
+        data: queryMockResponse["query.getAccountBalances"],
+        error: null,
+      });
+    }
+    case query.getAccountBalances(tokenBalanceLedgerKey, [
+      "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+      "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
     ]): {
       return Promise.resolve({
         data: queryMockResponse["query.getAccountBalances"],
@@ -147,5 +158,27 @@ jest.spyOn(client, "query").mockImplementation((_query: any): any => {
 });
 
 const mockMercuryClient = new MercuryClient(mercurySession, client, testLogger);
-
-export { pubKey, mockMercuryClient, queryMockResponse };
+async function getDevServer() {
+  const config = {
+    hostname: "localhost",
+    mode: "development",
+    mercuryEmail: "info@mercury.io",
+    mercuryKey: "xxx",
+    mercuryPassword: "pass",
+    mercuryBackend: "backend",
+    mercuryGraphQL: "graph-ql",
+    mercuryUserId: "user-id",
+    redisConnectionName: "freighter",
+    redisPort: 6379,
+  };
+  const server = initApiServer(mockMercuryClient, config);
+  await server.listen();
+  return server;
+}
+export {
+  pubKey,
+  mockMercuryClient,
+  queryMockResponse,
+  getDevServer,
+  tokenBalanceLedgerKey,
+};

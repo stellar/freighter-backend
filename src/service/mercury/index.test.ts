@@ -1,10 +1,11 @@
+import { scValToNative, xdr } from "soroban-client";
+
 import { mutation } from "./queries";
 import {
   mockMercuryClient,
   queryMockResponse,
   pubKey,
 } from "../../helper/test-helper";
-import { xdr } from "soroban-client";
 
 describe("Mercury Service", () => {
   it("can renew a token", async () => {
@@ -38,18 +39,18 @@ describe("Mercury Service", () => {
     const scVal = xdr.ScVal.fromXDR(
       Buffer.from(ledgerKey, "base64")
     ).value() as xdr.ScVal[];
-    const hasPubKey = scVal.map((scVal) => {
-      const inner = scVal.value() as xdr.ScMapEntry[];
-      return inner.some((v) => {
-        const mapVal = v.val();
-        return mapVal.value()?.toString() === pubKey;
-      });
-    });
-    expect(hasPubKey).toBeTruthy();
+
+    const [scValBalance, scValAddress] = scVal;
+    const balance = scValToNative(scValBalance);
+    const address = scValToNative(scValAddress);
+    expect([balance, address]).toEqual(["Balance", pubKey]);
   });
 
   it("can fetch account balances by pub key", async () => {
-    const contracts = ["contract-id-1", "contract-id-2"];
+    const contracts = [
+      "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+      "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+    ];
     const { data } = await mockMercuryClient.getAccountBalances(
       pubKey,
       contracts

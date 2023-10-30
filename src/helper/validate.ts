@@ -9,4 +9,13 @@ const isContractId = (contractId: string) => {
   }
 };
 
-export { isContractId };
+const isPubKey = (pubKey: string) => {
+  try {
+    StrKey.decodeEd25519PublicKey(pubKey);
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+export { isContractId, isPubKey };

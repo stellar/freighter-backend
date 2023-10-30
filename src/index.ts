@@ -53,7 +53,7 @@ async function main() {
     userId: conf.mercuryUserId,
   };
   const mercuryClient = new MercuryClient(mercurySession, client, logger);
-  const server = initApiServer(mercuryClient);
+  const server = initApiServer(mercuryClient, conf);
 
   try {
     await server.listen({ port });
