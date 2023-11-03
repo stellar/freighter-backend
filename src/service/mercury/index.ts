@@ -1,5 +1,5 @@
 import { Client } from "@urql/core";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { Logger } from "pino";
 import { Address, nativeToScVal, xdr } from "soroban-client";
 import { mutation, query } from "./queries";
@@ -73,14 +73,23 @@ export class MercuryClient {
     }
   };
 
-  // right now, Mercury does not differentiate expired jwts from other errors with error codes
-  // until Mercury returns 401s for expired tokens, on any error we renew the jwt and try again once.
   renewAndRetry = async <T>(method: () => Promise<T>) => {
     try {
       return await method();
-    } catch (error) {
-      await this.renewMercuryToken();
-      return await method();
+    } catch (error: unknown) {
+      let status = 400;
+      if (error instanceof AxiosError) {
+        status = error.response?.status || 400;
+      }
+
+      if (status === 401) {
+        this.logger.debug("renewing jwt, and retrying");
+        await this.renewMercuryToken();
+        return await method();
+      }
+      const _error = JSON.stringify(error);
+      this.logger.error(_error);
+      throw new Error(_error);
     }
   };
 
