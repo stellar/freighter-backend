@@ -45,6 +45,10 @@ async function main() {
       };
     },
   });
+  const renewClient = new Client({
+    url: conf.mercuryGraphQL,
+    exchanges: [fetchExchange],
+  });
   const mercurySession = {
     token: conf.mercuryKey,
     backend: conf.mercuryBackend,
@@ -52,7 +56,13 @@ async function main() {
     password: conf.mercuryPassword,
     userId: conf.mercuryUserId,
   };
-  const mercuryClient = new MercuryClient(mercurySession, client, logger);
+  const mercuryClient = new MercuryClient(
+    conf.mercuryGraphQL,
+    mercurySession,
+    client,
+    renewClient,
+    logger
+  );
   const server = initApiServer(mercuryClient, conf);
 
   try {
