@@ -1,15 +1,15 @@
 export const mutation = {
   authenticate: `
-    mutation Auth {
+    mutation Auth($email: String!, $password: String!) {
       authenticate(input: {email: $email, password: $password}) {
         jwtToken
       }
     }
   `,
   newAccountSubscription: `
-    mutation NewAccountSubscription {
+    mutation NewAccountSubscription($pubKey: String!, $userId: String!) {
       createFullAccountSubscription(
-        input: {fullAccountSubscription: {$pubKey: PUBKEY!, $userId: USER_ID!}}
+        input: {fullAccountSubscription: pubKey: $pubKey, userId: $userId}}
       ) {
         fullAccountSubscription {
           publickey
@@ -36,7 +36,7 @@ export const query = {
       ${contractIds.map(
         (id) =>
           `
-        entryUpdateByContractIdAndKey(ledgerKey: ${ledgerKey}, contract: ${id}) {
+        entryUpdateByContractIdAndKey(ledgerKey: $${ledgerKey}, contract: $${id}) {
           nodes {
             contractId
             keyXdr
@@ -51,8 +51,8 @@ export const query = {
     }
   `,
   getAccountHistory: `
-    query GetAccountHistory {
-      eventByTopic(t1: "AAAADgAAAARtaW50") {
+    query GetAccountHistory($pubKey: String!) {
+      mintEvent: eventByTopic(t1: "AAAADgAAAARtaW50") {
         edges {
           node {
             contractId
@@ -66,7 +66,8 @@ export const query = {
           }
         }
       }
-      eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", $t2: PUBKEY!) {
+
+      transferToEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t2: $pubKey) {
         edges {
           node {
             contractId
@@ -80,7 +81,7 @@ export const query = {
           }
         }
       }
-      eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", $t3: PUBKEY!) {
+      transferFromEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t3: $pubKey) {
         edges {
           node {
             contractId
@@ -94,17 +95,21 @@ export const query = {
           }
         }
       }
-      createAccountByPublicKey($publicKeyText: PUBKEY!) {
+      createAccountByPublicKey(publicKeyText: $pubKey) {
         edges {
-          node
+          node {
+            destination
+          }
         }
       }
-      createAccountToPublicKey($publicKeyText: PUBKEY!) {
+      createAccountToPublicKey(publicKeyText: $pubKey) {
         edges {
-          node
+          node {
+            destination
+          }
         }
       }
-      paymentsByPublicKey($publicKeyText: PUBKEY!) {
+      paymentsByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
             amount
@@ -122,7 +127,7 @@ export const query = {
           }
         }
       }
-      paymentsToPublicKey($publicKeyText: PUBKEY!) {
+      paymentsToPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
             amount
@@ -140,6 +145,7 @@ export const query = {
           }
         }
       }
+
     }
   `,
 };
