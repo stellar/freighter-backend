@@ -73,6 +73,17 @@ export class MercuryClient {
     }
   };
 
+  // right now, Mercury does not differentiate expired jwts from other errors with error codes
+  // until Mercury returns 401s for expired tokens, on any error we renew the jwt and try again once.
+  renewAndRetry = async <T>(method: () => Promise<T>) => {
+    try {
+      return await method();
+    } catch (error) {
+      await this.renewMercuryToken();
+      return await method();
+    }
+  };
+
   tokenSubscription = async (contractId: string, pubKey: string) => {
     // Token transfer topics are - 1: transfer, 2: from, 3: to, 4: assetName, data(amount)
     const transferToSub = {
@@ -87,7 +98,6 @@ export class MercuryClient {
       topic1: nativeToScVal("transfer").toXDR("base64"),
       topic3: nativeToScVal(pubKey).toXDR("base64"),
     };
-
     const mintSub = {
       contract_id: contractId,
       max_single_size: 200,
@@ -101,21 +111,32 @@ export class MercuryClient {
         },
       };
 
-      const { data: transferFromRes } = await axios.post(
-        this.eventsURL,
-        transferToSub,
-        config
-      );
-      const { data: transferToRes } = await axios.post(
-        this.eventsURL,
-        transferFromSub,
-        config
-      );
-      const { data: mintRes } = await axios.post(
-        this.eventsURL,
-        mintSub,
-        config
-      );
+      const subscribe = async () => {
+        const { data: transferFromRes } = await axios.post(
+          this.eventsURL,
+          transferToSub,
+          config
+        );
+        const { data: transferToRes } = await axios.post(
+          this.eventsURL,
+          transferFromSub,
+          config
+        );
+        const { data: mintRes } = await axios.post(
+          this.eventsURL,
+          mintSub,
+          config
+        );
+
+        return {
+          transferFromRes,
+          transferToRes,
+          mintRes,
+        };
+      };
+
+      const { transferFromRes, transferToRes, mintRes } =
+        await this.renewAndRetry(subscribe);
 
       if (!transferFromRes || !transferToRes || !mintRes) {
         throw new Error("Failed to subscribe to token events");
@@ -137,10 +158,15 @@ export class MercuryClient {
 
   accountSubscription = async (pubKey: string) => {
     try {
-      const data = await this.urqlClient.query(
-        mutation.newAccountSubscription,
-        { pubKey, userId: this.mercurySession.userId }
-      );
+      const subscribe = async () => {
+        const data = await this.urqlClient.query(
+          mutation.newAccountSubscription,
+          { pubKey, userId: this.mercurySession.userId }
+        );
+        return data;
+      };
+
+      const data = await this.renewAndRetry(subscribe);
 
       return {
         data,
@@ -170,7 +196,11 @@ export class MercuryClient {
         },
       };
 
-      const { data } = await axios.post(this.entryURL, entrySub, config);
+      const getData = async () => {
+        const { data } = await axios.post(this.entryURL, entrySub, config);
+        return data;
+      };
+      const data = await this.renewAndRetry(getData);
 
       return {
         data,
@@ -188,9 +218,13 @@ export class MercuryClient {
 
   getAccountHistory = async (pubKey: string) => {
     try {
-      const data = await this.urqlClient.query(query.getAccountHistory, {
-        publicKeyText: pubKey,
-      });
+      const getData = async () => {
+        const data = await this.urqlClient.query(query.getAccountHistory, {
+          publicKeyText: pubKey,
+        });
+        return data;
+      };
+      const data = await this.renewAndRetry(getData);
 
       return {
         data,
@@ -209,10 +243,14 @@ export class MercuryClient {
   getAccountBalances = async (pubKey: string, contractIds: string[]) => {
     // TODO: once classic subs include balance, add query
     try {
-      const data = await this.urqlClient.query(
-        query.getAccountBalances(this.tokenBalanceKey(pubKey), contractIds),
-        {}
-      );
+      const getData = async () => {
+        const data = await this.urqlClient.query(
+          query.getAccountBalances(this.tokenBalanceKey(pubKey), contractIds),
+          {}
+        );
+        return data;
+      };
+      const data = await this.renewAndRetry(getData);
 
       return {
         data,
