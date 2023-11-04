@@ -30,6 +30,11 @@ const client = new Client({
   },
 });
 
+const renewClient = new Client({
+  url: `::1:5000/graphql`,
+  exchanges: [fetchExchange],
+});
+
 const mercurySession = {
   token: "mercury-token",
   backend: "mercury-url",
@@ -115,14 +120,23 @@ const queryMockResponse = {
   },
 };
 
+jest
+  .spyOn(renewClient, "mutation")
+  .mockImplementation((_mutation: any): any => {
+    switch (_mutation) {
+      case mutation.authenticate: {
+        return Promise.resolve({
+          data: queryMockResponse[mutation.authenticate],
+          error: null,
+        });
+      }
+      default:
+        throw new Error("unknown mutation in mock");
+    }
+  });
+
 jest.spyOn(client, "query").mockImplementation((_query: any): any => {
   switch (_query) {
-    case mutation.authenticate: {
-      return Promise.resolve({
-        data: queryMockResponse[mutation.authenticate],
-        error: null,
-      });
-    }
     case mutation.newAccountSubscription: {
       return Promise.resolve({
         data: queryMockResponse[mutation.newAccountSubscription],
@@ -157,7 +171,13 @@ jest.spyOn(client, "query").mockImplementation((_query: any): any => {
   }
 });
 
-const mockMercuryClient = new MercuryClient(mercurySession, client, testLogger);
+const mockMercuryClient = new MercuryClient(
+  "http://example.com/graphql",
+  mercurySession,
+  client,
+  renewClient,
+  testLogger
+);
 async function getDevServer() {
   const config = {
     hostname: "localhost",
