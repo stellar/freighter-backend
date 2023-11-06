@@ -145,130 +145,328 @@ export const query = {
         }
       }
 
-      allPathPaymentStrictReceiveOps(
-        condition: {source: $pubKey}
-      ) {
-        edges {
-          node {
-            destAsset
-            destAmount
-            destAssetNative
-            destination
-            destinationMuxed
-            source
-            sourceMuxed
-            sendMax
-            sendAssetNative
-            sendAsset
-            path5AssetNative
-            path5Asset
-            path4AssetNative
-            path4Asset
-            path3AssetNative
-            path3Asset
-            path2AssetNative
-            path2Asset
-            path1AssetNative
-            path1Asset
+      pathPaymentsStrictSendByPublicKey(publicKeyText: $pubKey) {
+        nodes {
+          ledgerByLedger {
+            closeTime
+            sequence
           }
-        }
-      }
-
-      allPathPaymentStrictSendOps(
-        condition: {source: $pubKey}
-      ) {
-        edges {
-          node {
-            destAsset
-            destination
-            destinationMuxed
-            source
-            sourceMuxed
-            sendAssetNative
-            sendAsset
-            path1
+          accountBySource {
+            publickey
+          }
+          accountByDestination {
+            publickey
+          }
+          assetByDestAsset {
+            code
+            issuer
+          }
+          assetByPath1 {
+            code
+            issuer
+          }
+          assetByPath2 {
+            code
+            issuer
+          }
+          assetByPath3 {
+            issuer
+            code
+          }
+          assetByPath4 {
+            issuer
+            code
+          }
+          assetByPath5 {
+            issuer
+            code
+          }
+          assetBySendAsset {
+            code
+            issuer
+          }
+          destAssetNative
+          destMin
           path1Native
-          path2
           path2Native
-          path3
           path3Native
-          path4
           path4Native
-          path5
           path5Native
-          }
+          sendAmount
+          sendAssetNative
         }
       }
 
-      allManageBuyOfferOps(condition: {source: $pubKey}) {
+      pathPaymentsStrictSendToPublicKey(publicKeyText: $pubKey) {
+        nodes {
+          ledgerByLedger {
+            closeTime
+            sequence
+          }
+          accountBySource {
+            publickey
+          }
+          accountByDestination {
+            publickey
+          }
+          assetByDestAsset {
+            code
+            issuer
+          }
+          assetByPath1 {
+            code
+            issuer
+          }
+          assetByPath2 {
+            code
+            issuer
+          }
+          assetByPath3 {
+            issuer
+            code
+          }
+          assetByPath4 {
+            issuer
+            code
+          }
+          assetByPath5 {
+            issuer
+            code
+          }
+          assetBySendAsset {
+            code
+            issuer
+          }
+          destAssetNative
+          destMin
+          path1Native
+          path2Native
+          path3Native
+          path4Native
+          path5Native
+          sendAmount
+          sendAssetNative
+        }
+      }
+
+      pathPaymentsStrictReceiveByPublicKey(publicKeyText: $pubKey) {
+        nodes {
+          ledgerByLedger {
+            closeTime
+            sequence
+          }
+          accountBySource {
+            publickey
+          }
+          accountByDestination {
+            publickey
+          }
+          assetByDestAsset {
+            code
+            issuer
+          }
+          assetByPath1Asset {
+            code
+            issuer
+          }
+          assetByPath2Asset {
+            code
+            issuer
+          }
+          assetByPath2Asset {
+            issuer
+            code
+          }
+          assetByPath4Asset {
+            issuer
+            code
+          }
+          assetByPath5Asset {
+            issuer
+            code
+          }
+          assetBySendAsset {
+            code
+            issuer
+          }
+          destAssetNative
+          path1AssetNative
+          path2AssetNative
+          path3AssetNative
+          path4AssetNative
+          path5AssetNative
+          sendAssetNative
+          destAmount
+          sendMax
+        }
+      }
+
+      pathPaymentsStrictReceiveToPublicKey(publicKeyText: $pubKey) {
+        nodes {
+          ledgerByLedger {
+            closeTime
+            sequence
+          }
+          accountBySource {
+            publickey
+          }
+          accountByDestination {
+            publickey
+          }
+          assetByDestAsset {
+            code
+            issuer
+          }
+          assetByPath1Asset {
+            code
+            issuer
+          }
+          assetByPath2Asset {
+            code
+            issuer
+          }
+          assetByPath2Asset {
+            issuer
+            code
+          }
+          assetByPath4Asset {
+            issuer
+            code
+          }
+          assetByPath5Asset {
+            issuer
+            code
+          }
+          assetBySendAsset {
+            code
+            issuer
+          }
+          destAssetNative
+          path1AssetNative
+          path2AssetNative
+          path3AssetNative
+          path4AssetNative
+          path5AssetNative
+          sendAssetNative
+          destAmount
+          sendMax
+        }
+      }
+    
+      manageBuyOfferByPublicKey(
+        publicKeyText: $pubKey
+      ) {
         edges {
           node {
-            buyAmount
-            buying
             buyingNative
+            accountBySource {
+              publickey
+            }
+            assetByBuying {
+              issuer
+              code
+            }
+            assetBySelling {
+              code
+              issuer
+            }
+            ledgerByLedger {
+              closeTime
+              sequence
+            }
+            muxedaccountBySourceMuxed {
+              id
+              publickey
+            }
             offerId
             priceD
             priceN
-            selling
             sellingNative
-            source
           }
         }
       }
 
-      allManageSellOfferOps(condition: {source: $pubKey}) {
+      manageSellOfferByPublicKey(
+        publicKeyText: $pubKey
+      ) {
         edges {
           node {
-            amount
-            buying
             buyingNative
-            selling
-            priceN
+            accountBySource {
+              publickey
+            }
+            assetByBuying {
+              issuer
+              code
+            }
+            assetBySelling {
+              code
+              issuer
+            }
+            ledgerByLedger {
+              closeTime
+              sequence
+            }
+            muxedaccountBySourceMuxed {
+              id
+              publickey
+            }
+            offerId
             priceD
-            sellingNative
-            source
-          }
-        }
-      }
-
-      allCreatePassiveSellOfferOps(condition: {source: $pubKey}) {
-        edges {
-          node {
-            amount
-            buying
-            buyingNative
-            priceD
             priceN
-            selling
             sellingNative
-            source
           }
         }
       }
 
-      allChangeTrustOps(condition: {source: $pubKey}) {
-        totalCount
-        edges {
-          node {
-            limit
-            lineAsset
-            lineNative
-            linePoolShare
-            source
+      createPassiveSellOfferByPublicKey(publicKeyText: $pubKey) {
+        nodes {
+          accountBySource {
+            publickey
           }
-        }
-      }
-
-      allAllowTrustOps(condition: {source: $pubKey}) {
-        totalCount
-        edges {
-          node {
-            authorize
+          amount
+          assetByBuying {
             code
+            issuer
+          }
+          assetBySelling {
+            code
+            issuer
+          }
+          buyingNative
+          ledgerByLedger {
+            closeTime
+            sequence
+          }
+          muxedaccountBySourceMuxed {
             id
-            source
-            sourceMuxed
-            trustor
+            publickey
+          }
+          priceD
+          priceN
+          sellingNative
+        }
+      }
+
+      changeTrustByPublicKey(publicKeyText: $pubKey) {
+        nodes {
+          accountBySource {
+            publickey
+          }
+          assetByLineAsset {
+            issuer
+            code
+          }
+          ledgerByLedger {
+            closeTime
+            sequence
+          }
+          limit
+          lineNative
+          poolshareByLinePoolShare {
+            assetA
+            assetB
+            fee
           }
         }
       }
