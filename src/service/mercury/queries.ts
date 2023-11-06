@@ -36,7 +36,7 @@ export const query = {
       ${contractIds.map(
         (id) =>
           `
-        entryUpdateByContractIdAndKey(ledgerKey: $${ledgerKey}, contract: $${id}) {
+        entryUpdateByContractIdAndKey(ledgerKey: "${ledgerKey}", contract: "${id}") {
           nodes {
             contractId
             keyXdr
@@ -66,7 +66,6 @@ export const query = {
           }
         }
       }
-
       transferToEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t2: $pubKey) {
         edges {
           node {

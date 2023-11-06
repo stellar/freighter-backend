@@ -45,6 +45,7 @@ async function main() {
       };
     },
   });
+  // we need a second client because the authenticate muation does not ignore the current jwt
   const renewClient = new Client({
     url: conf.mercuryGraphQL,
     exchanges: [fetchExchange],
