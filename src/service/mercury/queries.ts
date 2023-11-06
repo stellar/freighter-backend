@@ -145,6 +145,137 @@ export const query = {
         }
       }
 
+      allPathPaymentStrictReceiveOps(
+        condition: {source: $pubKey}
+      ) {
+        edges {
+          node {
+            destAsset
+            destAmount
+            destAssetNative
+            destination
+            destinationMuxed
+            source
+            sourceMuxed
+            sendMax
+            sendAssetNative
+            sendAsset
+            path5AssetNative
+            path5Asset
+            path4AssetNative
+            path4Asset
+            path3AssetNative
+            path3Asset
+            path2AssetNative
+            path2Asset
+            path1AssetNative
+            path1Asset
+          }
+        }
+      }
+
+      allPathPaymentStrictSendOps(
+        condition: {source: $pubKey}
+      ) {
+        edges {
+          node {
+            destAsset
+            destAmount
+            destAssetNative
+            destination
+            destinationMuxed
+            source
+            sourceMuxed
+            sendMax
+            sendAssetNative
+            sendAsset
+            path5AssetNative
+            path5Asset
+            path4AssetNative
+            path4Asset
+            path3AssetNative
+            path3Asset
+            path2AssetNative
+            path2Asset
+            path1AssetNative
+            path1Asset
+          }
+        }
+      }
+
+      allManageBuyOfferOps(condition: {source: $pubKey}) {
+        edges {
+          node {
+            buyAmount
+            buying
+            buyingNative
+            offerId
+            priceD
+            priceN
+            selling
+            sellingNative
+            source
+          }
+        }
+      }
+
+      allManageSellOfferOps(condition: {source: $pubKey}) {
+        edges {
+          node {
+            buyAmount
+            buying
+            buyingNative
+            offerId
+            priceD
+            priceN
+            selling
+            sellingNative
+            source
+          }
+        }
+      }
+
+      allCreatePassiveSellOfferOps(condition: {source: $pubKey}) {
+        edges {
+          node {
+            amount
+            buying
+            buyingNative
+            priceD
+            priceN
+            selling
+            sellingNative
+            source
+          }
+        }
+      }
+
+      allChangeTrustOps(condition: {source: $pubKey}) {
+        totalCount
+        edges {
+          node {
+            limit
+            lineAsset
+            lineNative
+            linePoolShare
+            source
+          }
+        }
+      }
+
+      allAllowTrustOps(condition: {source: $pubKey}) {
+        totalCount
+        edges {
+          node {
+            limit
+            lineAsset
+            lineNative
+            linePoolShare
+            source
+          }
+        }
+      }
+
     }
   `,
 };
