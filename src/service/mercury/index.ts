@@ -112,6 +112,7 @@ export class MercuryClient {
     try {
       return await method();
     } catch (error: unknown) {
+      // renew and retry 0n 401, otherwise throw the error back up to the caller
       if (error instanceof Error) {
         if (error.message === ERROR_MESSAGES.JWT_EXPIRED) {
           await this.renewMercuryToken();
@@ -203,7 +204,7 @@ export class MercuryClient {
   accountSubscription = async (pubKey: string) => {
     try {
       const subscribe = async () => {
-        const data = await this.urqlClient.query(
+        const data = await this.urqlClient.mutation(
           mutation.newAccountSubscription,
           { pubKey, userId: this.mercurySession.userId }
         );
@@ -297,6 +298,11 @@ export class MercuryClient {
           query.getAccountBalances(this.tokenBalanceKey(pubKey), contractIds),
           {}
         );
+        const errorMessage = getGraphQlError(data.error);
+        if (errorMessage) {
+          throw new Error(errorMessage);
+        }
+
         return data;
       };
       const data = await this.renewAndRetry(getData);

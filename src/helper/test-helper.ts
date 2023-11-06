@@ -137,12 +137,6 @@ jest
 
 jest.spyOn(client, "query").mockImplementation((_query: any): any => {
   switch (_query) {
-    case mutation.newAccountSubscription: {
-      return Promise.resolve({
-        data: queryMockResponse[mutation.newAccountSubscription],
-        error: null,
-      });
-    }
     case query.getAccountHistory: {
       return Promise.resolve({
         data: queryMockResponse[query.getAccountHistory],
@@ -168,6 +162,19 @@ jest.spyOn(client, "query").mockImplementation((_query: any): any => {
     }
     default:
       throw new Error("unknown query in mock");
+  }
+});
+
+jest.spyOn(client, "mutation").mockImplementation((_mutation: any): any => {
+  switch (_mutation) {
+    case mutation.newAccountSubscription: {
+      return Promise.resolve({
+        data: queryMockResponse[mutation.newAccountSubscription],
+        error: null,
+      });
+    }
+    default:
+      throw new Error("unknown mutation in mock");
   }
 });
 

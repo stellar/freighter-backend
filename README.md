@@ -11,7 +11,7 @@ You will need
 
 ## Development
 
-This application relies on a Redis instance, you can either run `docker compose up` to use docker to stand up a Redis or you can start one on the standard port manually.
+This application relies on a Redis instance when `MODE=production`, you can either run `docker compose up` to use docker to stand up a Redis or you can start one on the standard port manually. If you're running in development mode, it uses a memory store.
 
 To start the server in development mode, run:
 `yarn i && yarn start`
@@ -19,3 +19,7 @@ To start the server in development mode, run:
 ## Production build
 
 `yarn build:prod`
+
+## Mercury Details
+
+This project integrates with Mercury, an indexer for Stellar/Soroban. You can find general developer documentation (in their repo docs)[https://github.com/xycloo/merury-developers-documentation/blob/main/src/SUMMARY.md].
