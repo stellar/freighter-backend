@@ -180,25 +180,22 @@ export const query = {
         edges {
           node {
             destAsset
-            destAmount
-            destAssetNative
             destination
             destinationMuxed
             source
             sourceMuxed
-            sendMax
             sendAssetNative
             sendAsset
-            path5AssetNative
-            path5Asset
-            path4AssetNative
-            path4Asset
-            path3AssetNative
-            path3Asset
-            path2AssetNative
-            path2Asset
-            path1AssetNative
-            path1Asset
+            path1
+          path1Native
+          path2
+          path2Native
+          path3
+          path3Native
+          path4
+          path4Native
+          path5
+          path5Native
           }
         }
       }
@@ -222,13 +219,12 @@ export const query = {
       allManageSellOfferOps(condition: {source: $pubKey}) {
         edges {
           node {
-            buyAmount
+            amount
             buying
             buyingNative
-            offerId
-            priceD
-            priceN
             selling
+            priceN
+            priceD
             sellingNative
             source
           }
@@ -267,11 +263,12 @@ export const query = {
         totalCount
         edges {
           node {
-            limit
-            lineAsset
-            lineNative
-            linePoolShare
+            authorize
+            code
+            id
             source
+            sourceMuxed
+            trustor
           }
         }
       }
