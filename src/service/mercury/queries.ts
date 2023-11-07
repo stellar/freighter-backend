@@ -18,6 +18,13 @@ export const mutation = {
       }
     }
   `,
+  deleteEntryUpdateById: `
+    mutation DeletEntryById($contractId: String!) {
+      deleteEntryUpdateById(input: {id: $contractId}) {
+        deletedEntryUpdateId
+      }
+    }
+  `,
 };
 export const query = {
   allSubscriptions: `
@@ -471,6 +478,17 @@ export const query = {
         }
       }
 
+    }
+  `,
+  getAllEntryUpdates: `
+    query GetAllEntryUpdates {
+      allEntryUpdates {
+        nodes {
+          contractId
+          nodeId
+          id
+        }
+      }
     }
   `,
 };
