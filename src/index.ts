@@ -2,6 +2,7 @@ import * as dotEnv from "dotenv";
 import { expand } from "dotenv-expand";
 import yargs from "yargs";
 import { Client, fetchExchange } from "@urql/core";
+import Redis from "ioredis";
 
 import { logger } from "./logger";
 import { buildConfig } from "./config";
@@ -57,14 +58,34 @@ async function main() {
     password: conf.mercuryPassword,
     userId: conf.mercuryUserId,
   };
+
+  let redis = undefined;
+
+  // use in-memory store in dev
+  if (config.mode !== "development") {
+    redis = new Redis({
+      connectionName: conf.redisConnectionName,
+      host: conf.hostname,
+      port: conf.redisPort,
+      connectTimeout: 500,
+      maxRetriesPerRequest: 1,
+    });
+
+    redis.on("error", (error) => {
+      logger.error(error);
+      throw new Error(JSON.stringify(error));
+    });
+  }
+
   const mercuryClient = new MercuryClient(
     conf.mercuryGraphQL,
     mercurySession,
     client,
     renewClient,
-    logger
+    logger,
+    redis
   );
-  const server = initApiServer(mercuryClient, conf);
+  const server = initApiServer(mercuryClient, logger, redis);
 
   try {
     await server.listen({ port });

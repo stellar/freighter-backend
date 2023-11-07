@@ -1,8 +1,19 @@
 import { Client, CombinedError, fetchExchange } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { Address, nativeToScVal, xdr } from "soroban-client";
+import { Address, Networks, nativeToScVal, xdr } from "soroban-client";
+import { Redis } from "ioredis";
+
 import { mutation, query } from "./queries";
+import {
+  getServer,
+  getTokenDecimals,
+  getTokenName,
+  getTokenSymbol,
+  getTxBuilder,
+} from "../../helper/soroban-rpc";
+
+type NetworkNames = keyof typeof Networks;
 
 const ERROR_MESSAGES = {
   JWT_EXPIRED: "jwt expired",
@@ -41,6 +52,7 @@ export class MercuryClient {
   mercurySession: MercurySession;
   eventsURL: string;
   entryURL: string;
+  redisClient?: Redis;
   logger: Logger;
 
   constructor(
@@ -48,7 +60,8 @@ export class MercuryClient {
     mercurySession: MercurySession,
     urqlClient: Client,
     renewClient: Client,
-    logger: Logger
+    logger: Logger,
+    redisClient?: Redis
   ) {
     this.mercuryUrl = mercuryUrl;
     this.mercurySession = mercurySession;
@@ -57,6 +70,7 @@ export class MercuryClient {
     this.urqlClient = urqlClient;
     this.renewClient = renewClient;
     this.logger = logger;
+    this.redisClient = redisClient;
   }
 
   tokenBalanceKey = (pubKey: string) => {
@@ -247,6 +261,8 @@ export class MercuryClient {
       };
       const data = await this.renewAndRetry(getData);
 
+      // await this.redisClient.set(contractId)
+
       return {
         data,
         error: null,
@@ -258,6 +274,38 @@ export class MercuryClient {
         data: null,
         error: _error,
       };
+    }
+  };
+
+  tokenDetails = async (
+    pubKey: string,
+    contractId: string,
+    network: NetworkNames
+  ) => {
+    try {
+      const server = await getServer(network);
+      // we need a builder per operation, 1 op per tx in Soroban
+      const decimalsBuilder = await getTxBuilder(pubKey, network, server);
+      const decimals = await getTokenDecimals(
+        contractId,
+        server,
+        decimalsBuilder
+      );
+
+      const nameBuilder = await getTxBuilder(pubKey, network, server);
+      const name = await getTokenName(contractId, server, nameBuilder);
+
+      const symbolsBuilder = await getTxBuilder(pubKey, network, server);
+      const symbols = await getTokenSymbol(contractId, server, symbolsBuilder);
+
+      return {
+        name,
+        decimals,
+        symbols,
+      };
+    } catch (error) {
+      this.logger.error(error);
+      throw new Error(`Unable to fetch token details for ${contractId}`);
     }
   };
 

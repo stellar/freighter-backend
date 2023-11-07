@@ -186,19 +186,7 @@ const mockMercuryClient = new MercuryClient(
   testLogger
 );
 async function getDevServer() {
-  const config = {
-    hostname: "localhost",
-    mode: "development",
-    mercuryEmail: "info@mercury.io",
-    mercuryKey: "xxx",
-    mercuryPassword: "pass",
-    mercuryBackend: "backend",
-    mercuryGraphQL: "graph-ql",
-    mercuryUserId: "user-id",
-    redisConnectionName: "freighter",
-    redisPort: 6379,
-  };
-  const server = initApiServer(mockMercuryClient, config);
+  const server = initApiServer(mockMercuryClient, testLogger);
   await server.listen();
   return server;
 }
