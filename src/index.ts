@@ -60,9 +60,8 @@ async function main() {
   };
 
   let redis = undefined;
-
   // use in-memory store in dev
-  if (config.mode !== "development") {
+  if (conf.mode !== "development") {
     redis = new Redis({
       connectionName: conf.redisConnectionName,
       host: conf.hostname,

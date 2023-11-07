@@ -62,9 +62,9 @@ const queryMockResponse = {
     },
   },
   "query.getAccountBalances": {
-    edges: [
-      {
-        node: {
+    entryUpdateByContractIdAndKey: {
+      nodes: [
+        {
           contractId:
             "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
           keyXdr: tokenBalanceLedgerKey,
@@ -73,9 +73,7 @@ const queryMockResponse = {
           ledger: "1",
           entryDurability: "persistent",
         },
-      },
-      {
-        node: {
+        {
           contractId:
             "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
           keyXdr: tokenBalanceLedgerKey,
@@ -84,8 +82,8 @@ const queryMockResponse = {
           ledger: "1",
           entryDurability: "persistent",
         },
-      },
-    ],
+      ],
+    },
   },
   [query.getAccountHistory]: {
     eventByContractId: {
@@ -185,6 +183,18 @@ const mockMercuryClient = new MercuryClient(
   renewClient,
   testLogger
 );
+
+jest
+  .spyOn(mockMercuryClient, "tokenDetails")
+  .mockImplementation(
+    (..._args: Parameters<MercuryClient["tokenDetails"]>): any => {
+      return {
+        name: "Test Contract",
+        decimals: 7,
+        symbol: "TST",
+      };
+    }
+  );
 async function getDevServer() {
   const server = initApiServer(mockMercuryClient, testLogger);
   await server.listen();

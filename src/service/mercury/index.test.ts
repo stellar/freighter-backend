@@ -39,14 +39,13 @@ describe("Mercury Service", () => {
       "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
       "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
     ];
-    const { data } = await mockMercuryClient.getAccountBalances(
+    const data = await mockMercuryClient.getAccountBalances(
       pubKey,
-      contracts
+      contracts,
+      "TESTNET"
     );
     expect(
-      data?.data.edges.map(
-        (node: { node: Record<string, string> }) => node.node.contractId
-      )
+      data?.data?.map((node: { contractId: string }) => node.contractId)
     ).toEqual(contracts);
   });
 

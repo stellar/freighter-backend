@@ -9,6 +9,7 @@ import { ajv } from "./validators";
 import { isContractId, isPubKey } from "../helper/validate";
 
 const API_VERSION = "v1";
+const NETWORK = "TESTNET"; // hardcode testnet for now, not sure how Mercury will change the schema for multi-network support yet
 
 export function initApiServer(
   mercuryClient: MercuryClient,
@@ -93,7 +94,8 @@ export function initApiServer(
           const contractIds = request.query["contract_ids"].split(",");
           const { data, error } = await mercuryClient.getAccountBalances(
             pubKey,
-            contractIds
+            contractIds,
+            NETWORK
           );
           if (error) {
             reply.code(400).send(error);
@@ -206,7 +208,8 @@ export function initApiServer(
           const { pub_key, contract_id } = request.body;
           const { data, error } = await mercuryClient.tokenBalanceSubscription(
             contract_id,
-            pub_key
+            pub_key,
+            NETWORK
           );
           if (error) {
             reply.code(400).send(error);
