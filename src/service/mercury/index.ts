@@ -12,6 +12,7 @@ import {
   getTokenSymbol,
   getTxBuilder,
 } from "../../helper/soroban-rpc";
+import { transformAccountBalances } from "./helpers/transformers";
 
 type NetworkNames = keyof typeof Networks;
 
@@ -241,7 +242,11 @@ export class MercuryClient {
     }
   };
 
-  tokenBalanceSubscription = async (contractId: string, pubKey: string) => {
+  tokenBalanceSubscription = async (
+    contractId: string,
+    pubKey: string,
+    network: NetworkNames
+  ) => {
     try {
       const entrySub = {
         contract_id: contractId,
@@ -261,7 +266,9 @@ export class MercuryClient {
       };
       const data = await this.renewAndRetry(getData);
 
-      // await this.redisClient.set(contractId)
+      if (this.redisClient) {
+        await this.tokenDetails(pubKey, contractId, network);
+      }
 
       return {
         data,
@@ -281,8 +288,18 @@ export class MercuryClient {
     pubKey: string,
     contractId: string,
     network: NetworkNames
-  ) => {
+  ): Promise<
+    { name: string; symbol: string; decimals: number } | undefined
+  > => {
     try {
+      const compositeKey = `${network}__${contractId}`;
+      // get from cache if we have them, otherwise go to ledger and cache
+      if (this.redisClient) {
+        const tokenDetails = await this.redisClient.get(compositeKey);
+        if (tokenDetails) {
+          return JSON.parse(tokenDetails);
+        }
+      }
       const server = await getServer(network);
       // we need a builder per operation, 1 op per tx in Soroban
       const decimalsBuilder = await getTxBuilder(pubKey, network, server);
@@ -296,16 +313,25 @@ export class MercuryClient {
       const name = await getTokenName(contractId, server, nameBuilder);
 
       const symbolsBuilder = await getTxBuilder(pubKey, network, server);
-      const symbols = await getTokenSymbol(contractId, server, symbolsBuilder);
+      const symbol = await getTokenSymbol(contractId, server, symbolsBuilder);
+      const tokenDetails = {
+        name,
+        decimals,
+        symbol,
+      };
+
+      if (this.redisClient) {
+        await this.redisClient.set(compositeKey, JSON.stringify(tokenDetails));
+      }
 
       return {
         name,
         decimals,
-        symbols,
+        symbol,
       };
     } catch (error) {
       this.logger.error(error);
-      throw new Error(`Unable to fetch token details for ${contractId}`);
+      return;
     }
   };
 
@@ -338,22 +364,32 @@ export class MercuryClient {
     }
   };
 
-  getAccountBalances = async (pubKey: string, contractIds: string[]) => {
+  getAccountBalances = async (
+    pubKey: string,
+    contractIds: string[],
+    network: NetworkNames
+  ) => {
     // TODO: once classic subs include balance, add query
     try {
       const getData = async () => {
-        const data = await this.urqlClient.query(
+        const response = await this.urqlClient.query(
           query.getAccountBalances(this.tokenBalanceKey(pubKey), contractIds),
           {}
         );
-        const errorMessage = getGraphQlError(data.error);
+        const errorMessage = getGraphQlError(response.error);
         if (errorMessage) {
           throw new Error(errorMessage);
         }
 
-        return data;
+        return response;
       };
-      const data = await this.renewAndRetry(getData);
+      const response = await this.renewAndRetry(getData);
+      const tokenDetails = {} as { [index: string]: any };
+      for (const contractId of contractIds) {
+        const details = await this.tokenDetails(pubKey, contractId, network);
+        tokenDetails[contractId] = details;
+      }
+      const data = await transformAccountBalances(response, tokenDetails);
 
       return {
         data,
