@@ -2,7 +2,7 @@ import { getDevServer, queryMockResponse, pubKey } from "../helper/test-helper";
 import { query } from "../service/mercury/queries";
 
 describe("API routes", () => {
-  describe.skip("/account-history/:pubKey", () => {
+  describe("/account-history/:pubKey", () => {
     it("can fetch an account history for a pub key", async () => {
       const server = await getDevServer();
       const response = await fetch(
