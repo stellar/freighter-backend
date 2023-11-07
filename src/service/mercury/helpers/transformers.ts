@@ -12,6 +12,16 @@ interface MercuryAccountBalancesData {
   };
 }
 
+interface MercuryAllEntryUpdatesData {
+  allEntryUpdates: {
+    nodes: {
+      contractId: string;
+      nodeId: string;
+      id: string;
+    }[];
+  };
+}
+
 interface TokenDetails {
   [k: string]: {
     name: string;
@@ -33,4 +43,10 @@ const transformAccountBalances = async (
   });
 };
 
-export { transformAccountBalances };
+const transformEntryUpdates = async (
+  rawResponse: OperationResult<MercuryAllEntryUpdatesData>
+) => {
+  return rawResponse?.data?.allEntryUpdates.nodes.map((node) => node);
+};
+
+export { transformAccountBalances, transformEntryUpdates };
