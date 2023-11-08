@@ -473,15 +473,4 @@ export const query = {
 
     }
   `,
-  getAllEntryUpdates: `
-    query GetAllEntryUpdates {
-      allEntryUpdates {
-        nodes {
-          contractId
-          nodeId
-          id
-        }
-      }
-    }
-  `,
 };
