@@ -43,10 +43,4 @@ const transformAccountBalances = async (
   });
 };
 
-const transformEntryUpdates = async (
-  rawResponse: OperationResult<MercuryAllEntryUpdatesData>
-) => {
-  return rawResponse?.data?.allEntryUpdates.nodes.map((node) => node);
-};
-
-export { transformAccountBalances, transformEntryUpdates };
+export { transformAccountBalances };
