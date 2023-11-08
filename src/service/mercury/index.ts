@@ -287,55 +287,6 @@ export class MercuryClient {
     }
   };
 
-  deleteTokenSubscription = async (contractId: string) => {
-    // get all entry update subs, find ones that match contractId, delete by ID.
-    try {
-      const getData = async () => {
-        const response = await this.urqlClient.query(
-          query.getAllEntryUpdates,
-          {}
-        );
-        const errorMessage = getGraphQlError(response.error);
-        if (errorMessage) {
-          throw new Error(errorMessage);
-        }
-
-        return response;
-      };
-      const response = await this.renewAndRetry(getData);
-      const data = await transformEntryUpdates(response);
-      const match = data?.filter((d) => d.contractId === contractId);
-
-      let deleted = false;
-      if (match) {
-        const response = await this.urqlClient.mutation(
-          mutation.deleteEntryUpdateById,
-          { contractId }
-        );
-        const errorMessage = getGraphQlError(response.error);
-        if (errorMessage) {
-          throw new Error(errorMessage);
-        }
-        deleted = response.error !== undefined;
-      }
-
-      return {
-        data: {
-          contractId,
-          deleted,
-        },
-        error: null,
-      };
-    } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(error);
-      return {
-        data: null,
-        error: _error,
-      };
-    }
-  };
-
   tokenDetails = async (
     pubKey: string,
     contractId: string,
