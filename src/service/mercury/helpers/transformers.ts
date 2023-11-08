@@ -12,16 +12,6 @@ interface MercuryAccountBalancesData {
   };
 }
 
-interface MercuryAllEntryUpdatesData {
-  allEntryUpdates: {
-    nodes: {
-      contractId: string;
-      nodeId: string;
-      id: string;
-    }[];
-  };
-}
-
 interface TokenDetails {
   [k: string]: {
     name: string;
