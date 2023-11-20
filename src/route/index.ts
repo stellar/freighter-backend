@@ -91,7 +91,9 @@ export function initApiServer(
           reply
         ) => {
           const pubKey = request.params["pubKey"];
-          const contractIds = request.query["contract_ids"].split(",");
+          const contractIds = request.query["contract_ids"]
+            ? request.query["contract_ids"].split(",")
+            : [];
           const { data, error } = await mercuryClient.getAccountBalances(
             pubKey,
             contractIds,

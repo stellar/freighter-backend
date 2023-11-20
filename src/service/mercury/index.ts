@@ -337,9 +337,11 @@ export class MercuryClient {
 
   getAccountHistory = async (pubKey: string) => {
     try {
+      const xdrPubKey = new Address(pubKey).toScVal().toXDR("base64");
       const getData = async () => {
         const data = await this.urqlClient.query(query.getAccountHistory, {
           pubKey,
+          xdrPubKey,
         });
         const errorMessage = getGraphQlError(data.error);
         if (errorMessage) {
@@ -369,6 +371,12 @@ export class MercuryClient {
     contractIds: string[],
     network: NetworkNames
   ) => {
+    if (contractIds.length < 1) {
+      return {
+        data: [],
+        error: null,
+      };
+    }
     // TODO: once classic subs include balance, add query
     try {
       const getData = async () => {

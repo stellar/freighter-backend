@@ -51,7 +51,7 @@ export const query = {
     }
   `,
   getAccountHistory: `
-    query GetAccountHistory($pubKey: String!) {
+    query GetAccountHistory($pubKey: String!, $xdrPubKey: String!) {
       mintEvent: eventByTopic(t1: "AAAADgAAAARtaW50") {
         edges {
           node {
@@ -66,7 +66,7 @@ export const query = {
           }
         }
       }
-      transferToEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t2: $pubKey) {
+      transferToEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t2: $xdrPubKey) {
         edges {
           node {
             contractId
@@ -80,7 +80,7 @@ export const query = {
           }
         }
       }
-      transferFromEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t3: $pubKey) {
+      transferFromEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t3: $xdrPubKey) {
         edges {
           node {
             contractId
@@ -464,9 +464,69 @@ export const query = {
           limit
           lineNative
           poolshareByLinePoolShare {
-            assetA
-            assetB
+            assetByA {
+              code
+            }
+            assetByB {
+              code
+            }
             fee
+          }
+        }
+      }
+
+      changeTrustByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            limit
+            lineAsset
+            lineNative
+            linePoolShare
+            source
+            sourceMuxed
+          }
+        }
+      }
+
+      accountMergeByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            destination
+            destinationMuxed
+            source
+            sourceMuxed
+          }
+        }
+      }
+
+      bumpSequenceByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            source
+            sourceMuxed
+            bumpTo
+          }
+        }
+      }
+
+      claimClaimableBalanceByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            source
+            sourceMuxed
+            balanceId
+          }
+        }
+      }
+
+      createClaimableBalanceByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            amount
+            asset
+            assetNative
+            source
+            sourceMuxed
           }
         }
       }
