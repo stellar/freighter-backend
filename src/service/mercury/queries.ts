@@ -80,7 +80,7 @@ export const query = {
           }
         }
       }
-      transferFromEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t3: $xdrPubKey) {
+      transferFromEvent: eventByTopic(t1: "AAAADwAAAAh0cmFuc2Zlcg==", t3: $xdrPubKey) {
         edges {
           node {
             contractId
