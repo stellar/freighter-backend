@@ -491,19 +491,6 @@ export const query = {
         }
       }
 
-      changeTrustByPublicKey(publicKeyText: $pubKey) {
-        edges {
-          node {
-            limit
-            lineAsset
-            lineNative
-            linePoolShare
-            source
-            sourceMuxed
-          }
-        }
-      }
-
       accountMergeByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
