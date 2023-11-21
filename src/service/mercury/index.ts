@@ -12,7 +12,10 @@ import {
   getTokenSymbol,
   getTxBuilder,
 } from "../../helper/soroban-rpc";
-import { transformAccountBalances } from "./helpers/transformers";
+import {
+  transformAccountBalances,
+  transformAccountHistory,
+} from "./helpers/transformers";
 
 type NetworkNames = keyof typeof Networks;
 
@@ -353,7 +356,7 @@ export class MercuryClient {
       const data = await this.renewAndRetry(getData);
 
       return {
-        data,
+        data: transformAccountHistory(data),
         error: null,
       };
     } catch (error) {
@@ -381,7 +384,11 @@ export class MercuryClient {
     try {
       const getData = async () => {
         const response = await this.urqlClient.query(
-          query.getAccountBalances(this.tokenBalanceKey(pubKey), contractIds),
+          query.getAccountBalances(
+            pubKey,
+            this.tokenBalanceKey(pubKey),
+            contractIds
+          ),
           {}
         );
         const errorMessage = getGraphQlError(response.error);

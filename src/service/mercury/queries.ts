@@ -31,7 +31,11 @@ export const query = {
       }
     }
   `,
-  getAccountBalances: (ledgerKey: string, contractIds: string[]) => `
+  getAccountBalances: (
+    publicKey: string,
+    ledgerKey: string,
+    contractIds: string[]
+  ) => `
     query AccountBalances {
       ${contractIds.map(
         (id) =>
@@ -48,6 +52,18 @@ export const query = {
         }
         `
       )}
+
+      balanceByPublicKey(publicKeyText: "${publicKey}") {
+        edges {
+          node {
+            account
+            asset
+            balance
+            limit
+            lpShare
+          }
+        }
+      }
     }
   `,
   getAccountHistory: `
@@ -530,6 +546,8 @@ export const query = {
           }
         }
       }
+
+
 
     }
   `,
