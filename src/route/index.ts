@@ -57,7 +57,10 @@ export function initApiServer(
           reply
         ) => {
           const pubKey = request.params["pubKey"];
-          const { data, error } = await mercuryClient.getAccountHistory(pubKey);
+          const { data, error } = await mercuryClient.getAccountHistory(
+            pubKey,
+            NETWORK
+          );
           if (error) {
             reply.code(400).send(error);
           } else {

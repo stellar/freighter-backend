@@ -338,7 +338,7 @@ export class MercuryClient {
     }
   };
 
-  getAccountHistory = async (pubKey: string) => {
+  getAccountHistory = async (pubKey: string, network: NetworkNames) => {
     try {
       const xdrPubKey = new Address(pubKey).toScVal().toXDR("base64");
       const getData = async () => {
@@ -354,9 +354,13 @@ export class MercuryClient {
         return data;
       };
       const data = await this.renewAndRetry(getData);
-
       return {
-        data: transformAccountHistory(data),
+        data: await transformAccountHistory(
+          data,
+          pubKey,
+          network,
+          this.tokenDetails
+        ),
         error: null,
       };
     } catch (error) {
