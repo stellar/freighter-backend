@@ -16,6 +16,7 @@ import {
   getTxBuilder,
 } from "../../helper/soroban-rpc";
 import { transformAccountBalances } from "./helpers/transformers";
+import BigNumber from "bignumber.js";
 
 type NetworkNames = keyof typeof Networks;
 
@@ -36,6 +37,10 @@ function getGraphQlError(error?: CombinedError) {
   const [err] = error.graphQLErrors;
   return err.message;
 }
+
+const hasIndexerSupport = (network: NetworkNames) => {
+  return network === "TESTNET";
+};
 
 export interface NewEventSubscriptionPayload {
   contract_id?: string;
@@ -388,9 +393,24 @@ export class MercuryClient {
       const balance = await getTokenBalance(id, params, server, builder);
       const tokenDetails = await this.tokenDetails(pubKey, id, network);
       balances.push({
+        id,
         balance,
         ...tokenDetails,
       });
+    }
+    const balanceMap = {} as Record<string, any>;
+    for (const balance of balances) {
+      balanceMap[`${balance.symbol}:${balance.id}`] = {
+        token: {
+          code: balance.symbol,
+          issuer: {
+            key: balance.id,
+          },
+        },
+        decimals: balance.decimals,
+        total: new BigNumber(balance.balance),
+        available: new BigNumber(balance.balance),
+      };
     }
     return balances;
   };
@@ -449,7 +469,7 @@ export class MercuryClient {
     };
   };
 
-  getAccountBalances = async (
+  getAccountBalancesMercury = async (
     pubKey: string,
     contractIds: string[],
     network: NetworkNames
@@ -486,6 +506,47 @@ export class MercuryClient {
       return {
         data: null,
         error: _error,
+      };
+    }
+  };
+
+  getAccountBalances = async (
+    pubKey: string,
+    contractIds: string[],
+    network: NetworkNames
+  ) => {
+    if (hasIndexerSupport(network)) {
+      const data = await this.getAccountBalancesMercury(
+        pubKey,
+        contractIds,
+        network
+      );
+      return {
+        data,
+        error: null,
+      };
+    } else {
+      const classicBalances = await this.getAccountBalancesHorizon(
+        pubKey,
+        network
+      );
+      const tokenBalances = await this.getTokenBalancesSorobanRPC(
+        pubKey,
+        contractIds,
+        network
+      );
+
+      const data = {
+        balances: {
+          ...classicBalances.balances,
+          ...tokenBalances,
+        },
+        isFunded: classicBalances.isFunded,
+        subentryCount: classicBalances.subentryCount,
+      };
+      return {
+        data,
+        error: null,
       };
     }
   };
