@@ -3,10 +3,13 @@ import axios from "axios";
 import { Logger } from "pino";
 import { Address, Networks, nativeToScVal, xdr } from "soroban-client";
 import { Redis } from "ioredis";
+import { DataProvider } from "@stellar/wallet-sdk";
+import { Server } from "stellar-sdk";
 
 import { mutation, query } from "./queries";
 import {
   getServer,
+  getTokenBalance,
   getTokenDecimals,
   getTokenName,
   getTokenSymbol,
@@ -15,6 +18,14 @@ import {
 import { transformAccountBalances } from "./helpers/transformers";
 
 type NetworkNames = keyof typeof Networks;
+
+enum NETWORK_URLS {
+  PUBLIC = "https://horizon.stellar.org",
+  TESTNET = "https://horizon-testnet.stellar.org",
+  FUTURENET = "https://horizon-futurenet.stellar.org",
+  SANDBOX = "",
+  STANDALONE = "",
+}
 
 const ERROR_MESSAGES = {
   JWT_EXPIRED: "jwt expired",
@@ -362,6 +373,80 @@ export class MercuryClient {
         error: _error,
       };
     }
+  };
+
+  getTokenBalancesSorobanRPC = async (
+    pubKey: string,
+    contractIds: string[],
+    network: NetworkNames
+  ) => {
+    const server = await getServer(network);
+    const balances = [];
+    for (const id of contractIds) {
+      const builder = await getTxBuilder(pubKey, network, server);
+      const params = [new Address(pubKey).toScVal()];
+      const balance = await getTokenBalance(id, params, server, builder);
+      const tokenDetails = await this.tokenDetails(pubKey, id, network);
+      balances.push({
+        balance,
+        ...tokenDetails,
+      });
+    }
+    return balances;
+  };
+
+  getAccountBalancesHorizon = async (pubKey: string, network: NetworkNames) => {
+    const networkPassphrase = Networks[network];
+    const networkUrl = NETWORK_URLS[network];
+
+    let balances: any = null;
+    let isFunded = null;
+    let subentryCount = 0;
+
+    try {
+      const server = new Server(networkUrl, {
+        allowHttp: !networkUrl.includes("https"),
+      });
+      const dataProvider = new DataProvider({
+        serverUrl: networkUrl,
+        accountOrKey: pubKey,
+        networkPassphrase,
+        metadata: {
+          allowHttp: networkUrl.startsWith("http://"),
+        },
+      });
+      const resp = await dataProvider.fetchAccountDetails();
+
+      for (let i = 0; i < Object.keys(resp.balances).length; i++) {
+        const k = Object.keys(resp.balances)[i];
+        const v: any = resp.balances[k];
+        if (v.liquidity_pool_id) {
+          const lp = await server
+            .liquidityPools()
+            .liquidityPoolId(v.liquidity_pool_id)
+            .call();
+          balances[k] = {
+            ...balances[k],
+            liquidityPoolId: v.liquidity_pool_id,
+            reserves: lp.reserves,
+          };
+          delete balances[k].liquidity_pool_id;
+        }
+      }
+      isFunded = true;
+    } catch (error) {
+      console.error(error);
+      return {
+        balances,
+        isFunded: false,
+        subentryCount,
+      };
+    }
+    return {
+      balances,
+      isFunded,
+      subentryCount,
+    };
   };
 
   getAccountBalances = async (
