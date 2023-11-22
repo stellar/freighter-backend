@@ -10,6 +10,7 @@ import {
   MemoType,
   Operation,
   scValToNative,
+  xdr,
 } from "soroban-client";
 
 type NetworkNames = keyof typeof Networks;
@@ -101,8 +102,26 @@ const getTokenSymbol = async (
   return result;
 };
 
+const getTokenBalance = async (
+  contractId: string,
+  params: xdr.ScVal[],
+  server: Server,
+  builder: TransactionBuilder
+) => {
+  const contract = new Contract(contractId);
+
+  const tx = builder
+    .addOperation(contract.call("balance", ...params))
+    .setTimeout(TimeoutInfinite)
+    .build();
+
+  const result = await simulateTx<number>(tx, server);
+  return result;
+};
+
 export {
   getServer,
+  getTokenBalance,
   getTokenDecimals,
   getTokenName,
   getTokenSymbol,
