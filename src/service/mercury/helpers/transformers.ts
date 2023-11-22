@@ -460,6 +460,102 @@ interface MercuryAccountHistory {
       };
     }[];
   };
+  allowTrustByPublicKey: {
+    edges: {
+      node: {
+        authorize: boolean;
+        code: string;
+        source: string;
+        sourceMuxed: string;
+        trustor: string;
+      };
+    }[];
+  };
+  manageDataByPublicKey: {
+    edges: {
+      node: {
+        dataName: string;
+        dataValue: string;
+        source: string;
+        sourceMuxed: string;
+      };
+    }[];
+  };
+  beginSponsoringFutureReservesByPublicKey: {
+    edges: {
+      node: {
+        source: string;
+        sourceMuxed: string;
+      };
+    }[];
+  };
+  endSponsoringFutureReservesByPublicKey: {
+    edges: {
+      node: {
+        source: string;
+        sourceMuxed: string;
+      };
+    }[];
+  };
+  revokeSponsorshipByPublicKey: {
+    edges: {
+      node: {
+        source: string;
+        sourceMuxed: string;
+        sponsorship: string;
+      };
+    }[];
+  };
+  clawbackByPublicKey: {
+    edges: {
+      node: {
+        amount: string;
+        asset: string;
+        assetNative: boolean;
+        from: string;
+        fromMuxed: string;
+        source: string;
+        sourceMuxed: string;
+      };
+    }[];
+  };
+  setTrustLineFlagsByPublicKey: {
+    edges: {
+      node: {
+        asset: string;
+        assetNative: boolean;
+        clearFlags: boolean;
+        setFlags: boolean;
+        source: string;
+        sourceMuxed: string;
+        trustor: string;
+      };
+    }[];
+  };
+  liquidityPoolDepositByPublicKey: {
+    edges: {
+      node: {
+        maxAmountA: string;
+        maxAmountB: string;
+        maxPriceD: string;
+        maxPriceN: string;
+        minPriceD: string;
+        source: string;
+        sourceMuxed: string;
+      };
+    }[];
+  };
+  liquidityPoolWithdrawByPublicKey: {
+    edges: {
+      node: {
+        amount: string;
+        minAmountA: string;
+        minAmountB: string;
+        source: string;
+        sourceMuxed: string;
+      };
+    }[];
+  };
 }
 
 const transformAccountHistory = async (
@@ -503,6 +599,24 @@ const transformAccountHistory = async (
     rawResponse.data?.claimClaimableBalanceByPublicKey.edges || [];
   const createClaimableBalanceByPublicKeyEdges =
     rawResponse.data?.createClaimableBalanceByPublicKey.edges || [];
+  const allowTrustByPublicKeyEdges =
+    rawResponse.data?.allowTrustByPublicKey.edges || [];
+  const manageDataByPublicKeyEdges =
+    rawResponse.data?.manageDataByPublicKey.edges || [];
+  const beginSponsoringFutureReservesByPublicKeyEdges =
+    rawResponse.data?.beginSponsoringFutureReservesByPublicKey.edges || [];
+  const endSponsoringFutureReservesByPublicKeyEdges =
+    rawResponse.data?.endSponsoringFutureReservesByPublicKey.edges || [];
+  const revokeSponsorshipByPublicKeyEdges =
+    rawResponse.data?.revokeSponsorshipByPublicKey.edges || [];
+  const clawbackByPublicKeyEdges =
+    rawResponse.data?.clawbackByPublicKey.edges || [];
+  const setTrustLineFlagsByPublicKeyEdges =
+    rawResponse.data?.setTrustLineFlagsByPublicKey.edges || [];
+  const liquidityPoolDepositByPublicKeyEdges =
+    rawResponse.data?.liquidityPoolDepositByPublicKey.edges || [];
+  const liquidityPoolWithdrawByPublicKeyEdges =
+    rawResponse.data?.liquidityPoolWithdrawByPublicKey.edges || [];
 
   const transferFrom = await Promise.all(
     transferFromEdges.map(async (edge) => {
@@ -653,26 +767,79 @@ const transformAccountHistory = async (
       ...edge,
     }));
 
+  const allowTrustByPublicKey = allowTrustByPublicKeyEdges.map((edge) => ({
+    ...edge,
+  }));
+
+  const manageDataByPublicKey = manageDataByPublicKeyEdges.map((edge) => ({
+    ...edge,
+  }));
+
+  const beginSponsoringFutureReservesByPublicKey =
+    beginSponsoringFutureReservesByPublicKeyEdges.map((edge) => ({
+      ...edge,
+    }));
+
+  const endSponsoringFutureReservesByPublicKey =
+    endSponsoringFutureReservesByPublicKeyEdges.map((edge) => ({
+      ...edge,
+    }));
+
+  const revokeSponsorshipByPublicKey = revokeSponsorshipByPublicKeyEdges.map(
+    (edge) => ({
+      ...edge,
+    })
+  );
+
+  const clawbackByPublicKey = clawbackByPublicKeyEdges.map((edge) => ({
+    ...edge,
+  }));
+
+  const setTrustLineFlagsByPublicKey = setTrustLineFlagsByPublicKeyEdges.map(
+    (edge) => ({
+      ...edge,
+    })
+  );
+
+  const liquidityPoolDepositByPublicKey =
+    liquidityPoolDepositByPublicKeyEdges.map((edge) => ({
+      ...edge,
+    }));
+
+  const liquidityPoolWithdrawByPublicKey =
+    liquidityPoolWithdrawByPublicKeyEdges.map((edge) => ({
+      ...edge,
+    }));
+
   return [
-    ...transferFrom,
-    ...mint,
-    ...transferTo,
+    ...accountMergeByPublicKey,
+    ...allowTrustByPublicKey,
+    ...beginSponsoringFutureReservesByPublicKey,
+    ...bumpSequenceByPublicKey,
+    ...changeTrustByPublicKey,
+    ...claimClaimableBalanceByPublicKey,
+    ...clawbackByPublicKey,
     ...createAccount,
     ...createAccountTo,
-    ...paymentsByPublicKey,
-    ...paymentsToPublicKey,
-    ...pathPaymentsStrictSendByPublicKey,
-    ...pathPaymentsStrictSendToPublicKey,
+    ...createClaimableBalanceByPublicKey,
+    ...createPassiveSellOfferByPublicKey,
+    ...endSponsoringFutureReservesByPublicKey,
+    ...liquidityPoolDepositByPublicKey,
+    ...liquidityPoolWithdrawByPublicKey,
+    ...manageBuyOfferByPublicKey,
+    ...manageDataByPublicKey,
+    ...manageSellOfferByPublicKey,
+    ...mint,
     ...pathPaymentsStrictReceiveByPublicKey,
     ...pathPaymentsStrictReceiveToPublicKey,
-    ...manageBuyOfferByPublicKey,
-    ...manageSellOfferByPublicKey,
-    ...createPassiveSellOfferByPublicKey,
-    ...changeTrustByPublicKey,
-    ...accountMergeByPublicKey,
-    ...bumpSequenceByPublicKey,
-    ...claimClaimableBalanceByPublicKey,
-    ...createClaimableBalanceByPublicKey,
+    ...pathPaymentsStrictSendByPublicKey,
+    ...pathPaymentsStrictSendToPublicKey,
+    ...paymentsByPublicKey,
+    ...paymentsToPublicKey,
+    ...revokeSponsorshipByPublicKey,
+    ...setTrustLineFlagsByPublicKey,
+    ...transferFrom,
+    ...transferTo,
   ];
 };
 

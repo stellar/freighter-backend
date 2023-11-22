@@ -534,7 +534,110 @@ export const query = {
         }
       }
 
+      allowTrustByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            authorize
+            code
+            source
+            sourceMuxed
+            trustor
+          }
+        }
+      }
 
+      manageDataByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            dataName
+            dataValue
+            source
+            sourceMuxed
+          }
+        }
+      }
+
+      beginSponsoringFutureReservesByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            source
+            sourceMuxed
+          }
+        }
+      }
+
+      endSponsoringFutureReservesByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            source
+            sourceMuxed
+          }
+        }
+      }
+
+      revokeSponsorshipByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            source
+            sourceMuxed
+            sponsorship
+          }
+        }
+      }
+
+      clawbackByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            amount
+            asset
+            assetNative
+            from
+            fromMuxed
+            source
+            sourceMuxed
+          }
+        }
+      }
+
+      setTrustLineFlagsByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            asset
+            assetNative
+            clearFlags
+            setFlags
+            source
+            sourceMuxed
+            trustor
+          }
+        }
+      }
+
+      liquidityPoolDepositByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            maxAmountA
+            maxAmountB
+            maxPriceD
+            maxPriceN
+            minPriceD
+            source
+            sourceMuxed
+          }
+        }
+      }
+
+      liquidityPoolWithdrawByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            amount
+            minAmountA
+            minAmountB
+            source
+            sourceMuxed
+          }
+        }
+      }
 
     }
   `,
