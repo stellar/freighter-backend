@@ -3,7 +3,6 @@ import axios from "axios";
 import { Logger } from "pino";
 import { Address, Networks, nativeToScVal, xdr } from "soroban-client";
 import { Redis } from "ioredis";
-import { DataProvider } from "@stellar/wallet-sdk";
 import { Server } from "stellar-sdk";
 
 import { mutation, query } from "./queries";
@@ -17,6 +16,7 @@ import {
 } from "../../helper/soroban-rpc";
 import { transformAccountBalances } from "./helpers/transformers";
 import BigNumber from "bignumber.js";
+import { fetchAccountDetails } from "../../helper/horizon-rpc";
 
 type NetworkNames = keyof typeof Networks;
 
@@ -416,7 +416,6 @@ export class MercuryClient {
   };
 
   getAccountBalancesHorizon = async (pubKey: string, network: NetworkNames) => {
-    const networkPassphrase = Networks[network];
     const networkUrl = NETWORK_URLS[network];
 
     let balances: any = null;
@@ -427,15 +426,7 @@ export class MercuryClient {
       const server = new Server(networkUrl, {
         allowHttp: !networkUrl.includes("https"),
       });
-      const dataProvider = new DataProvider({
-        serverUrl: networkUrl,
-        accountOrKey: pubKey,
-        networkPassphrase,
-        metadata: {
-          allowHttp: networkUrl.startsWith("http://"),
-        },
-      });
-      const resp = await dataProvider.fetchAccountDetails();
+      const resp = await fetchAccountDetails(pubKey, server);
 
       for (let i = 0; i < Object.keys(resp.balances).length; i++) {
         const k = Object.keys(resp.balances)[i];

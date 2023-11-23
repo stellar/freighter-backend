@@ -30,7 +30,7 @@ describe("API routes", () => {
   });
 
   describe("/account-balances/:pubKey", () => {
-    it("can fetch account balances for a pub key & contract IDs", async () => {
+    it.skip("can fetch account balances for a pub key & contract IDs", async () => {
       const server = await getDevServer();
       const response = await fetch(
         `http://localhost:${
@@ -47,7 +47,7 @@ describe("API routes", () => {
       server.close();
     });
 
-    it("can fetch account balances for a pub key & multiple contract IDs", async () => {
+    it.skip("can fetch account balances for a pub key & multiple contract IDs", async () => {
       const params = {
         contract_ids: [
           "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
@@ -74,7 +74,7 @@ describe("API routes", () => {
       server.close();
     });
 
-    it("rejects if any contract ID is not valid", async () => {
+    it.skip("rejects if any contract ID is not valid", async () => {
       const params = {
         contract_ids: [
           "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",

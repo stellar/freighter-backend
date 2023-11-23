@@ -1,7 +1,7 @@
 import { OperationResult } from "@urql/core";
 import { scValToNative, xdr } from "soroban-client";
 import BigNumber from "bignumber.js";
-import { NativeBalance } from "@stellar/wallet-sdk/dist/types";
+import { NativeBalance } from "../../../helper/horizon-rpc";
 
 // Transformers take an API response, and transform it/augment it for frontend consumption
 
