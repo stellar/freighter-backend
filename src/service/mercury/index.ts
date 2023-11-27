@@ -527,6 +527,39 @@ export class MercuryClient {
         network
       );
 
+      // const mockResponse = {
+      //   balances: {
+      //     native: {
+      //       token: { type: "native", code: "XLM" },
+      //       total: new BigNumber(4),
+      //       available: new BigNumber(1),
+      //     },
+      //     ["DT:CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP"]: {
+      //       token: {
+      //         code: "DT",
+      //         issuer: {
+      //           key: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+      //         },
+      //       },
+      //       decimals: 7,
+      //       total: new BigNumber("10"),
+      //       available: new BigNumber("10"),
+      //     },
+      //     ["USDC:GCK3D3V2XNLLKRFGFFFDEJXA4O2J4X36HET2FE446AV3M4U7DPHO3PEM"]: {
+      //       token: {
+      //         code: "USDC",
+      //         issuer: {
+      //           key: "GCK3D3V2XNLLKRFGFFFDEJXA4O2J4X36HET2FE446AV3M4U7DPHO3PEM",
+      //         },
+      //       },
+      //       total: new BigNumber("100"),
+      //       available: new BigNumber("100"),
+      //     },
+      //   },
+      //   isFunded: true,
+      //   subentryCount: 1
+      // }
+
       return {
         data,
         error: null,
