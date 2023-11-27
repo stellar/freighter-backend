@@ -53,14 +53,6 @@ const queryMockResponse = {
       jwtToken: "mercury-token",
     },
   },
-  [mutation.newAccountSubscription]: {
-    createFullAccountSubscription: {
-      fullAccountSubscription: {
-        publickey: pubKey,
-        id: 28,
-      },
-    },
-  },
   "query.getAccountBalances": {
     entryUpdateByContractIdAndKey: {
       nodes: [
@@ -165,12 +157,6 @@ jest.spyOn(client, "query").mockImplementation((_query: any): any => {
 
 jest.spyOn(client, "mutation").mockImplementation((_mutation: any): any => {
   switch (_mutation) {
-    case mutation.newAccountSubscription: {
-      return Promise.resolve({
-        data: queryMockResponse[mutation.newAccountSubscription],
-        error: null,
-      });
-    }
     default:
       throw new Error("unknown mutation in mock");
   }
