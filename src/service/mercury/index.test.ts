@@ -27,7 +27,7 @@ describe("Mercury Service", () => {
     expect([balance, address]).toEqual(["Balance", pubKey]);
   });
 
-  it.skip("can fetch account balances by pub key", async () => {
+  it("can fetch account balances by pub key", async () => {
     const contracts = [
       "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
       "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
@@ -37,7 +37,7 @@ describe("Mercury Service", () => {
       contracts,
       "TESTNET"
     );
-    console.log(data);
+    expect(data).toBeDefined();
   });
 
   it("can renew a token", async () => {
