@@ -6,18 +6,6 @@ export const mutation = {
       }
     }
   `,
-  newAccountSubscription: `
-    mutation NewAccountSubscription($pubKey: String!, $userId: String!) {
-      createFullAccountSubscription(
-        input: {fullAccountSubscription: pubKey: $pubKey, userId: $userId}}
-      ) {
-        fullAccountSubscription {
-          publickey
-          id
-        }
-      }
-    }
-  `,
 };
 export const query = {
   allSubscriptions: `

@@ -15,13 +15,6 @@ describe("Mercury Service", () => {
     expect(paymentsToPublicKey.amount).toBe("50000000");
   });
 
-  it("can add new full account subscription", async () => {
-    const { data } = await mockMercuryClient.accountSubscription(pubKey);
-    expect(pubKey).toEqual(
-      data?.data.createFullAccountSubscription.fullAccountSubscription.publickey
-    );
-  });
-
   it("can build a balance ledger key for a pub key", async () => {
     const ledgerKey = mockMercuryClient.tokenBalanceKey(pubKey);
     const scVal = xdr.ScVal.fromXDR(

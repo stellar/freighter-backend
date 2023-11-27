@@ -69,6 +69,7 @@ export class MercuryClient {
   mercurySession: MercurySession;
   eventsURL: string;
   entryURL: string;
+  accountSubUrl: string;
   redisClient?: Redis;
   logger: Logger;
 
@@ -84,6 +85,7 @@ export class MercuryClient {
     this.mercurySession = mercurySession;
     this.eventsURL = `${mercurySession.backend}/event`;
     this.entryURL = `${mercurySession.backend}/entry`;
+    this.accountSubUrl = `${mercurySession.backend}/account`;
     this.urqlClient = urqlClient;
     this.renewClient = renewClient;
     this.logger = logger;
@@ -181,13 +183,13 @@ export class MercuryClient {
     };
 
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${this.mercurySession.token}`,
-        },
-      };
-
       const subscribe = async () => {
+        const config = {
+          headers: {
+            Authorization: `Bearer ${this.mercurySession.token}`,
+          },
+        };
+
         const { data: transferFromRes } = await axios.post(
           this.eventsURL,
           transferToSub,
@@ -235,9 +237,15 @@ export class MercuryClient {
   accountSubscription = async (pubKey: string) => {
     try {
       const subscribe = async () => {
-        const data = await this.urqlClient.mutation(
-          mutation.newAccountSubscription,
-          { pubKey, userId: this.mercurySession.userId }
+        const config = {
+          headers: {
+            Authorization: `Bearer ${this.mercurySession.token}`,
+          },
+        };
+        const { data } = await axios.post(
+          this.accountSubUrl,
+          { publickey: pubKey, hydrate: true },
+          config
         );
         return data;
       };
@@ -465,6 +473,12 @@ export class MercuryClient {
     contractIds: string[],
     network: NetworkNames
   ) => {
+    if (contractIds.length < 1) {
+      return {
+        data: [],
+        error: null,
+      };
+    }
     // TODO: once classic subs include balance, add query
     try {
       const getData = async () => {
@@ -512,6 +526,7 @@ export class MercuryClient {
         contractIds,
         network
       );
+
       return {
         data,
         error: null,
