@@ -1,5 +1,6 @@
 import { Client, fetchExchange } from "@urql/core";
 import pino from "pino";
+import { nativeToScVal } from "soroban-client";
 
 import { mutation, query } from "../service/mercury/queries";
 import { MercuryClient } from "../service/mercury";
@@ -43,6 +44,7 @@ const mercurySession = {
   userId: "1",
 };
 
+const valueXdr = nativeToScVal(1).toXDR();
 const pubKey = "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
 const tokenBalanceLedgerKey =
   "AAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys";
@@ -60,7 +62,7 @@ const queryMockResponse = {
           contractId:
             "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
           keyXdr: tokenBalanceLedgerKey,
-          valueXdr: "value-xdr",
+          valueXdr,
           ledgerTimestamp: "timestamp",
           ledger: "1",
           entryDurability: "persistent",
@@ -69,7 +71,7 @@ const queryMockResponse = {
           contractId:
             "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
           keyXdr: tokenBalanceLedgerKey,
-          valueXdr: "value-xdr",
+          valueXdr,
           ledgerTimestamp: "timestamp",
           ledger: "1",
           entryDurability: "persistent",

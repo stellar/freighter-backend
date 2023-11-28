@@ -79,7 +79,7 @@ export function initApiServer(
           querystring: {
             ["contract_ids"]: {
               type: "string",
-              validator: (qStr: string) => qStr.split(",").some(isContractId),
+              validator: (qStr: string) => qStr.split(",").every(isContractId),
             },
           },
         },

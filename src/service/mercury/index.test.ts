@@ -6,6 +6,7 @@ import {
   queryMockResponse,
   pubKey,
 } from "../../helper/test-helper";
+import { transformAccountBalances } from "./helpers/transformers";
 
 describe("Mercury Service", () => {
   it("can fetch account history with a payment-to in history", async () => {
@@ -32,12 +33,32 @@ describe("Mercury Service", () => {
       "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
       "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
     ];
-    const data = await mockMercuryClient.getAccountBalances(
+    const { data } = await mockMercuryClient.getAccountBalances(
       pubKey,
       contracts,
       "TESTNET"
     );
-    expect(data).toBeDefined();
+    const tokenDetails = {
+      CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP: {
+        name: "Test Token",
+        symbol: "TST",
+        decimals: 7,
+      },
+      CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG: {
+        name: "Test Token 2",
+        symbol: "TST",
+        decimals: 7,
+      },
+    };
+    const transformedData = await transformAccountBalances(
+      { data: queryMockResponse["query.getAccountBalances"] } as any,
+      tokenDetails as any
+    );
+    const expected = {
+      data: transformedData,
+      error: null,
+    };
+    expect(data).toEqual(expected);
   });
 
   it("can renew a token", async () => {
