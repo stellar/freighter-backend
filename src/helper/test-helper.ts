@@ -78,6 +78,20 @@ const queryMockResponse = {
         },
       ],
     },
+    balanceByPublicKey: {
+      nodes: [],
+    },
+    accountObjectByPublicKey: {
+      nodes: [
+        {
+          accountByAccount: {
+            publickey: pubKey,
+          },
+          nativeBalance: "10",
+          numSubEntries: "1",
+        },
+      ],
+    },
   },
   [query.getAccountHistory]: {
     eventByContractId: {
@@ -135,7 +149,7 @@ jest.spyOn(client, "query").mockImplementation((_query: any): any => {
         error: null,
       });
     }
-    case query.getAccountBalances(tokenBalanceLedgerKey, [
+    case query.getAccountBalances(pubKey, tokenBalanceLedgerKey, [
       "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
     ]): {
       return Promise.resolve({
@@ -143,7 +157,7 @@ jest.spyOn(client, "query").mockImplementation((_query: any): any => {
         error: null,
       });
     }
-    case query.getAccountBalances(tokenBalanceLedgerKey, [
+    case query.getAccountBalances(pubKey, tokenBalanceLedgerKey, [
       "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
       "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
     ]): {
