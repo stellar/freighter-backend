@@ -1,4 +1,4 @@
-import { scValToNative, xdr } from "soroban-client";
+import { scValToNative, xdr } from "stellar-sdk";
 
 import { mutation } from "./queries";
 import {
