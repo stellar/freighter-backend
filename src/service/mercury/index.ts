@@ -1,9 +1,8 @@
 import { Client, CombinedError, fetchExchange } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { Address, Networks, nativeToScVal, xdr } from "soroban-client";
+import { Address, Horizon, Networks, nativeToScVal, xdr } from "stellar-sdk";
 import { Redis } from "ioredis";
-import { Server } from "stellar-sdk";
 
 import { mutation, query } from "./queries";
 import {
@@ -431,7 +430,7 @@ export class MercuryClient {
     let subentryCount = 0;
 
     try {
-      const server = new Server(networkUrl, {
+      const server = new Horizon.Server(networkUrl, {
         allowHttp: !networkUrl.includes("https"),
       });
       const resp = await fetchAccountDetails(pubKey, server);

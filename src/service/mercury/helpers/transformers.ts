@@ -1,5 +1,5 @@
 import { OperationResult } from "@urql/core";
-import { scValToNative, xdr } from "soroban-client";
+import { scValToNative, xdr } from "stellar-sdk";
 import BigNumber from "bignumber.js";
 import {
   BASE_RESERVE,

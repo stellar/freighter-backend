@@ -1,6 +1,6 @@
 import { Client, fetchExchange } from "@urql/core";
 import pino from "pino";
-import { nativeToScVal } from "soroban-client";
+import { nativeToScVal } from "stellar-sdk";
 
 import { mutation, query } from "../service/mercury/queries";
 import { MercuryClient } from "../service/mercury";
