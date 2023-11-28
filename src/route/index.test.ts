@@ -60,7 +60,7 @@ describe("API routes", () => {
       server.close();
     });
 
-    it.skip("rejects if any contract ID is not valid", async () => {
+    it("rejects if any contract ID is not valid", async () => {
       const params = {
         contract_ids: [
           "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
