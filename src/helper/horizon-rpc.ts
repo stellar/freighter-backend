@@ -1,5 +1,5 @@
 import BigNumber from "bignumber.js";
-import { AssetType, Horizon, Server, ServerApi } from "stellar-sdk";
+import { AssetType, Horizon } from "stellar-sdk";
 
 export const BASE_RESERVE = 0.5;
 export const BASE_RESERVE_MIN_COUNT = 2;
@@ -56,7 +56,9 @@ export interface BalanceMap {
   native: NativeBalance;
 }
 
-export function getBalanceIdentifier(balance: Horizon.BalanceLine): string {
+export function getBalanceIdentifier(
+  balance: Horizon.HorizonApi.BalanceLine
+): string {
   if ("asset_issuer" in balance && !balance.asset_issuer) {
     return "native";
   }
@@ -74,7 +76,7 @@ export function getBalanceIdentifier(balance: Horizon.BalanceLine): string {
 }
 
 export const makeDisplayableBalances = (
-  accountDetails: ServerApi.AccountRecord
+  accountDetails: Horizon.ServerApi.AccountRecord
 ) => {
   const { balances, subentry_count, num_sponsored, num_sponsoring } =
     accountDetails;
@@ -124,7 +126,8 @@ export const makeDisplayableBalances = (
         };
       }
 
-      const liquidityPoolBalance = balance as Horizon.BalanceLineLiquidityPool;
+      const liquidityPoolBalance =
+        balance as Horizon.HorizonApi.BalanceLineLiquidityPool;
 
       if (identifier.includes(":lp")) {
         return {
@@ -137,7 +140,7 @@ export const makeDisplayableBalances = (
         };
       }
 
-      const assetBalance = balance as Horizon.BalanceLineAsset;
+      const assetBalance = balance as Horizon.HorizonApi.BalanceLineAsset;
       const assetSponsor = assetBalance.sponsor
         ? { sponsor: assetBalance.sponsor }
         : {};
@@ -167,7 +170,10 @@ export const makeDisplayableBalances = (
   return displayableBalances as BalanceMap;
 };
 
-export const fetchAccountDetails = async (pubKey: string, server: Server) => {
+export const fetchAccountDetails = async (
+  pubKey: string,
+  server: Horizon.Server
+) => {
   try {
     const accountSummary = await server.accounts().accountId(pubKey).call();
 
