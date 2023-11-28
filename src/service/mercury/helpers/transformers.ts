@@ -1,7 +1,11 @@
 import { OperationResult } from "@urql/core";
 import { scValToNative, xdr } from "soroban-client";
 import BigNumber from "bignumber.js";
-import { NativeBalance } from "../../../helper/horizon-rpc";
+import {
+  BASE_RESERVE,
+  BASE_RESERVE_MIN_COUNT,
+  NativeBalance,
+} from "../../../helper/horizon-rpc";
 
 // Transformers take an API response, and transform it/augment it for frontend consumption
 
@@ -19,7 +23,28 @@ interface AccountBalancesInterface {
 }
 
 interface MercuryAccountBalancesData {
-  entryUpdateByContractIdAndKey: {
+  accountObjectByPublicKey: {
+    nodes: {
+      accountByAccount: {
+        publickey: string;
+      };
+      nativeBalance: string;
+      numSubEntries: string;
+    }[];
+  };
+  balanceByPublicKey: {
+    nodes: {
+      assetByAsset: {
+        code: string;
+        issuer: string;
+      };
+      accountByAccount: {
+        publickey: string;
+      };
+      balance: string;
+    }[];
+  };
+  entryUpdateByContractIdAndKey?: {
     nodes: {
       contractId: string;
       keyXdr: string;
@@ -40,8 +65,32 @@ const transformAccountBalances = async (
   rawResponse: OperationResult<MercuryAccountBalancesData>,
   tokenDetails: TokenDetails
 ) => {
-  const data = rawResponse?.data?.entryUpdateByContractIdAndKey.nodes || [];
-  const formattedBalances = data.map((entry) => {
+  const tokenBalanceData =
+    rawResponse?.data?.entryUpdateByContractIdAndKey?.nodes || [];
+  const accountObjectData =
+    rawResponse?.data?.accountObjectByPublicKey.nodes || [];
+  const classicBalanceData = rawResponse?.data?.balanceByPublicKey.nodes || [];
+
+  const accountObject = accountObjectData[0];
+  // TODO: get these into query
+  const numSponsoring = 0;
+  const numSponsored = 0;
+  const sellingLiabilities = 0;
+
+  const accountBalance = {
+    native: {
+      token: { type: "native", code: "XLM" },
+      total: new BigNumber(accountObject.nativeBalance),
+      available: new BigNumber(BASE_RESERVE_MIN_COUNT)
+        .plus(accountObject.numSubEntries)
+        .plus(numSponsoring)
+        .minus(numSponsored)
+        .times(BASE_RESERVE)
+        .plus(sellingLiabilities),
+    },
+  };
+
+  const formattedBalances = tokenBalanceData.map((entry) => {
     const details = tokenDetails[entry.contractId];
     const totalScVal = xdr.ScVal.fromXDR(Buffer.from(entry.valueXdr, "base64"));
     return {
@@ -52,33 +101,43 @@ const transformAccountBalances = async (
   });
 
   const balances = formattedBalances.reduce((prev, curr) => {
-    if (curr.symbol === "XLM") {
-      prev["native"] = {
-        token: { type: "native", code: "XLM" },
-        total: new BigNumber(curr.total),
-        available: new BigNumber(curr.total), // TODO: how to get available for xlm?
-      } as NativeBalance;
-    }
-    if (curr.contractId) {
-      prev[`${curr.symbol}:${curr.contractId}`] = {
-        token: {
-          code: curr.symbol,
-          issuer: {
-            key: curr.contractId,
-          },
+    prev[`${curr.symbol}:${curr.contractId}`] = {
+      token: {
+        code: curr.symbol,
+        issuer: {
+          key: curr.contractId,
         },
-        decimals: curr.decimals,
-        total: new BigNumber(curr.total),
-        available: new BigNumber(curr.total),
-      };
-    }
+      },
+      decimals: curr.decimals,
+      total: new BigNumber(curr.total),
+      available: new BigNumber(curr.total),
+    };
+    return prev;
+  }, {} as NonNullable<AccountBalancesInterface["balances"]>);
+
+  const classicBalances = classicBalanceData.reduce((prev, curr) => {
+    prev[`${curr.assetByAsset.code}:${curr.assetByAsset.issuer}`] = {
+      token: {
+        code: curr.assetByAsset.code,
+        issuer: {
+          key: curr.assetByAsset.issuer,
+        },
+      },
+      decimals: "7",
+      total: new BigNumber(curr.balance),
+      available: new BigNumber(curr.balance),
+    };
     return prev;
   }, {} as NonNullable<AccountBalancesInterface["balances"]>);
 
   return {
-    balances,
+    balances: {
+      ...accountBalance,
+      ...classicBalances,
+      ...balances,
+    },
     isFunded: true,
-    subentryCount: 0, // TODO: Mercury will index this with account subs, and will add to query
+    subentryCount: accountObject.numSubEntries,
   };
 };
 
