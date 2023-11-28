@@ -19,8 +19,37 @@ export const query = {
       }
     }
   `,
-  getAccountBalances: (ledgerKey: string, contractIds: string[]) => `
+  getAccountBalances: (
+    pubKey: string,
+    ledgerKey: string,
+    contractIds: string[]
+  ) => `
     query AccountBalances {
+      accountObjectByPublicKey(
+        publicKeyText: "${pubKey}"
+      ) {
+        nodes {
+          accountByAccount {
+            publickey
+          }
+          nativeBalance
+          numSubEntries
+        }
+      }
+      balanceByPublicKey(
+        publicKeyText: "${pubKey}"
+      ) {
+        nodes {
+          assetByAsset {
+            code
+            issuer
+          }
+          accountByAccount {
+            publickey
+          }
+          balance
+        }
+      }
       ${contractIds.map(
         (id) =>
           `
