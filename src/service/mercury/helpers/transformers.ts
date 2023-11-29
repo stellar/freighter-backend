@@ -6,6 +6,7 @@ import {
   BASE_RESERVE_MIN_COUNT,
   NativeBalance,
 } from "../../../helper/horizon-rpc";
+import { formatTokenAmount } from "../../../helper/format";
 
 type NetworkNames = keyof typeof Networks;
 
@@ -82,7 +83,7 @@ const transformAccountBalances = async (
   const accountBalance = {
     native: {
       token: { type: "native", code: "XLM" },
-      total: new BigNumber(accountObject.nativeBalance),
+      total: formatTokenAmount(new BigNumber(accountObject.nativeBalance), 7),
       available: new BigNumber(BASE_RESERVE_MIN_COUNT)
         .plus(accountObject.numSubEntries)
         .plus(numSponsoring)
