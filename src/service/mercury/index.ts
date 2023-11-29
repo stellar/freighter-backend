@@ -172,19 +172,19 @@ export class MercuryClient {
     const transferToSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: nativeToScVal("transfer").toXDR("base64"),
-      topic2: nativeToScVal(pubKey).toXDR("base64"),
+      topic1: xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
+      topic2: xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
     };
     const transferFromSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: nativeToScVal("transfer").toXDR("base64"),
-      topic3: nativeToScVal(pubKey).toXDR("base64"),
+      topic1: xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
+      topic3: xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
     };
     const mintSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: nativeToScVal("mint").toXDR("base64"),
+      topic1: xdr.ScVal.scvSymbol("mint").toXDR("base64"),
     };
 
     try {
