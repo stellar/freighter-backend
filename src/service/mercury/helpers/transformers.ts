@@ -1,12 +1,52 @@
 import { OperationResult } from "@urql/core";
-import { Networks, scValToNative, xdr } from "soroban-client";
+import { Horizon, Networks, scValToNative, xdr } from "stellar-sdk";
+import BigNumber from "bignumber.js";
+import {
+  BASE_RESERVE,
+  BASE_RESERVE_MIN_COUNT,
+  NativeBalance,
+} from "../../../helper/horizon-rpc";
 
 type NetworkNames = keyof typeof Networks;
 
 // Transformers take an API response, and transform it/augment it for frontend consumption
 
+export interface BalanceMap {
+  [key: string]: any;
+  native: NativeBalance;
+}
+
+export type Balances = BalanceMap | null;
+
+interface AccountBalancesInterface {
+  balances: Balances;
+  isFunded: boolean | null;
+  subentryCount: number;
+}
+
 interface MercuryAccountBalancesData {
-  entryUpdateByContractIdAndKey: {
+  accountObjectByPublicKey: {
+    nodes: {
+      accountByAccount: {
+        publickey: string;
+      };
+      nativeBalance: string;
+      numSubEntries: string;
+    }[];
+  };
+  balanceByPublicKey: {
+    nodes: {
+      assetByAsset: {
+        code: string;
+        issuer: string;
+      };
+      accountByAccount: {
+        publickey: string;
+      };
+      balance: string;
+    }[];
+  };
+  entryUpdateByContractIdAndKey?: {
     nodes: {
       contractId: string;
       keyXdr: string;
@@ -27,13 +67,80 @@ const transformAccountBalances = async (
   rawResponse: OperationResult<MercuryAccountBalancesData>,
   tokenDetails: TokenDetails
 ) => {
-  return rawResponse?.data?.entryUpdateByContractIdAndKey.nodes.map((entry) => {
+  const tokenBalanceData =
+    rawResponse?.data?.entryUpdateByContractIdAndKey?.nodes || [];
+  const accountObjectData =
+    rawResponse?.data?.accountObjectByPublicKey.nodes || [];
+  const classicBalanceData = rawResponse?.data?.balanceByPublicKey.nodes || [];
+
+  const accountObject = accountObjectData[0];
+  // TODO: get these into query
+  const numSponsoring = 0;
+  const numSponsored = 0;
+  const sellingLiabilities = 0;
+
+  const accountBalance = {
+    native: {
+      token: { type: "native", code: "XLM" },
+      total: new BigNumber(accountObject.nativeBalance),
+      available: new BigNumber(BASE_RESERVE_MIN_COUNT)
+        .plus(accountObject.numSubEntries)
+        .plus(numSponsoring)
+        .minus(numSponsored)
+        .times(BASE_RESERVE)
+        .plus(sellingLiabilities),
+    },
+  };
+
+  const formattedBalances = tokenBalanceData.map((entry) => {
     const details = tokenDetails[entry.contractId];
+    const totalScVal = xdr.ScVal.fromXDR(Buffer.from(entry.valueXdr, "base64"));
     return {
       ...entry,
       ...details,
+      total: scValToNative(totalScVal),
     };
   });
+
+  const balances = formattedBalances.reduce((prev, curr) => {
+    prev[`${curr.symbol}:${curr.contractId}`] = {
+      token: {
+        code: curr.symbol,
+        issuer: {
+          key: curr.contractId,
+        },
+      },
+      decimals: curr.decimals,
+      total: new BigNumber(curr.total),
+      available: new BigNumber(curr.total),
+    };
+    return prev;
+  }, {} as NonNullable<AccountBalancesInterface["balances"]>);
+
+  const classicBalances = classicBalanceData.reduce((prev, curr) => {
+    prev[`${curr.assetByAsset.code}:${curr.assetByAsset.issuer}`] = {
+      token: {
+        code: curr.assetByAsset.code,
+        issuer: {
+          key: curr.assetByAsset.issuer,
+        },
+      },
+      decimals: "7",
+      total: new BigNumber(curr.balance),
+      available: new BigNumber(curr.balance),
+    };
+    return prev;
+  }, {} as NonNullable<AccountBalancesInterface["balances"]>);
+
+  return {
+    balances: {
+      ...accountBalance,
+      ...classicBalances,
+      ...balances,
+    },
+    isFunded: true,
+    subentryCount: accountObject.numSubEntries,
+  };
 };
 
 interface MercuryAccountHistory {
@@ -563,61 +670,8 @@ const transformAccountHistory = async (
   pubKey: string,
   network: NetworkNames,
   getTokenDetails: any // todo
-) => {
+): Promise<Partial<Horizon.ServerApi.OperationRecord>[]> => {
   const transferFromEdges = rawResponse.data?.transferFromEvent.edges || [];
-  const transferToEdges = rawResponse.data?.transferToEvent.edges || [];
-  const mintEdges = rawResponse.data?.mintEvent.edges || [];
-  const createAccountEdges =
-    rawResponse.data?.createAccountByPublicKey.edges || [];
-  const createAccountToEdges =
-    rawResponse.data?.createAccountToPublicKey.edges || [];
-  const paymentsByPublicKeyEdges =
-    rawResponse.data?.paymentsByPublicKey.edges || [];
-  const paymentsToPublicKeyEdges =
-    rawResponse.data?.paymentsToPublicKey.edges || [];
-  const pathPaymentsStrictSendByPublicKeyEdges =
-    rawResponse.data?.pathPaymentsStrictSendByPublicKey.nodes || [];
-  const pathPaymentsStrictSendToPublicKeyEdges =
-    rawResponse.data?.pathPaymentsStrictSendToPublicKey.nodes || [];
-  const pathPaymentsStrictReceiveByPublicKeyEdges =
-    rawResponse.data?.pathPaymentsStrictReceiveByPublicKey.nodes || [];
-  const pathPaymentsStrictReceiveToPublicKeyEdges =
-    rawResponse.data?.pathPaymentsStrictReceiveToPublicKey.nodes || [];
-  const manageBuyOfferByPublicKeyEdges =
-    rawResponse.data?.manageBuyOfferByPublicKey.edges || [];
-  const manageSellOfferByPublicKeyEdges =
-    rawResponse.data?.manageSellOfferByPublicKey.edges || [];
-  const createPassiveSellOfferByPublicKeyEdges =
-    rawResponse.data?.createPassiveSellOfferByPublicKey.nodes || [];
-  const changeTrustByPublicKeyEdges =
-    rawResponse.data?.changeTrustByPublicKey.nodes || [];
-  const accountMergeByPublicKeyEdges =
-    rawResponse.data?.accountMergeByPublicKey.edges || [];
-  const bumpSequenceByPublicKeyEdges =
-    rawResponse.data?.bumpSequenceByPublicKey.edges || [];
-  const claimClaimableBalanceByPublicKeyEdges =
-    rawResponse.data?.claimClaimableBalanceByPublicKey.edges || [];
-  const createClaimableBalanceByPublicKeyEdges =
-    rawResponse.data?.createClaimableBalanceByPublicKey.edges || [];
-  const allowTrustByPublicKeyEdges =
-    rawResponse.data?.allowTrustByPublicKey.edges || [];
-  const manageDataByPublicKeyEdges =
-    rawResponse.data?.manageDataByPublicKey.edges || [];
-  const beginSponsoringFutureReservesByPublicKeyEdges =
-    rawResponse.data?.beginSponsoringFutureReservesByPublicKey.edges || [];
-  const endSponsoringFutureReservesByPublicKeyEdges =
-    rawResponse.data?.endSponsoringFutureReservesByPublicKey.edges || [];
-  const revokeSponsorshipByPublicKeyEdges =
-    rawResponse.data?.revokeSponsorshipByPublicKey.edges || [];
-  const clawbackByPublicKeyEdges =
-    rawResponse.data?.clawbackByPublicKey.edges || [];
-  const setTrustLineFlagsByPublicKeyEdges =
-    rawResponse.data?.setTrustLineFlagsByPublicKey.edges || [];
-  const liquidityPoolDepositByPublicKeyEdges =
-    rawResponse.data?.liquidityPoolDepositByPublicKey.edges || [];
-  const liquidityPoolWithdrawByPublicKeyEdges =
-    rawResponse.data?.liquidityPoolWithdrawByPublicKey.edges || [];
-
   const transferFrom = await Promise.all(
     transferFromEdges.map(async (edge) => {
       const tokenDetails = await getTokenDetails(
@@ -639,10 +693,11 @@ const transformAccountHistory = async (
         to: scValToNative(xdr.ScVal.fromXDR(edge.node.topic3, "base64")),
         from: scValToNative(xdr.ScVal.fromXDR(edge.node.topic2, "base64")),
         amount: amountBigInt.toString(),
-      };
+      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
     })
   );
 
+  const transferToEdges = rawResponse.data?.transferToEvent.edges || [];
   const transferTo = await Promise.all(
     transferToEdges.map(async (edge) => {
       const tokenDetails = await getTokenDetails(
@@ -664,10 +719,11 @@ const transformAccountHistory = async (
         to: scValToNative(xdr.ScVal.fromXDR(edge.node.topic3, "base64")),
         from: scValToNative(xdr.ScVal.fromXDR(edge.node.topic2, "base64")),
         amount: amountBigInt.toString(),
-      };
+      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
     })
   );
 
+  const mintEdges = rawResponse.data?.mintEvent.edges || [];
   const mint = await Promise.all(
     mintEdges.map(async (edge) => {
       const tokenDetails = await getTokenDetails(
@@ -688,158 +744,275 @@ const transformAccountHistory = async (
         fnName: scValToNative(xdr.ScVal.fromXDR(edge.node.topic1, "base64")),
         to: scValToNative(xdr.ScVal.fromXDR(edge.node.topic2, "base64")),
         amount: amountBigInt.toString(),
-      };
+      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
     })
   );
 
-  const createAccount = createAccountEdges.map((edge) => ({
-    destination: edge.node.destination,
-  }));
+  const createAccountEdges =
+    rawResponse.data?.createAccountByPublicKey.edges || [];
+  const createAccount = createAccountEdges.map(
+    (edge) =>
+      ({
+        destination: edge.node.destination,
+      } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>)
+  );
 
-  const createAccountTo = createAccountToEdges.map((edge) => ({
-    destination: edge.node.destination,
-  }));
+  const createAccountToEdges =
+    rawResponse.data?.createAccountToPublicKey.edges || [];
+  const createAccountTo = createAccountToEdges.map(
+    (edge) =>
+      ({
+        destination: edge.node.destination,
+      } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>)
+  );
 
-  const paymentsByPublicKey = paymentsByPublicKeyEdges.map((edge) => ({
-    ...edge.node,
-  }));
+  const paymentsByPublicKeyEdges =
+    rawResponse.data?.paymentsByPublicKey.edges || [];
+  const paymentsByPublicKey = paymentsByPublicKeyEdges.map(
+    (edge) =>
+      ({
+        ...edge.node,
+      } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
+  );
 
-  const paymentsToPublicKey = paymentsToPublicKeyEdges.map((edge) => ({
-    ...edge.node,
-  }));
+  const paymentsToPublicKeyEdges =
+    rawResponse.data?.paymentsToPublicKey.edges || [];
+  const paymentsToPublicKey = paymentsToPublicKeyEdges.map(
+    (edge) =>
+      ({
+        ...edge.node,
+      } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
+  );
 
+  const pathPaymentsStrictSendByPublicKeyEdges =
+    rawResponse.data?.pathPaymentsStrictSendByPublicKey.nodes || [];
   const pathPaymentsStrictSendByPublicKey =
-    pathPaymentsStrictSendByPublicKeyEdges.map((edge) => ({
-      ...edge,
-    }));
+    pathPaymentsStrictSendByPublicKeyEdges.map(
+      (edge) =>
+        ({
+          ...edge,
+        } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>)
+    );
 
+  const pathPaymentsStrictSendToPublicKeyEdges =
+    rawResponse.data?.pathPaymentsStrictSendToPublicKey.nodes || [];
   const pathPaymentsStrictSendToPublicKey =
-    pathPaymentsStrictSendToPublicKeyEdges.map((edge) => ({
-      ...edge,
-    }));
+    pathPaymentsStrictSendToPublicKeyEdges.map(
+      (edge) =>
+        ({
+          ...edge,
+        } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>)
+    );
 
+  const pathPaymentsStrictReceiveByPublicKeyEdges =
+    rawResponse.data?.pathPaymentsStrictReceiveByPublicKey.nodes || [];
   const pathPaymentsStrictReceiveByPublicKey =
-    pathPaymentsStrictReceiveByPublicKeyEdges.map((edge) => ({
-      ...edge,
-    }));
+    pathPaymentsStrictReceiveByPublicKeyEdges.map(
+      (edge) =>
+        ({
+          ...edge,
+        } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>)
+    );
 
+  const pathPaymentsStrictReceiveToPublicKeyEdges =
+    rawResponse.data?.pathPaymentsStrictReceiveToPublicKey.nodes || [];
   const pathPaymentsStrictReceiveToPublicKey =
-    pathPaymentsStrictReceiveToPublicKeyEdges.map((edge) => ({
-      ...edge,
-    }));
+    pathPaymentsStrictReceiveToPublicKeyEdges.map(
+      (edge) =>
+        ({
+          ...edge,
+        } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>)
+    );
 
+  const manageBuyOfferByPublicKeyEdges =
+    rawResponse.data?.manageBuyOfferByPublicKey.edges || [];
   const manageBuyOfferByPublicKey = manageBuyOfferByPublicKeyEdges.map(
-    (edge) => ({
-      ...edge,
-    })
+    (edge) =>
+      ({
+        ...edge.node,
+      } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>)
   );
 
+  const manageSellOfferByPublicKeyEdges =
+    rawResponse.data?.manageSellOfferByPublicKey.edges || [];
   const manageSellOfferByPublicKey = manageSellOfferByPublicKeyEdges.map(
-    (edge) => ({
-      ...edge,
-    })
+    (edge) =>
+      ({
+        ...edge.node,
+      } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>)
   );
 
+  const createPassiveSellOfferByPublicKeyEdges =
+    rawResponse.data?.createPassiveSellOfferByPublicKey.nodes || [];
   const createPassiveSellOfferByPublicKey =
-    createPassiveSellOfferByPublicKeyEdges.map((edge) => ({
-      ...edge,
-    }));
+    createPassiveSellOfferByPublicKeyEdges.map(
+      (edge) =>
+        ({
+          ...edge,
+        } as Partial<Horizon.ServerApi.PassiveOfferOperationRecord>)
+    );
 
-  const changeTrustByPublicKey = changeTrustByPublicKeyEdges.map((edge) => ({
-    ...edge,
-  }));
+  const changeTrustByPublicKeyEdges =
+    rawResponse.data?.changeTrustByPublicKey.nodes || [];
+  const changeTrustByPublicKey = changeTrustByPublicKeyEdges.map(
+    (edge) =>
+      ({
+        ...edge,
+      } as Partial<Horizon.ServerApi.ChangeTrustOperationRecord>)
+  );
 
-  const accountMergeByPublicKey = accountMergeByPublicKeyEdges.map((edge) => ({
-    ...edge,
-  }));
+  const accountMergeByPublicKeyEdges =
+    rawResponse.data?.accountMergeByPublicKey.edges || [];
+  const accountMergeByPublicKey = accountMergeByPublicKeyEdges.map(
+    (edge) =>
+      ({
+        ...edge.node,
+      } as Partial<Horizon.ServerApi.AccountMergeOperationRecord>)
+  );
 
-  const bumpSequenceByPublicKey = bumpSequenceByPublicKeyEdges.map((edge) => ({
-    ...edge,
-  }));
+  const bumpSequenceByPublicKeyEdges =
+    rawResponse.data?.bumpSequenceByPublicKey.edges || [];
+  const bumpSequenceByPublicKey = bumpSequenceByPublicKeyEdges.map(
+    (edge) =>
+      ({
+        ...edge.node,
+      } as Partial<Horizon.ServerApi.BumpSequenceOperationRecord>)
+  );
 
+  const claimClaimableBalanceByPublicKeyEdges =
+    rawResponse.data?.claimClaimableBalanceByPublicKey.edges || [];
   const claimClaimableBalanceByPublicKey =
-    claimClaimableBalanceByPublicKeyEdges.map((edge) => ({
-      ...edge,
-    }));
+    claimClaimableBalanceByPublicKeyEdges.map(
+      (edge) =>
+        ({
+          ...edge.node,
+        } as Partial<Horizon.ServerApi.ClaimClaimableBalanceOperationRecord>)
+    );
 
+  const createClaimableBalanceByPublicKeyEdges =
+    rawResponse.data?.createClaimableBalanceByPublicKey.edges || [];
   const createClaimableBalanceByPublicKey =
-    createClaimableBalanceByPublicKeyEdges.map((edge) => ({
-      ...edge,
-    }));
+    createClaimableBalanceByPublicKeyEdges.map(
+      (edge) =>
+        ({
+          ...edge.node,
+        } as Partial<Horizon.ServerApi.CreateClaimableBalanceOperationRecord>)
+    );
 
-  const allowTrustByPublicKey = allowTrustByPublicKeyEdges.map((edge) => ({
-    ...edge,
-  }));
+  const allowTrustByPublicKeyEdges =
+    rawResponse.data?.allowTrustByPublicKey.edges || [];
+  const allowTrustByPublicKey = allowTrustByPublicKeyEdges.map(
+    (edge) =>
+      ({
+        ...edge.node,
+      } as Partial<Horizon.ServerApi.AllowTrustOperationRecord>)
+  );
 
-  const manageDataByPublicKey = manageDataByPublicKeyEdges.map((edge) => ({
-    ...edge,
-  }));
+  const manageDataByPublicKeyEdges =
+    rawResponse.data?.manageDataByPublicKey.edges || [];
+  const manageDataByPublicKey = manageDataByPublicKeyEdges.map(
+    (edge) =>
+      ({
+        ...edge.node,
+      } as Partial<Horizon.ServerApi.ManageDataOperationRecord>)
+  );
 
+  const beginSponsoringFutureReservesByPublicKeyEdges =
+    rawResponse.data?.beginSponsoringFutureReservesByPublicKey.edges || [];
   const beginSponsoringFutureReservesByPublicKey =
-    beginSponsoringFutureReservesByPublicKeyEdges.map((edge) => ({
-      ...edge,
-    }));
+    beginSponsoringFutureReservesByPublicKeyEdges.map(
+      (edge) =>
+        ({
+          ...edge.node,
+        } as Partial<Horizon.ServerApi.BeginSponsoringFutureReservesOperationRecord>)
+    );
 
+  const endSponsoringFutureReservesByPublicKeyEdges =
+    rawResponse.data?.endSponsoringFutureReservesByPublicKey.edges || [];
   const endSponsoringFutureReservesByPublicKey =
-    endSponsoringFutureReservesByPublicKeyEdges.map((edge) => ({
-      ...edge,
-    }));
+    endSponsoringFutureReservesByPublicKeyEdges.map(
+      (edge) =>
+        ({
+          ...edge.node,
+        } as Partial<Horizon.ServerApi.EndSponsoringFutureReservesOperationRecord>)
+    );
 
+  const revokeSponsorshipByPublicKeyEdges =
+    rawResponse.data?.revokeSponsorshipByPublicKey.edges || [];
   const revokeSponsorshipByPublicKey = revokeSponsorshipByPublicKeyEdges.map(
-    (edge) => ({
-      ...edge,
-    })
+    (edge) =>
+      ({
+        ...edge.node,
+      } as Partial<Horizon.ServerApi.RevokeSponsorshipOperationRecord>)
   );
 
-  const clawbackByPublicKey = clawbackByPublicKeyEdges.map((edge) => ({
-    ...edge,
-  }));
+  const clawbackByPublicKeyEdges =
+    rawResponse.data?.clawbackByPublicKey.edges || [];
+  const clawbackByPublicKey = clawbackByPublicKeyEdges.map(
+    (edge) =>
+      ({
+        ...edge.node,
+      } as Partial<Horizon.ServerApi.ClawbackOperationRecord>)
+  );
 
+  const setTrustLineFlagsByPublicKeyEdges =
+    rawResponse.data?.setTrustLineFlagsByPublicKey.edges || [];
   const setTrustLineFlagsByPublicKey = setTrustLineFlagsByPublicKeyEdges.map(
-    (edge) => ({
-      ...edge,
-    })
+    (edge) =>
+      ({
+        ...edge.node,
+      } as Partial<Horizon.ServerApi.SetTrustLineFlagsOperationRecord>)
   );
 
+  const liquidityPoolDepositByPublicKeyEdges =
+    rawResponse.data?.liquidityPoolDepositByPublicKey.edges || [];
   const liquidityPoolDepositByPublicKey =
-    liquidityPoolDepositByPublicKeyEdges.map((edge) => ({
-      ...edge,
-    }));
+    liquidityPoolDepositByPublicKeyEdges.map(
+      (edge) =>
+        ({
+          ...edge.node,
+        } as Partial<Horizon.ServerApi.DepositLiquidityOperationRecord>)
+    );
 
+  const liquidityPoolWithdrawByPublicKeyEdges =
+    rawResponse.data?.liquidityPoolWithdrawByPublicKey.edges || [];
   const liquidityPoolWithdrawByPublicKey =
-    liquidityPoolWithdrawByPublicKeyEdges.map((edge) => ({
-      ...edge,
-    }));
+    liquidityPoolWithdrawByPublicKeyEdges.map(
+      (edge) =>
+        ({
+          ...edge.node,
+        } as Partial<Horizon.ServerApi.WithdrawLiquidityOperationRecord>)
+    );
 
   return [
-    ...accountMergeByPublicKey,
-    ...allowTrustByPublicKey,
-    ...beginSponsoringFutureReservesByPublicKey,
-    ...bumpSequenceByPublicKey,
-    ...changeTrustByPublicKey,
-    ...claimClaimableBalanceByPublicKey,
-    ...clawbackByPublicKey,
     ...createAccount,
     ...createAccountTo,
-    ...createClaimableBalanceByPublicKey,
-    ...createPassiveSellOfferByPublicKey,
-    ...endSponsoringFutureReservesByPublicKey,
-    ...liquidityPoolDepositByPublicKey,
-    ...liquidityPoolWithdrawByPublicKey,
-    ...manageBuyOfferByPublicKey,
-    ...manageDataByPublicKey,
-    ...manageSellOfferByPublicKey,
-    ...mint,
-    ...pathPaymentsStrictReceiveByPublicKey,
-    ...pathPaymentsStrictReceiveToPublicKey,
-    ...pathPaymentsStrictSendByPublicKey,
-    ...pathPaymentsStrictSendToPublicKey,
     ...paymentsByPublicKey,
     ...paymentsToPublicKey,
+    ...changeTrustByPublicKey,
+    ...allowTrustByPublicKey,
+    ...accountMergeByPublicKey,
+    ...bumpSequenceByPublicKey,
+    ...liquidityPoolDepositByPublicKey,
+    ...liquidityPoolWithdrawByPublicKey,
+    ...pathPaymentsStrictSendByPublicKey,
+    ...pathPaymentsStrictSendToPublicKey,
+    ...pathPaymentsStrictReceiveByPublicKey,
+    ...pathPaymentsStrictReceiveToPublicKey,
+    ...claimClaimableBalanceByPublicKey,
+    ...createClaimableBalanceByPublicKey,
+    ...manageBuyOfferByPublicKey,
+    ...manageSellOfferByPublicKey,
+    ...createPassiveSellOfferByPublicKey,
+    ...manageDataByPublicKey,
+    ...beginSponsoringFutureReservesByPublicKey,
+    ...endSponsoringFutureReservesByPublicKey,
     ...revokeSponsorshipByPublicKey,
+    ...clawbackByPublicKey,
     ...setTrustLineFlagsByPublicKey,
-    ...transferFrom,
     ...transferTo,
+    ...transferFrom,
+    ...mint,
   ];
 };
 

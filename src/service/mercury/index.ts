@@ -1,12 +1,14 @@
 import { Client, CombinedError, fetchExchange } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { Address, Networks, nativeToScVal, xdr } from "soroban-client";
+import { Address, Horizon, Networks, nativeToScVal, xdr } from "stellar-sdk";
 import { Redis } from "ioredis";
+import BigNumber from "bignumber.js";
 
 import { mutation, query } from "./queries";
 import {
   getServer,
+  getTokenBalance,
   getTokenDecimals,
   getTokenName,
   getTokenSymbol,
@@ -16,8 +18,20 @@ import {
   transformAccountBalances,
   transformAccountHistory,
 } from "./helpers/transformers";
+import {
+  fetchAccountDetails,
+  fetchAccountHistory,
+} from "../../helper/horizon-rpc";
 
 type NetworkNames = keyof typeof Networks;
+
+enum NETWORK_URLS {
+  PUBLIC = "https://horizon.stellar.org",
+  TESTNET = "https://horizon-testnet.stellar.org",
+  FUTURENET = "https://horizon-futurenet.stellar.org",
+  SANDBOX = "",
+  STANDALONE = "",
+}
 
 const ERROR_MESSAGES = {
   JWT_EXPIRED: "jwt expired",
@@ -28,6 +42,10 @@ function getGraphQlError(error?: CombinedError) {
   const [err] = error.graphQLErrors;
   return err.message;
 }
+
+const hasIndexerSupport = (network: NetworkNames) => {
+  return network === "TESTNET";
+};
 
 export interface NewEventSubscriptionPayload {
   contract_id?: string;
@@ -56,6 +74,7 @@ export class MercuryClient {
   mercurySession: MercurySession;
   eventsURL: string;
   entryURL: string;
+  accountSubUrl: string;
   redisClient?: Redis;
   logger: Logger;
 
@@ -71,6 +90,7 @@ export class MercuryClient {
     this.mercurySession = mercurySession;
     this.eventsURL = `${mercurySession.backend}/event`;
     this.entryURL = `${mercurySession.backend}/entry`;
+    this.accountSubUrl = `${mercurySession.backend}/account`;
     this.urqlClient = urqlClient;
     this.renewClient = renewClient;
     this.logger = logger;
@@ -168,13 +188,13 @@ export class MercuryClient {
     };
 
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${this.mercurySession.token}`,
-        },
-      };
-
       const subscribe = async () => {
+        const config = {
+          headers: {
+            Authorization: `Bearer ${this.mercurySession.token}`,
+          },
+        };
+
         const { data: transferFromRes } = await axios.post(
           this.eventsURL,
           transferToSub,
@@ -222,9 +242,15 @@ export class MercuryClient {
   accountSubscription = async (pubKey: string) => {
     try {
       const subscribe = async () => {
-        const data = await this.urqlClient.mutation(
-          mutation.newAccountSubscription,
-          { pubKey, userId: this.mercurySession.userId }
+        const config = {
+          headers: {
+            Authorization: `Bearer ${this.mercurySession.token}`,
+          },
+        };
+        const { data } = await axios.post(
+          this.accountSubUrl,
+          { publickey: pubKey, hydrate: true },
+          config
         );
         return data;
       };
@@ -338,7 +364,29 @@ export class MercuryClient {
     }
   };
 
-  getAccountHistory = async (pubKey: string, network: NetworkNames) => {
+  getAccountHistoryHorizon = async (pubKey: string, network: NetworkNames) => {
+    try {
+      const networkUrl = NETWORK_URLS[network];
+      const server = new Horizon.Server(networkUrl, {
+        allowHttp: !networkUrl.includes("https"),
+      });
+      const data = await fetchAccountHistory(pubKey, server);
+      return {
+        data,
+        error: null,
+      };
+    } catch (error) {
+      this.logger.error(error);
+      const _error = JSON.stringify(error);
+      this.logger.error(_error);
+      return {
+        data: null,
+        error: _error,
+      };
+    }
+  };
+
+  getAccountHistoryMercury = async (pubKey: string, network: NetworkNames) => {
     try {
       const xdrPubKey = new Address(pubKey).toScVal().toXDR("base64");
       const getData = async () => {
@@ -373,18 +421,101 @@ export class MercuryClient {
     }
   };
 
-  getAccountBalances = async (
+  getAccountHistory = async (pubKey: string, network: NetworkNames) => {
+    if (hasIndexerSupport(network)) {
+      const res = await this.getAccountHistoryMercury(pubKey, network);
+      return res;
+    } else {
+      const res = await this.getAccountHistoryHorizon(pubKey, network);
+      return res;
+    }
+  };
+
+  getTokenBalancesSorobanRPC = async (
     pubKey: string,
     contractIds: string[],
     network: NetworkNames
   ) => {
-    if (contractIds.length < 1) {
-      return {
-        data: [],
-        error: null,
+    const server = await getServer(network);
+    const balances = [];
+    for (const id of contractIds) {
+      const builder = await getTxBuilder(pubKey, network, server);
+      const params = [new Address(pubKey).toScVal()];
+      const balance = await getTokenBalance(id, params, server, builder);
+      const tokenDetails = await this.tokenDetails(pubKey, id, network);
+      balances.push({
+        id,
+        balance,
+        ...tokenDetails,
+      });
+    }
+    const balanceMap = {} as Record<string, any>;
+    for (const balance of balances) {
+      balanceMap[`${balance.symbol}:${balance.id}`] = {
+        token: {
+          code: balance.symbol,
+          issuer: {
+            key: balance.id,
+          },
+        },
+        decimals: balance.decimals,
+        total: new BigNumber(balance.balance),
+        available: new BigNumber(balance.balance),
       };
     }
-    // TODO: once classic subs include balance, add query
+    return balances;
+  };
+
+  getAccountBalancesHorizon = async (pubKey: string, network: NetworkNames) => {
+    const networkUrl = NETWORK_URLS[network];
+
+    let balances: any = null;
+    let isFunded = null;
+    let subentryCount = 0;
+
+    try {
+      const server = new Horizon.Server(networkUrl, {
+        allowHttp: !networkUrl.includes("https"),
+      });
+      const resp = await fetchAccountDetails(pubKey, server);
+
+      for (let i = 0; i < Object.keys(resp.balances).length; i++) {
+        const k = Object.keys(resp.balances)[i];
+        const v: any = resp.balances[k];
+        if (v.liquidity_pool_id) {
+          const lp = await server
+            .liquidityPools()
+            .liquidityPoolId(v.liquidity_pool_id)
+            .call();
+          balances[k] = {
+            ...balances[k],
+            liquidityPoolId: v.liquidity_pool_id,
+            reserves: lp.reserves,
+          };
+          delete balances[k].liquidity_pool_id;
+        }
+      }
+      isFunded = true;
+    } catch (error) {
+      this.logger.error(error);
+      return {
+        balances,
+        isFunded: false,
+        subentryCount,
+      };
+    }
+    return {
+      balances,
+      isFunded,
+      subentryCount,
+    };
+  };
+
+  getAccountBalancesMercury = async (
+    pubKey: string,
+    contractIds: string[],
+    network: NetworkNames
+  ) => {
     try {
       const getData = async () => {
         const response = await this.urqlClient.query(
@@ -415,11 +546,54 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
+      this.logger.error(error);
       const _error = JSON.stringify(error);
       this.logger.error(_error);
       return {
         data: null,
         error: _error,
+      };
+    }
+  };
+
+  getAccountBalances = async (
+    pubKey: string,
+    contractIds: string[],
+    network: NetworkNames
+  ) => {
+    if (hasIndexerSupport(network)) {
+      const data = await this.getAccountBalancesMercury(
+        pubKey,
+        contractIds,
+        network
+      );
+
+      return {
+        data,
+        error: null,
+      };
+    } else {
+      const classicBalances = await this.getAccountBalancesHorizon(
+        pubKey,
+        network
+      );
+      const tokenBalances = await this.getTokenBalancesSorobanRPC(
+        pubKey,
+        contractIds,
+        network
+      );
+
+      const data = {
+        balances: {
+          ...classicBalances.balances,
+          ...tokenBalances,
+        },
+        isFunded: classicBalances.isFunded,
+        subentryCount: classicBalances.subentryCount,
+      };
+      return {
+        data,
+        error: null,
       };
     }
   };

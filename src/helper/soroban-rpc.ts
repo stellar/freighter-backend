@@ -1,6 +1,5 @@
 import {
   Networks,
-  Server,
   TransactionBuilder,
   BASE_FEE,
   Contract,
@@ -10,7 +9,9 @@ import {
   MemoType,
   Operation,
   scValToNative,
-} from "soroban-client";
+  xdr,
+  SorobanRpc,
+} from "stellar-sdk";
 
 type NetworkNames = keyof typeof Networks;
 
@@ -24,7 +25,7 @@ const getServer = async (network: NetworkNames) => {
     throw new Error("network not supported");
   }
 
-  return new Server(serverUrl, {
+  return new SorobanRpc.Server(serverUrl, {
     allowHttp: serverUrl.startsWith("http://"),
   });
 };
@@ -32,7 +33,7 @@ const getServer = async (network: NetworkNames) => {
 const getTxBuilder = async (
   pubKey: string,
   network: NetworkNames,
-  server: Server
+  server: SorobanRpc.Server
 ) => {
   const sourceAccount = await server.getAccount(pubKey);
   return new TransactionBuilder(sourceAccount, {
@@ -43,7 +44,7 @@ const getTxBuilder = async (
 
 const simulateTx = async <ArgType>(
   tx: Transaction<Memo<MemoType>, Operation[]>,
-  server: Server
+  server: SorobanRpc.Server
 ): Promise<ArgType> => {
   const simulatedTX = await server.simulateTransaction(tx);
   if ("result" in simulatedTX && simulatedTX.result !== undefined) {
@@ -55,7 +56,7 @@ const simulateTx = async <ArgType>(
 
 const getTokenDecimals = async (
   contractId: string,
-  server: Server,
+  server: SorobanRpc.Server,
   builder: TransactionBuilder
 ) => {
   const contract = new Contract(contractId);
@@ -71,7 +72,7 @@ const getTokenDecimals = async (
 
 const getTokenName = async (
   contractId: string,
-  server: Server,
+  server: SorobanRpc.Server,
   builder: TransactionBuilder
 ) => {
   const contract = new Contract(contractId);
@@ -87,7 +88,7 @@ const getTokenName = async (
 
 const getTokenSymbol = async (
   contractId: string,
-  server: Server,
+  server: SorobanRpc.Server,
   builder: TransactionBuilder
 ) => {
   const contract = new Contract(contractId);
@@ -101,8 +102,26 @@ const getTokenSymbol = async (
   return result;
 };
 
+const getTokenBalance = async (
+  contractId: string,
+  params: xdr.ScVal[],
+  server: SorobanRpc.Server,
+  builder: TransactionBuilder
+) => {
+  const contract = new Contract(contractId);
+
+  const tx = builder
+    .addOperation(contract.call("balance", ...params))
+    .setTimeout(TimeoutInfinite)
+    .build();
+
+  const result = await simulateTx<number>(tx, server);
+  return result;
+};
+
 export {
   getServer,
+  getTokenBalance,
   getTokenDecimals,
   getTokenName,
   getTokenSymbol,

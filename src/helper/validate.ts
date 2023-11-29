@@ -1,4 +1,4 @@
-import { StrKey } from "soroban-client";
+import { StrKey } from "stellar-sdk";
 
 const isContractId = (contractId: string) => {
   try {

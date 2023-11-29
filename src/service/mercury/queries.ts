@@ -6,18 +6,6 @@ export const mutation = {
       }
     }
   `,
-  newAccountSubscription: `
-    mutation NewAccountSubscription($pubKey: String!, $userId: String!) {
-      createFullAccountSubscription(
-        input: {fullAccountSubscription: pubKey: $pubKey, userId: $userId}}
-      ) {
-        fullAccountSubscription {
-          publickey
-          id
-        }
-      }
-    }
-  `,
 };
 export const query = {
   allSubscriptions: `
@@ -32,11 +20,36 @@ export const query = {
     }
   `,
   getAccountBalances: (
-    publicKey: string,
+    pubKey: string,
     ledgerKey: string,
     contractIds: string[]
   ) => `
     query AccountBalances {
+      accountObjectByPublicKey(
+        publicKeyText: "${pubKey}"
+      ) {
+        nodes {
+          accountByAccount {
+            publickey
+          }
+          nativeBalance
+          numSubEntries
+        }
+      }
+      balanceByPublicKey(
+        publicKeyText: "${pubKey}"
+      ) {
+        nodes {
+          assetByAsset {
+            code
+            issuer
+          }
+          accountByAccount {
+            publickey
+          }
+          balance
+        }
+      }
       ${contractIds.map(
         (id) =>
           `
@@ -52,18 +65,6 @@ export const query = {
         }
         `
       )}
-
-      balanceByPublicKey(publicKeyText: "${publicKey}") {
-        edges {
-          node {
-            account
-            asset
-            balance
-            limit
-            lpShare
-          }
-        }
-      }
     }
   `,
   getAccountHistory: `

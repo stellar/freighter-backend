@@ -37,13 +37,7 @@ describe("API routes", () => {
           (server?.server?.address() as any).port
         }/api/v1/account-balances/${pubKey}?contract_ids=CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP`
       );
-      const data = await response.json();
       expect(response.status).toEqual(200);
-      for (const node of data) {
-        expect(node).toHaveProperty("contractId");
-        expect(node).toHaveProperty("keyXdr");
-        expect(node).toHaveProperty("valueXdr");
-      }
       server.close();
     });
 
@@ -62,15 +56,7 @@ describe("API routes", () => {
           params as any
         )}`
       );
-      const data = await response.json();
       expect(response.status).toEqual(200);
-      expect(response.status).toEqual(200);
-      expect(data.length).toEqual(2);
-      for (const node of data) {
-        expect(node).toHaveProperty("contractId");
-        expect(node).toHaveProperty("keyXdr");
-        expect(node).toHaveProperty("valueXdr");
-      }
       server.close();
     });
 
