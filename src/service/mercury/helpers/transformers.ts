@@ -771,7 +771,12 @@ const transformAccountHistory = async (
   const paymentsByPublicKey = paymentsByPublicKeyEdges.map(
     (edge) =>
       ({
-        ...edge.node,
+        from: edge.node.accountBySource.publickey,
+        to: edge.node.accountByDestination.publickey,
+        asset_type: undefined, // TODO, get asset type in Mercury
+        asset_code: edge.node.assetByAsset.code,
+        asset_issuer: edge.node.assetByAsset.code,
+        amount: edge.node.amount,
       } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
   );
 
@@ -780,7 +785,12 @@ const transformAccountHistory = async (
   const paymentsToPublicKey = paymentsToPublicKeyEdges.map(
     (edge) =>
       ({
-        ...edge.node,
+        from: edge.node.accountBySource.publickey,
+        to: edge.node.accountByDestination.publickey,
+        asset_type: undefined, // TODO, get asset type in Mercury
+        asset_code: edge.node.assetByAsset.code,
+        asset_issuer: edge.node.assetByAsset.code,
+        amount: edge.node.amount,
       } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
   );
 

@@ -1,4 +1,4 @@
-import { scValToNative, xdr } from "stellar-sdk";
+import { Horizon, scValToNative, xdr } from "stellar-sdk";
 
 import { mutation } from "./queries";
 import {
@@ -9,11 +9,18 @@ import {
 import { transformAccountBalances } from "./helpers/transformers";
 
 describe("Mercury Service", () => {
-  it.skip("can fetch account history with a payment-to in history", async () => {
-    // const { data } = await mockMercuryClient.getAccountHistory(pubKey);
-    // const paymentsToPublicKey = data?.data.paymentsToPublicKey.edges[0].node;
-    // expect(paymentsToPublicKey.accountByDestination.publickey).toEqual(pubKey);
-    // expect(paymentsToPublicKey.amount).toBe("50000000");
+  it("can fetch account history with a payment-to in history", async () => {
+    const { data } = await mockMercuryClient.getAccountHistory(
+      pubKey,
+      "TESTNET"
+    );
+    const payment = data.data?.find((d) => {
+      if ("asset_code" in d && d.asset_code === "DT") {
+        return true;
+      }
+      return false;
+    }) as Partial<Horizon.ServerApi.PaymentOperationRecord>;
+    expect(payment.amount).toEqual("50000000");
   });
 
   it("can build a balance ledger key for a pub key", async () => {

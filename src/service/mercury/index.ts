@@ -423,11 +423,17 @@ export class MercuryClient {
 
   getAccountHistory = async (pubKey: string, network: NetworkNames) => {
     if (hasIndexerSupport(network)) {
-      const res = await this.getAccountHistoryMercury(pubKey, network);
-      return res;
+      const data = await this.getAccountHistoryMercury(pubKey, network);
+      return {
+        data,
+        error: null,
+      };
     } else {
-      const res = await this.getAccountHistoryHorizon(pubKey, network);
-      return res;
+      const data = await this.getAccountHistoryHorizon(pubKey, network);
+      return {
+        data,
+        error: null,
+      };
     }
   };
 
