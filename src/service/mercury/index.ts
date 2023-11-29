@@ -1,7 +1,7 @@
 import { Client, CombinedError, fetchExchange } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { Address, Horizon, Networks, nativeToScVal, xdr } from "stellar-sdk";
+import { Address, Horizon, Networks, xdr } from "stellar-sdk";
 import { Redis } from "ioredis";
 import BigNumber from "bignumber.js";
 
