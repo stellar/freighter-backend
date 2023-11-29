@@ -116,9 +116,13 @@ const transformAccountBalances = async (
   }, {} as NonNullable<AccountBalancesInterface["balances"]>);
 
   const classicBalances = classicBalanceData.reduce((prev, curr) => {
+    const codeAscii = Buffer.from(
+      curr.assetByAsset.code.substring(2),
+      "hex"
+    ).toString("utf8");
     prev[`${curr.assetByAsset.code}:${curr.assetByAsset.issuer}`] = {
       token: {
-        code: curr.assetByAsset.code,
+        code: codeAscii,
         issuer: {
           key: curr.assetByAsset.issuer,
         },
