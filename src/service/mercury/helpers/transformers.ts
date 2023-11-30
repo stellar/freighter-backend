@@ -202,7 +202,7 @@ interface MercuryAccountHistory {
         assetByAsset: {
           code: string;
           issuer: string;
-        };
+        } | null;
         accountBySource: {
           publickey: string;
         };
@@ -220,7 +220,7 @@ interface MercuryAccountHistory {
         assetByAsset: {
           code: string;
           issuer: string;
-        };
+        } | null;
         accountBySource: {
           publickey: string;
         };
@@ -758,6 +758,7 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         destination: edge.node.destination,
+        starting_balance: "", // TODO: need from Mercury
       } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>)
   );
 
@@ -778,8 +779,8 @@ const transformAccountHistory = async (
         from: edge.node.accountBySource.publickey,
         to: edge.node.accountByDestination.publickey,
         asset_type: undefined, // TODO, get asset type in Mercury
-        asset_code: edge.node.assetByAsset.code,
-        asset_issuer: edge.node.assetByAsset.code,
+        asset_code: edge.node.assetByAsset?.code,
+        asset_issuer: edge.node.assetByAsset?.code,
         amount: edge.node.amount,
       } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
   );
@@ -792,8 +793,8 @@ const transformAccountHistory = async (
         from: edge.node.accountBySource.publickey,
         to: edge.node.accountByDestination.publickey,
         asset_type: undefined, // TODO, get asset type in Mercury
-        asset_code: edge.node.assetByAsset.code,
-        asset_issuer: edge.node.assetByAsset.code,
+        asset_code: edge.node.assetByAsset?.code,
+        asset_issuer: edge.node.assetByAsset?.code,
         amount: edge.node.amount,
       } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
   );
