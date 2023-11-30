@@ -130,7 +130,6 @@ const transformAccountBalances = async (
           key: curr.assetByAsset.issuer,
         },
       },
-      decimals: "7",
       total: new BigNumber(curr.balance),
       available: new BigNumber(curr.balance),
     };
