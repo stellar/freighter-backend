@@ -123,7 +123,7 @@ const transformAccountBalances = async (
       curr.assetByAsset.code.substring(2),
       "hex"
     ).toString("utf8");
-    prev[`${curr.assetByAsset.code}:${curr.assetByAsset.issuer}`] = {
+    prev[`${codeAscii}:${curr.assetByAsset.issuer}`] = {
       token: {
         code: codeAscii,
         issuer: {
