@@ -115,6 +115,8 @@ export const query = {
         edges {
           node {
             destination
+            startingBalance
+
           }
         }
       }
@@ -122,6 +124,8 @@ export const query = {
         edges {
           node {
             destination
+            startingBalance
+
           }
         }
       }

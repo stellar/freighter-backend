@@ -184,6 +184,7 @@ interface MercuryAccountHistory {
     edges: {
       node: {
         destination: string;
+        startingBalance: string;
       };
     }[];
   };
@@ -191,6 +192,7 @@ interface MercuryAccountHistory {
     edges: {
       node: {
         destination: string;
+        startingBalance: string;
       };
     }[];
   };
@@ -758,7 +760,7 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         destination: edge.node.destination,
-        starting_balance: "", // TODO: need from Mercury
+        starting_balance: edge.node.startingBalance,
       } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>)
   );
 
@@ -768,6 +770,7 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         destination: edge.node.destination,
+        starting_balance: edge.node.startingBalance,
       } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>)
   );
 
