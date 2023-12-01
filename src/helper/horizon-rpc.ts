@@ -76,6 +76,16 @@ export function getBalanceIdentifier(
   }
 }
 
+export function getAssetType(code?: string) {
+  if (!code) {
+    return "native";
+  }
+  if (code.length > 4) {
+    return "credit_alphanum12";
+  }
+  return "credit_alphanum4";
+}
+
 export const makeDisplayableBalances = (
   accountDetails: Horizon.ServerApi.AccountRecord
 ) => {

@@ -5,6 +5,7 @@ import {
   BASE_RESERVE,
   BASE_RESERVE_MIN_COUNT,
   NativeBalance,
+  getAssetType,
 } from "../../../helper/horizon-rpc";
 import { formatTokenAmount } from "../../../helper/format";
 
@@ -761,6 +762,8 @@ const transformAccountHistory = async (
       ({
         destination: edge.node.destination,
         starting_balance: edge.node.startingBalance,
+        type: "create_account",
+        type_i: 0,
       } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>)
   );
 
@@ -771,6 +774,8 @@ const transformAccountHistory = async (
       ({
         destination: edge.node.destination,
         starting_balance: edge.node.startingBalance,
+        type: "create_account",
+        type_i: 0,
       } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>)
   );
 
@@ -781,10 +786,12 @@ const transformAccountHistory = async (
       ({
         from: edge.node.accountBySource.publickey,
         to: edge.node.accountByDestination.publickey,
-        asset_type: undefined, // TODO, get asset type in Mercury
+        asset_type: getAssetType(edge.node.assetByAsset?.code),
         asset_code: edge.node.assetByAsset?.code,
         asset_issuer: edge.node.assetByAsset?.code,
         amount: edge.node.amount,
+        type: "payment",
+        type_i: 1,
       } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
   );
 
@@ -795,10 +802,12 @@ const transformAccountHistory = async (
       ({
         from: edge.node.accountBySource.publickey,
         to: edge.node.accountByDestination.publickey,
-        asset_type: undefined, // TODO, get asset type in Mercury
+        asset_type: getAssetType(edge.node.assetByAsset?.code),
         asset_code: edge.node.assetByAsset?.code,
         asset_issuer: edge.node.assetByAsset?.code,
         amount: edge.node.amount,
+        type: "payment",
+        type_i: 1,
       } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
   );
 
@@ -809,6 +818,8 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          type: "path_payment_strict_send",
+          type_i: 13,
         } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>)
     );
 
@@ -819,6 +830,8 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          type: "path_payment_strict_send",
+          type_i: 13,
         } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>)
     );
 
@@ -829,6 +842,8 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          type: "path_payment_strict_receive",
+          type_i: 2,
         } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>)
     );
 
@@ -839,6 +854,8 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          type: "path_payment_strict_receive",
+          type_i: 2,
         } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>)
     );
 
@@ -848,6 +865,8 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        type: "manage_sell_offer",
+        type_i: 4,
       } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>)
   );
 
@@ -857,6 +876,8 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        type: "manage_sell_offer",
+        type_i: 4,
       } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>)
   );
 
@@ -867,6 +888,8 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          type: "create_passive_sell_offer",
+          type_i: 3,
         } as Partial<Horizon.ServerApi.PassiveOfferOperationRecord>)
     );
 
@@ -876,6 +899,8 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge,
+        type: "change_trust",
+        type_i: 6,
       } as Partial<Horizon.ServerApi.ChangeTrustOperationRecord>)
   );
 
@@ -885,6 +910,8 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        type: "account_merge",
+        type_i: 8,
       } as Partial<Horizon.ServerApi.AccountMergeOperationRecord>)
   );
 
@@ -894,6 +921,8 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        type: "bump_sequence",
+        type_i: 11,
       } as Partial<Horizon.ServerApi.BumpSequenceOperationRecord>)
   );
 
@@ -904,6 +933,8 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          type: "claim_claimable_balance",
+          type_i: 15,
         } as Partial<Horizon.ServerApi.ClaimClaimableBalanceOperationRecord>)
     );
 
@@ -914,6 +945,8 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          type: "create_claimable_balance",
+          type_i: 14,
         } as Partial<Horizon.ServerApi.CreateClaimableBalanceOperationRecord>)
     );
 
@@ -923,6 +956,8 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        type: "allow_trust",
+        type_i: 7,
       } as Partial<Horizon.ServerApi.AllowTrustOperationRecord>)
   );
 
@@ -932,6 +967,8 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        type: "manage_data",
+        type_i: 10,
       } as Partial<Horizon.ServerApi.ManageDataOperationRecord>)
   );
 
@@ -942,6 +979,8 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          type: "begin_sponsoring_future_reserves",
+          type_i: 16,
         } as Partial<Horizon.ServerApi.BeginSponsoringFutureReservesOperationRecord>)
     );
 
@@ -952,6 +991,8 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          type: "end_sponsoring_future_reserves",
+          type_i: 17,
         } as Partial<Horizon.ServerApi.EndSponsoringFutureReservesOperationRecord>)
     );
 
@@ -961,6 +1002,8 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        type: "revoke_sponsorship",
+        type_i: 18,
       } as Partial<Horizon.ServerApi.RevokeSponsorshipOperationRecord>)
   );
 
@@ -970,6 +1013,8 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        type: "clawback",
+        type_i: 19,
       } as Partial<Horizon.ServerApi.ClawbackOperationRecord>)
   );
 
@@ -979,6 +1024,8 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        type: "set_trust_line_flags",
+        type_i: 21,
       } as Partial<Horizon.ServerApi.SetTrustLineFlagsOperationRecord>)
   );
 
@@ -989,6 +1036,8 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          type: "liquidity_pool_deposit",
+          type_i: 22,
         } as Partial<Horizon.ServerApi.DepositLiquidityOperationRecord>)
     );
 
@@ -999,6 +1048,8 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          type: "liquidity_pool_withdraw",
+          type_i: 23,
         } as Partial<Horizon.ServerApi.WithdrawLiquidityOperationRecord>)
     );
 
