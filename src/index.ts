@@ -87,7 +87,7 @@ async function main() {
   const server = initApiServer(mercuryClient, logger, redis);
 
   try {
-    await server.listen({ port });
+    await server.listen({ port, host: "0.0.0.0" });
     logger.info(`Running in ${env} mode`);
   } catch (err) {
     server.log.error(err);
