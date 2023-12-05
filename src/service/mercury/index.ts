@@ -485,7 +485,7 @@ export class MercuryClient {
         available: new BigNumber(balance.balance),
       };
     }
-    return balances;
+    return balanceMap;
   };
 
   getAccountBalancesHorizon = async (pubKey: string, network: NetworkNames) => {
@@ -500,6 +500,8 @@ export class MercuryClient {
         allowHttp: !networkUrl.includes("https"),
       });
       const resp = await fetchAccountDetails(pubKey, server);
+      balances = resp.balances;
+      subentryCount = resp.subentryCount;
 
       for (let i = 0; i < Object.keys(resp.balances).length; i++) {
         const k = Object.keys(resp.balances)[i];
@@ -595,15 +597,33 @@ export class MercuryClient {
         error: null,
       };
     } else {
-      const classicBalances = await this.getAccountBalancesHorizon(
-        pubKey,
-        network
-      );
-      const tokenBalances = await this.getTokenBalancesSorobanRPC(
-        pubKey,
-        contractIds,
-        network
-      );
+      let tokenBalances = {};
+      let classicBalances = {
+        balances: [],
+        isFunded: false,
+        subentryCount: 0,
+      };
+      try {
+        classicBalances = await this.getAccountBalancesHorizon(pubKey, network);
+      } catch (error) {
+        this.logger.error(error);
+        this.logger.error(
+          `failed to fetch token classic balances from Horizon: ${pubKey}, ${network}`
+        );
+      }
+
+      try {
+        tokenBalances = await this.getTokenBalancesSorobanRPC(
+          pubKey,
+          contractIds,
+          network
+        );
+      } catch (error) {
+        this.logger.error(error);
+        this.logger.error(
+          `failed to fetch token token balances from Soroban RPC: ${pubKey}, ${network}`
+        );
+      }
 
       const data = {
         balances: {
@@ -614,7 +634,9 @@ export class MercuryClient {
         subentryCount: classicBalances.subentryCount,
       };
       return {
-        data,
+        data: {
+          data,
+        },
         error: null,
       };
     }
