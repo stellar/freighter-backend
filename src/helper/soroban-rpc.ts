@@ -12,8 +12,7 @@ import {
   xdr,
   SorobanRpc,
 } from "stellar-sdk";
-
-type NetworkNames = keyof typeof Networks;
+import { NetworkNames } from "./validate";
 
 const SOROBAN_RPC_URLS: { [key in keyof typeof Networks]?: string } = {
   TESTNET: "https://soroban-testnet.stellar.org/",

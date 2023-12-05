@@ -55,7 +55,7 @@ describe("API routes", () => {
       const response = await fetch(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-balances/${pubKey}?contract_ids=CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP`
+        }/api/v1/account-balances/${pubKey}?contract_ids=CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP&network=TESTNET`
       );
       expect(response.status).toEqual(200);
       server.close();
@@ -67,6 +67,7 @@ describe("API routes", () => {
           "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
           "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
         ],
+        network: "TESTNET",
       };
       const server = await getDevServer();
       const response = await fetch(

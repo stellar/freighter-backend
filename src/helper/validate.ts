@@ -1,4 +1,6 @@
-import { StrKey } from "stellar-sdk";
+import { Networks, StrKey } from "stellar-sdk";
+
+export type NetworkNames = keyof typeof Networks;
 
 const isContractId = (contractId: string) => {
   try {
@@ -18,4 +20,8 @@ const isPubKey = (pubKey: string) => {
   }
 };
 
-export { isContractId, isPubKey };
+const isNetwork = (network: string): network is NetworkNames => {
+  return Object.keys(Networks).includes(network);
+};
+
+export { isContractId, isPubKey, isNetwork };

@@ -1,7 +1,7 @@
 import { Client, CombinedError, fetchExchange } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { Address, Horizon, Networks, xdr } from "stellar-sdk";
+import { Address, Horizon, xdr } from "stellar-sdk";
 import { Redis } from "ioredis";
 import BigNumber from "bignumber.js";
 
@@ -22,8 +22,7 @@ import {
   fetchAccountDetails,
   fetchAccountHistory,
 } from "../../helper/horizon-rpc";
-
-type NetworkNames = keyof typeof Networks;
+import { NetworkNames } from "../../helper/validate";
 
 enum NETWORK_URLS {
   PUBLIC = "https://horizon.stellar.org",
@@ -167,7 +166,17 @@ export class MercuryClient {
     }
   };
 
-  tokenSubscription = async (contractId: string, pubKey: string) => {
+  tokenSubscription = async (
+    contractId: string,
+    pubKey: string,
+    network: NetworkNames
+  ) => {
+    if (!hasIndexerSupport(network)) {
+      return {
+        data: null,
+        error: `network not currently supported: ${network}`,
+      };
+    }
     // Token transfer topics are - 1: transfer, 2: from, 3: to, 4: assetName, data(amount)
     const transferToSub = {
       contract_id: contractId,
@@ -239,7 +248,14 @@ export class MercuryClient {
     }
   };
 
-  accountSubscription = async (pubKey: string) => {
+  accountSubscription = async (pubKey: string, network: NetworkNames) => {
+    if (!hasIndexerSupport(network)) {
+      return {
+        data: null,
+        error: `network not currently supported: ${network}`,
+      };
+    }
+
     try {
       const subscribe = async () => {
         const config = {

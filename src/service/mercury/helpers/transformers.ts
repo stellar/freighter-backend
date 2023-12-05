@@ -1,5 +1,5 @@
 import { OperationResult } from "@urql/core";
-import { Horizon, Networks, scValToNative, xdr } from "stellar-sdk";
+import { Horizon, scValToNative, xdr } from "stellar-sdk";
 import BigNumber from "bignumber.js";
 import {
   BASE_RESERVE,
@@ -8,8 +8,7 @@ import {
   getAssetType,
 } from "../../../helper/horizon-rpc";
 import { formatTokenAmount } from "../../../helper/format";
-
-type NetworkNames = keyof typeof Networks;
+import { NetworkNames } from "../../../helper/validate";
 
 // Transformers take an API response, and transform it/augment it for frontend consumption
 
