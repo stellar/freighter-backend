@@ -394,7 +394,6 @@ export class MercuryClient {
     } catch (error) {
       this.logger.error(error);
       const _error = JSON.stringify(error);
-      this.logger.error(_error);
       return {
         data: null,
         error: _error,
