@@ -116,7 +116,12 @@ export const query = {
           node {
             destination
             startingBalance
-
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -125,7 +130,12 @@ export const query = {
           node {
             destination
             startingBalance
-
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -144,6 +154,12 @@ export const query = {
             accountByDestination {
               publickey
             }
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -161,6 +177,12 @@ export const query = {
             }
             accountByDestination {
               publickey
+            }
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
             }
           }
         }
@@ -215,6 +237,12 @@ export const query = {
           path5Native
           sendAmount
           sendAssetNative
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+          }
         }
       }
 
@@ -267,6 +295,12 @@ export const query = {
           path5Native
           sendAmount
           sendAssetNative
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+          }
         }
       }
 
@@ -319,6 +353,12 @@ export const query = {
           sendAssetNative
           destAmount
           sendMax
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+          }
         }
       }
 
@@ -371,6 +411,12 @@ export const query = {
           sendAssetNative
           destAmount
           sendMax
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+          }
         }
       }
     
@@ -403,6 +449,12 @@ export const query = {
             priceD
             priceN
             sellingNative
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -436,6 +488,12 @@ export const query = {
             priceD
             priceN
             sellingNative
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -466,6 +524,12 @@ export const query = {
           priceD
           priceN
           sellingNative
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+          }
         }
       }
 
@@ -493,6 +557,12 @@ export const query = {
             }
             fee
           }
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+          }
         }
       }
 
@@ -503,6 +573,12 @@ export const query = {
             destinationMuxed
             source
             sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -513,6 +589,12 @@ export const query = {
             source
             sourceMuxed
             bumpTo
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -523,6 +605,12 @@ export const query = {
             source
             sourceMuxed
             balanceId
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -535,6 +623,12 @@ export const query = {
             assetNative
             source
             sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -547,6 +641,12 @@ export const query = {
             source
             sourceMuxed
             trustor
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -558,6 +658,12 @@ export const query = {
             dataValue
             source
             sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -567,6 +673,12 @@ export const query = {
           node {
             source
             sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -576,6 +688,12 @@ export const query = {
           node {
             source
             sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -586,6 +704,12 @@ export const query = {
             source
             sourceMuxed
             sponsorship
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -600,6 +724,12 @@ export const query = {
             fromMuxed
             source
             sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -614,6 +744,12 @@ export const query = {
             source
             sourceMuxed
             trustor
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -628,6 +764,12 @@ export const query = {
             minPriceD
             source
             sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
@@ -640,6 +782,12 @@ export const query = {
             minAmountB
             source
             sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+            }
           }
         }
       }
