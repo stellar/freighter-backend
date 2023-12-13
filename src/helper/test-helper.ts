@@ -94,7 +94,13 @@ const queryMockResponse = {
     },
   },
   [query.getAccountHistory]: {
-    eventByContractId: {
+    transferFromEvent: {
+      edges: [],
+    },
+    transferToEvent: {
+      edges: [],
+    },
+    mintEvent: {
       edges: [],
     },
     createAccountByPublicKey: {
@@ -116,12 +122,80 @@ const queryMockResponse = {
               publickey:
                 "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
             },
+            assetByAsset: {
+              code: "DT",
+              issuer:
+                "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+            },
             accountByDestination: {
               publickey: pubKey,
             },
           },
         },
       ],
+    },
+    pathPaymentsStrictSendByPublicKey: {
+      nodes: [],
+    },
+    pathPaymentsStrictSendToPublicKey: {
+      nodes: [],
+    },
+    pathPaymentsStrictReceiveByPublicKey: {
+      nodes: [],
+    },
+    pathPaymentsStrictReceiveToPublicKey: {
+      nodes: [],
+    },
+    manageBuyOfferByPublicKey: {
+      edges: [],
+    },
+    manageSellOfferByPublicKey: {
+      edges: [],
+    },
+    createPassiveSellOfferByPublicKey: {
+      nodes: [],
+    },
+    changeTrustByPublicKey: {
+      nodes: [],
+    },
+    accountMergeByPublicKey: {
+      edges: [],
+    },
+    bumpSequenceByPublicKey: {
+      edges: [],
+    },
+    claimClaimableBalanceByPublicKey: {
+      edges: [],
+    },
+    createClaimableBalanceByPublicKey: {
+      edges: [],
+    },
+    allowTrustByPublicKey: {
+      edges: [],
+    },
+    manageDataByPublicKey: {
+      edges: [],
+    },
+    beginSponsoringFutureReservesByPublicKey: {
+      edges: [],
+    },
+    endSponsoringFutureReservesByPublicKey: {
+      edges: [],
+    },
+    revokeSponsorshipByPublicKey: {
+      edges: [],
+    },
+    clawbackByPublicKey: {
+      edges: [],
+    },
+    setTrustLineFlagsByPublicKey: {
+      edges: [],
+    },
+    liquidityPoolDepositByPublicKey: {
+      edges: [],
+    },
+    liquidityPoolWithdrawByPublicKey: {
+      edges: [],
     },
   },
 };

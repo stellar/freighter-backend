@@ -6,10 +6,14 @@ import { Redis } from "ioredis";
 
 import { MercuryClient } from "../service/mercury";
 import { ajv } from "./validators";
-import { isContractId, isPubKey } from "../helper/validate";
+import {
+  isContractId,
+  isPubKey,
+  isNetwork,
+  NetworkNames,
+} from "../helper/validate";
 
 const API_VERSION = "v1";
-const NETWORK = "TESTNET"; // hardcode testnet for now, not sure how Mercury will change the schema for multi-network support yet
 
 export function initApiServer(
   mercuryClient: MercuryClient,
@@ -49,15 +53,26 @@ export function initApiServer(
               validator: (qStr: string) => isPubKey(qStr),
             },
           },
+          querystring: {
+            ["network"]: {
+              type: "string",
+              validator: (qStr: string) => isNetwork(qStr),
+            },
+          },
         },
         handler: async (
           request: FastifyRequest<{
             Params: { ["pubKey"]: string };
+            Querystring: { ["network"]: NetworkNames };
           }>,
           reply
         ) => {
           const pubKey = request.params["pubKey"];
-          const { data, error } = await mercuryClient.getAccountHistory(pubKey);
+          const network = request.query["network"];
+          const { data, error } = await mercuryClient.getAccountHistory(
+            pubKey,
+            network
+          );
           if (error) {
             reply.code(400).send(error);
           } else {
@@ -81,23 +96,31 @@ export function initApiServer(
               type: "string",
               validator: (qStr: string) => qStr.split(",").every(isContractId),
             },
+            ["network"]: {
+              type: "string",
+              validator: (qStr: string) => isNetwork(qStr),
+            },
           },
         },
         handler: async (
           request: FastifyRequest<{
             Params: { ["pubKey"]: string };
-            Querystring: { ["contract_ids"]: string };
+            Querystring: {
+              ["contract_ids"]: string;
+              ["network"]: NetworkNames;
+            };
           }>,
           reply
         ) => {
           const pubKey = request.params["pubKey"];
+          const network = request.query["network"];
           const contractIds = request.query["contract_ids"]
             ? request.query["contract_ids"].split(",")
             : [];
           const { data, error } = await mercuryClient.getAccountBalances(
             pubKey,
             contractIds,
-            NETWORK
+            network
           );
           if (error) {
             reply.code(400).send(error);
@@ -116,6 +139,7 @@ export function initApiServer(
             properties: {
               contract_id: { type: "string" },
               pub_key: { type: "string" },
+              network: { type: "string" },
             },
           },
           response: {
@@ -129,14 +153,19 @@ export function initApiServer(
         },
         handler: async (
           request: FastifyRequest<{
-            Body: { contract_id: string; pub_key: string };
+            Body: {
+              contract_id: string;
+              pub_key: string;
+              network: NetworkNames;
+            };
           }>,
           reply
         ) => {
-          const { contract_id, pub_key } = request.body;
+          const { contract_id, pub_key, network } = request.body;
           const { data, error } = await mercuryClient.tokenSubscription(
             contract_id,
-            pub_key
+            pub_key,
+            network
           );
           if (error) {
             reply.code(400).send(error);
@@ -154,6 +183,7 @@ export function initApiServer(
             type: "object",
             properties: {
               pub_key: { type: "string" },
+              network: { type: "string" },
             },
           },
           response: {
@@ -166,12 +196,15 @@ export function initApiServer(
           },
         },
         handler: async (
-          request: FastifyRequest<{ Body: { pub_key: string } }>,
+          request: FastifyRequest<{
+            Body: { pub_key: string; network: NetworkNames };
+          }>,
           reply
         ) => {
-          const { pub_key } = request.body;
+          const { pub_key, network } = request.body;
           const { data, error } = await mercuryClient.accountSubscription(
-            pub_key
+            pub_key,
+            network
           );
           if (error) {
             reply.code(400).send(error);
@@ -190,6 +223,7 @@ export function initApiServer(
             properties: {
               contract_id: { type: "string" },
               pub_key: { type: "string" },
+              network: { type: "string" },
             },
           },
           response: {
@@ -203,15 +237,19 @@ export function initApiServer(
         },
         handler: async (
           request: FastifyRequest<{
-            Body: { pub_key: string; contract_id: string };
+            Body: {
+              pub_key: string;
+              contract_id: string;
+              network: NetworkNames;
+            };
           }>,
           reply
         ) => {
-          const { pub_key, contract_id } = request.body;
+          const { pub_key, contract_id, network } = request.body;
           const { data, error } = await mercuryClient.tokenBalanceSubscription(
             contract_id,
             pub_key,
-            NETWORK
+            network
           );
           if (error) {
             reply.code(400).send(error);

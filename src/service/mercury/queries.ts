@@ -68,7 +68,7 @@ export const query = {
     }
   `,
   getAccountHistory: `
-    query GetAccountHistory($pubKey: String!) {
+    query GetAccountHistory($pubKey: String!, $xdrPubKey: String!) {
       mintEvent: eventByTopic(t1: "AAAADgAAAARtaW50") {
         edges {
           node {
@@ -83,7 +83,7 @@ export const query = {
           }
         }
       }
-      transferToEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t2: $pubKey) {
+      transferToEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t2: $xdrPubKey) {
         edges {
           node {
             contractId
@@ -97,7 +97,7 @@ export const query = {
           }
         }
       }
-      transferFromEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t3: $pubKey) {
+      transferFromEvent: eventByTopic(t1: "AAAADwAAAAh0cmFuc2Zlcg==", t3: $xdrPubKey) {
         edges {
           node {
             contractId
@@ -115,6 +115,17 @@ export const query = {
         edges {
           node {
             destination
+            startingBalance
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
           }
         }
       }
@@ -122,6 +133,17 @@ export const query = {
         edges {
           node {
             destination
+            startingBalance
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
           }
         }
       }
@@ -140,6 +162,16 @@ export const query = {
             accountByDestination {
               publickey
             }
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
           }
         }
       }
@@ -157,6 +189,16 @@ export const query = {
             }
             accountByDestination {
               publickey
+            }
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
             }
           }
         }
@@ -211,6 +253,16 @@ export const query = {
           path5Native
           sendAmount
           sendAssetNative
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+            ledgerByLedger {
+              closeTime
+              sequence
+            }
+          }
         }
       }
 
@@ -263,6 +315,16 @@ export const query = {
           path5Native
           sendAmount
           sendAssetNative
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+            ledgerByLedger {
+              closeTime
+              sequence
+            }
+          }
         }
       }
 
@@ -315,6 +377,16 @@ export const query = {
           sendAssetNative
           destAmount
           sendMax
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+            ledgerByLedger {
+              closeTime
+              sequence
+            }
+          }
         }
       }
 
@@ -367,6 +439,16 @@ export const query = {
           sendAssetNative
           destAmount
           sendMax
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+            ledgerByLedger {
+              closeTime
+              sequence
+            }
+          }
         }
       }
     
@@ -399,6 +481,16 @@ export const query = {
             priceD
             priceN
             sellingNative
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
           }
         }
       }
@@ -432,6 +524,16 @@ export const query = {
             priceD
             priceN
             sellingNative
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
           }
         }
       }
@@ -462,6 +564,16 @@ export const query = {
           priceD
           priceN
           sellingNative
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+            ledgerByLedger {
+              closeTime
+              sequence
+            }
+          }
         }
       }
 
@@ -481,9 +593,301 @@ export const query = {
           limit
           lineNative
           poolshareByLinePoolShare {
-            assetA
-            assetB
+            assetByA {
+              code
+            }
+            assetByB {
+              code
+            }
             fee
+          }
+          txInfoByTx {
+            fee
+            opCount
+            txHash
+            ledger
+            ledgerByLedger {
+              closeTime
+              sequence
+            }
+          }
+        }
+      }
+
+      accountMergeByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            destination
+            destinationMuxed
+            source
+            sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      bumpSequenceByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            source
+            sourceMuxed
+            bumpTo
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      claimClaimableBalanceByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            source
+            sourceMuxed
+            balanceId
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      createClaimableBalanceByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            amount
+            asset
+            assetNative
+            source
+            sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      allowTrustByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            authorize
+            code
+            source
+            sourceMuxed
+            trustor
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      manageDataByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            dataName
+            dataValue
+            source
+            sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      beginSponsoringFutureReservesByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            source
+            sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      endSponsoringFutureReservesByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            source
+            sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      revokeSponsorshipByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            source
+            sourceMuxed
+            sponsorship
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      clawbackByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            amount
+            asset
+            assetNative
+            from
+            fromMuxed
+            source
+            sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      setTrustLineFlagsByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            asset
+            assetNative
+            clearFlags
+            setFlags
+            source
+            sourceMuxed
+            trustor
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      liquidityPoolDepositByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            maxAmountA
+            maxAmountB
+            maxPriceD
+            maxPriceN
+            minPriceD
+            source
+            sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
+      liquidityPoolWithdrawByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            amount
+            minAmountA
+            minAmountB
+            source
+            sourceMuxed
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
           }
         }
       }

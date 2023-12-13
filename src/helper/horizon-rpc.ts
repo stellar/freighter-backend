@@ -3,6 +3,7 @@ import { AssetType, Horizon } from "stellar-sdk";
 
 export const BASE_RESERVE = 0.5;
 export const BASE_RESERVE_MIN_COUNT = 2;
+const TRANSACTIONS_LIMIT = 100;
 
 export interface Issuer {
   key: string;
@@ -73,6 +74,16 @@ export function getBalanceIdentifier(
     default:
       return "native";
   }
+}
+
+export function getAssetType(code?: string) {
+  if (!code) {
+    return "native";
+  }
+  if (code.length > 4) {
+    return "credit_alphanum12";
+  }
+  return "credit_alphanum4";
 }
 
 export const makeDisplayableBalances = (
@@ -195,6 +206,25 @@ export const fetchAccountDetails = async (
       sequenceNumber: accountSummary.sequence,
       balances,
     };
+  } catch (error) {
+    throw new Error(JSON.stringify(error));
+  }
+};
+
+export const fetchAccountHistory = async (
+  pubKey: string,
+  server: Horizon.Server
+) => {
+  try {
+    const operationsData = await server
+      .operations()
+      .forAccount(pubKey)
+      .order("desc")
+      .join("transactions")
+      .limit(TRANSACTIONS_LIMIT)
+      .call();
+
+    return operationsData.records || [];
   } catch (error) {
     throw new Error(JSON.stringify(error));
   }

@@ -1,8 +1,9 @@
 import { Client, CombinedError, fetchExchange } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { Address, Horizon, Networks, nativeToScVal, xdr } from "stellar-sdk";
+import { Address, Horizon, xdr } from "stellar-sdk";
 import { Redis } from "ioredis";
+import BigNumber from "bignumber.js";
 
 import { mutation, query } from "./queries";
 import {
@@ -13,11 +14,15 @@ import {
   getTokenSymbol,
   getTxBuilder,
 } from "../../helper/soroban-rpc";
-import { transformAccountBalances } from "./helpers/transformers";
-import BigNumber from "bignumber.js";
-import { fetchAccountDetails } from "../../helper/horizon-rpc";
-
-type NetworkNames = keyof typeof Networks;
+import {
+  transformAccountBalances,
+  transformAccountHistory,
+} from "./helpers/transformers";
+import {
+  fetchAccountDetails,
+  fetchAccountHistory,
+} from "../../helper/horizon-rpc";
+import { NetworkNames } from "../../helper/validate";
 
 enum NETWORK_URLS {
   PUBLIC = "https://horizon.stellar.org",
@@ -161,24 +166,34 @@ export class MercuryClient {
     }
   };
 
-  tokenSubscription = async (contractId: string, pubKey: string) => {
+  tokenSubscription = async (
+    contractId: string,
+    pubKey: string,
+    network: NetworkNames
+  ) => {
+    if (!hasIndexerSupport(network)) {
+      return {
+        data: null,
+        error: `network not currently supported: ${network}`,
+      };
+    }
     // Token transfer topics are - 1: transfer, 2: from, 3: to, 4: assetName, data(amount)
     const transferToSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: nativeToScVal("transfer").toXDR("base64"),
-      topic2: nativeToScVal(pubKey).toXDR("base64"),
+      topic1: xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
+      topic2: xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
     };
     const transferFromSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: nativeToScVal("transfer").toXDR("base64"),
-      topic3: nativeToScVal(pubKey).toXDR("base64"),
+      topic1: xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
+      topic3: xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
     };
     const mintSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: nativeToScVal("mint").toXDR("base64"),
+      topic1: xdr.ScVal.scvSymbol("mint").toXDR("base64"),
     };
 
     try {
@@ -233,7 +248,14 @@ export class MercuryClient {
     }
   };
 
-  accountSubscription = async (pubKey: string) => {
+  accountSubscription = async (pubKey: string, network: NetworkNames) => {
+    if (!hasIndexerSupport(network)) {
+      return {
+        data: null,
+        error: `network not currently supported: ${network}`,
+      };
+    }
+
     try {
       const subscribe = async () => {
         const config = {
@@ -358,11 +380,34 @@ export class MercuryClient {
     }
   };
 
-  getAccountHistory = async (pubKey: string) => {
+  getAccountHistoryHorizon = async (pubKey: string, network: NetworkNames) => {
     try {
+      const networkUrl = NETWORK_URLS[network];
+      const server = new Horizon.Server(networkUrl, {
+        allowHttp: !networkUrl.includes("https"),
+      });
+      const data = await fetchAccountHistory(pubKey, server);
+      return {
+        data,
+        error: null,
+      };
+    } catch (error) {
+      this.logger.error(error);
+      const _error = JSON.stringify(error);
+      return {
+        data: null,
+        error: _error,
+      };
+    }
+  };
+
+  getAccountHistoryMercury = async (pubKey: string, network: NetworkNames) => {
+    try {
+      const xdrPubKey = new Address(pubKey).toScVal().toXDR("base64");
       const getData = async () => {
         const data = await this.urqlClient.query(query.getAccountHistory, {
           pubKey,
+          xdrPubKey,
         });
         const errorMessage = getGraphQlError(data.error);
         if (errorMessage) {
@@ -372,9 +417,13 @@ export class MercuryClient {
         return data;
       };
       const data = await this.renewAndRetry(getData);
-
       return {
-        data,
+        data: await transformAccountHistory(
+          data,
+          pubKey,
+          network,
+          this.tokenDetails
+        ),
         error: null,
       };
     } catch (error) {
@@ -383,6 +432,22 @@ export class MercuryClient {
       return {
         data: null,
         error: _error,
+      };
+    }
+  };
+
+  getAccountHistory = async (pubKey: string, network: NetworkNames) => {
+    if (hasIndexerSupport(network)) {
+      const data = await this.getAccountHistoryMercury(pubKey, network);
+      return {
+        data,
+        error: null,
+      };
+    } else {
+      const data = await this.getAccountHistoryHorizon(pubKey, network);
+      return {
+        data,
+        error: null,
       };
     }
   };
@@ -419,7 +484,7 @@ export class MercuryClient {
         available: new BigNumber(balance.balance),
       };
     }
-    return balances;
+    return balanceMap;
   };
 
   getAccountBalancesHorizon = async (pubKey: string, network: NetworkNames) => {
@@ -434,6 +499,8 @@ export class MercuryClient {
         allowHttp: !networkUrl.includes("https"),
       });
       const resp = await fetchAccountDetails(pubKey, server);
+      balances = resp.balances;
+      subentryCount = resp.subentryCount;
 
       for (let i = 0; i < Object.keys(resp.balances).length; i++) {
         const k = Object.keys(resp.balances)[i];
@@ -453,7 +520,7 @@ export class MercuryClient {
       }
       isFunded = true;
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
       return {
         balances,
         isFunded: false,
@@ -502,7 +569,7 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      console.log(error);
+      this.logger.error(error);
       const _error = JSON.stringify(error);
       this.logger.error(_error);
       return {
@@ -529,15 +596,33 @@ export class MercuryClient {
         error: null,
       };
     } else {
-      const classicBalances = await this.getAccountBalancesHorizon(
-        pubKey,
-        network
-      );
-      const tokenBalances = await this.getTokenBalancesSorobanRPC(
-        pubKey,
-        contractIds,
-        network
-      );
+      let tokenBalances = {};
+      let classicBalances = {
+        balances: [],
+        isFunded: false,
+        subentryCount: 0,
+      };
+      try {
+        classicBalances = await this.getAccountBalancesHorizon(pubKey, network);
+      } catch (error) {
+        this.logger.error(error);
+        this.logger.error(
+          `failed to fetch token classic balances from Horizon: ${pubKey}, ${network}`
+        );
+      }
+
+      try {
+        tokenBalances = await this.getTokenBalancesSorobanRPC(
+          pubKey,
+          contractIds,
+          network
+        );
+      } catch (error) {
+        this.logger.error(error);
+        this.logger.error(
+          `failed to fetch token token balances from Soroban RPC: ${pubKey}, ${network}`
+        );
+      }
 
       const data = {
         balances: {
@@ -548,7 +633,9 @@ export class MercuryClient {
         subentryCount: classicBalances.subentryCount,
       };
       return {
-        data,
+        data: {
+          data,
+        },
         error: null,
       };
     }
