@@ -12,6 +12,7 @@ import {
   isNetwork,
   NetworkNames,
 } from "../helper/validate";
+import { submitTransaction } from "../helper/horizon-rpc";
 
 const API_VERSION = "v1";
 
@@ -250,6 +251,51 @@ export function initApiServer(
             contract_id,
             pub_key,
             network
+          );
+          if (error) {
+            reply.code(400).send(error);
+          } else {
+            reply.code(200).send(data);
+          }
+        },
+      });
+
+      instance.route({
+        method: "POST",
+        url: "/submit-tx",
+        schema: {
+          body: {
+            type: "object",
+            properties: {
+              signed_xdr: { type: "string" },
+              network_url: { type: "string" },
+              network_passphrase: { type: "string" },
+            },
+          },
+          response: {
+            200: {
+              type: "object",
+              properties: {
+                data: { type: "object" },
+              },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Body: {
+              signed_xdr: string;
+              network_url: string;
+              network_passphrase: string;
+            };
+          }>,
+          reply
+        ) => {
+          const { signed_xdr, network_url, network_passphrase } = request.body;
+          const { data, error } = await submitTransaction(
+            signed_xdr,
+            network_url,
+            network_passphrase
           );
           if (error) {
             reply.code(400).send(error);
