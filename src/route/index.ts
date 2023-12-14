@@ -58,20 +58,31 @@ export function initApiServer(
               type: "string",
               validator: (qStr: string) => isNetwork(qStr),
             },
+            ["horizon_url"]: {
+              type: "string",
+            },
+            ["soroban_url"]: {
+              type: "string",
+            },
           },
         },
         handler: async (
           request: FastifyRequest<{
             Params: { ["pubKey"]: string };
-            Querystring: { ["network"]: NetworkNames };
+            Querystring: {
+              ["network"]: NetworkNames;
+              ["horizon_url"]?: string;
+              ["soroban_url"]?: string;
+            };
           }>,
           reply
         ) => {
           const pubKey = request.params["pubKey"];
-          const network = request.query["network"];
+          const { network, horizon_url, soroban_url } = request.query;
           const { data, error } = await mercuryClient.getAccountHistory(
             pubKey,
-            network
+            network,
+            { horizon: horizon_url, soroban: soroban_url }
           );
           if (error) {
             reply.code(400).send(error);
@@ -100,6 +111,12 @@ export function initApiServer(
               type: "string",
               validator: (qStr: string) => isNetwork(qStr),
             },
+            ["horizon_url"]: {
+              type: "string",
+            },
+            ["soroban_url"]: {
+              type: "string",
+            },
           },
         },
         handler: async (
@@ -108,19 +125,22 @@ export function initApiServer(
             Querystring: {
               ["contract_ids"]: string;
               ["network"]: NetworkNames;
+              ["horizon_url"]?: string;
+              ["soroban_url"]?: string;
             };
           }>,
           reply
         ) => {
           const pubKey = request.params["pubKey"];
-          const network = request.query["network"];
+          const { network, horizon_url, soroban_url } = request.query;
           const contractIds = request.query["contract_ids"]
             ? request.query["contract_ids"].split(",")
             : [];
           const { data, error } = await mercuryClient.getAccountBalances(
             pubKey,
             contractIds,
-            network
+            network,
+            { horizon: horizon_url, soroban: soroban_url }
           );
           if (error) {
             reply.code(400).send(error);

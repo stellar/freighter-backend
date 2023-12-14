@@ -380,9 +380,19 @@ export class MercuryClient {
     }
   };
 
-  getAccountHistoryHorizon = async (pubKey: string, network: NetworkNames) => {
+  getAccountHistoryHorizon = async (
+    pubKey: string,
+    network: NetworkNames,
+    customHorizonRpcUrl?: string
+  ) => {
     try {
-      const networkUrl = NETWORK_URLS[network];
+      const networkUrl = !NETWORK_URLS[network]
+        ? customHorizonRpcUrl
+        : NETWORK_URLS[network];
+      if (!networkUrl) {
+        throw new Error("network not supported");
+      }
+
       const server = new Horizon.Server(networkUrl, {
         allowHttp: !networkUrl.includes("https"),
       });
@@ -436,7 +446,11 @@ export class MercuryClient {
     }
   };
 
-  getAccountHistory = async (pubKey: string, network: NetworkNames) => {
+  getAccountHistory = async (
+    pubKey: string,
+    network: NetworkNames,
+    rpcUrls: { horizon?: string; soroban?: string }
+  ) => {
     if (hasIndexerSupport(network)) {
       const data = await this.getAccountHistoryMercury(pubKey, network);
       return {
@@ -444,7 +458,11 @@ export class MercuryClient {
         error: null,
       };
     } else {
-      const data = await this.getAccountHistoryHorizon(pubKey, network);
+      const data = await this.getAccountHistoryHorizon(
+        pubKey,
+        network,
+        rpcUrls.horizon
+      );
       return {
         data,
         error: null,
@@ -455,9 +473,10 @@ export class MercuryClient {
   getTokenBalancesSorobanRPC = async (
     pubKey: string,
     contractIds: string[],
-    network: NetworkNames
+    network: NetworkNames,
+    customSorobanRpcUrl?: string
   ) => {
-    const server = await getServer(network);
+    const server = await getServer(network, customSorobanRpcUrl);
     const balances = [];
     for (const id of contractIds) {
       const builder = await getTxBuilder(pubKey, network, server);
@@ -487,8 +506,17 @@ export class MercuryClient {
     return balanceMap;
   };
 
-  getAccountBalancesHorizon = async (pubKey: string, network: NetworkNames) => {
-    const networkUrl = NETWORK_URLS[network];
+  getAccountBalancesHorizon = async (
+    pubKey: string,
+    network: NetworkNames,
+    customHorizonRpcUrl?: string
+  ) => {
+    const networkUrl = !NETWORK_URLS[network]
+      ? customHorizonRpcUrl
+      : NETWORK_URLS[network];
+    if (!networkUrl) {
+      throw new Error("network not supported");
+    }
 
     let balances: any = null;
     let isFunded = null;
@@ -582,7 +610,8 @@ export class MercuryClient {
   getAccountBalances = async (
     pubKey: string,
     contractIds: string[],
-    network: NetworkNames
+    network: NetworkNames,
+    rpcUrls: { horizon?: string; soroban?: string }
   ) => {
     if (hasIndexerSupport(network)) {
       const data = await this.getAccountBalancesMercury(
@@ -603,7 +632,11 @@ export class MercuryClient {
         subentryCount: 0,
       };
       try {
-        classicBalances = await this.getAccountBalancesHorizon(pubKey, network);
+        classicBalances = await this.getAccountBalancesHorizon(
+          pubKey,
+          network,
+          rpcUrls.horizon
+        );
       } catch (error) {
         this.logger.error(error);
         this.logger.error(
@@ -615,7 +648,8 @@ export class MercuryClient {
         tokenBalances = await this.getTokenBalancesSorobanRPC(
           pubKey,
           contractIds,
-          network
+          network,
+          rpcUrls.soroban
         );
       } catch (error) {
         this.logger.error(error);
