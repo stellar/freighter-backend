@@ -292,14 +292,6 @@ export function initApiServer(
               network_passphrase: { type: "string" },
             },
           },
-          response: {
-            200: {
-              type: "object",
-              properties: {
-                data: { type: "object" },
-              },
-            },
-          },
         },
         handler: async (
           request: FastifyRequest<{
