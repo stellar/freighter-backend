@@ -161,6 +161,58 @@ export function initApiServer(
       });
 
       instance.route({
+        method: "GET",
+        url: "/token-details/:contractId",
+        schema: {
+          params: {
+            ["contractId"]: {
+              type: "string",
+              validator: (qStr: string) => isContractId(qStr),
+            },
+          },
+          querystring: {
+            ["pub_key"]: {
+              type: "string",
+              validator: (qStr: string) => isPubKey(qStr),
+            },
+            ["network"]: {
+              type: "string",
+              validator: (qStr: string) => isNetwork(qStr),
+            },
+            ["soroban_url"]: {
+              type: "string",
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Params: { ["contractId"]: string };
+            Querystring: {
+              ["contract_ids"]: string;
+              ["pub_key"]: string;
+              ["network"]: NetworkNames;
+              ["soroban_url"]?: string;
+            };
+          }>,
+          reply
+        ) => {
+          const contractId = request.params["contractId"];
+          const { network, pub_key, soroban_url } = request.query;
+          try {
+            const data = await mercuryClient.tokenDetails(
+              pub_key,
+              contractId,
+              network,
+              soroban_url
+            );
+            reply.code(200).send(data);
+          } catch (error) {
+            reply.code(400).send(error);
+          }
+        },
+      });
+
+      instance.route({
         method: "POST",
         url: "/subscription/token",
         schema: {

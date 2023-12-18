@@ -332,7 +332,8 @@ export class MercuryClient {
   tokenDetails = async (
     pubKey: string,
     contractId: string,
-    network: NetworkNames
+    network: NetworkNames,
+    customRpcUrl?: string
   ): Promise<
     { name: string; symbol: string; decimals: number } | undefined
   > => {
@@ -345,7 +346,7 @@ export class MercuryClient {
           return JSON.parse(tokenDetails);
         }
       }
-      const server = await getServer(network);
+      const server = await getServer(network, customRpcUrl);
       // we need a builder per operation, 1 op per tx in Soroban
       const decimalsBuilder = await getTxBuilder(pubKey, network, server);
       const decimals = await getTokenDecimals(
