@@ -13,6 +13,15 @@ import {
   NetworkNames,
 } from "../helper/validate";
 import { submitTransaction } from "../helper/horizon-rpc";
+import {
+  Memo,
+  MemoType,
+  Operation,
+  SorobanRpc,
+  Transaction,
+  TransactionBuilder,
+} from "stellar-sdk";
+import { simulateTx } from "../helper/soroban-rpc";
 
 const API_VERSION = "v1";
 
@@ -313,6 +322,49 @@ export function initApiServer(
             reply.code(400).send(error);
           } else {
             reply.code(200).send(data);
+          }
+        },
+      });
+
+      instance.route({
+        method: "POST",
+        url: "/simulate-tx",
+        schema: {
+          body: {
+            type: "object",
+            properties: {
+              signed_xdr: { type: "string" },
+              network_url: { type: "string" },
+              network_passphrase: { type: "string" },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Body: {
+              signed_xdr: string;
+              network_url: string;
+              network_passphrase: string;
+            };
+          }>,
+          reply
+        ) => {
+          const { signed_xdr, network_url, network_passphrase } = request.body;
+
+          try {
+            const tx = TransactionBuilder.fromXDR(
+              signed_xdr,
+              network_passphrase
+            );
+            const server = new SorobanRpc.Server(network_url);
+
+            const data = await simulateTx<unknown>(
+              tx as Transaction<Memo<MemoType>, Operation[]>,
+              server
+            );
+            reply.code(200).send(data);
+          } catch (error) {
+            reply.code(400).send(error);
           }
         },
       });
