@@ -1,5 +1,5 @@
 import BigNumber from "bignumber.js";
-import { AssetType, Horizon } from "stellar-sdk";
+import { AssetType, Horizon, TransactionBuilder } from "stellar-sdk";
 
 export const BASE_RESERVE = 0.5;
 export const BASE_RESERVE_MIN_COUNT = 2;
@@ -227,5 +227,36 @@ export const fetchAccountHistory = async (
     return operationsData.records || [];
   } catch (error) {
     throw new Error(JSON.stringify(error));
+  }
+};
+
+export const submitTransaction = async (
+  signedXDR: string,
+  networkUrl: string,
+  networkPassphrase: string
+): Promise<{
+  data: Horizon.HorizonApi.SubmitTransactionResponse | null;
+  error: unknown;
+}> => {
+  const tx = TransactionBuilder.fromXDR(signedXDR, networkPassphrase);
+  const server = new Horizon.Server(networkUrl);
+
+  try {
+    const data = await server.submitTransaction(tx);
+    return {
+      data,
+      error: null,
+    };
+  } catch (e: any) {
+    if (e.response.status === 504) {
+      // in case of 504, keep retrying this tx until submission succeeds or we get a different error
+      // https://developers.stellar.org/api/errors/http-status-codes/horizon-specific/timeout
+      // https://developers.stellar.org/docs/encyclopedia/error-handling
+      return await submitTransaction(signedXDR, networkUrl, networkPassphrase);
+    }
+    return {
+      data: null,
+      error: e,
+    };
   }
 };
