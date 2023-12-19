@@ -295,8 +295,9 @@ export class MercuryClient {
     try {
       const entrySub = {
         contract_id: contractId,
-        max_single_size: 150,
+        max_single_size: 300,
         key_xdr: this.tokenBalanceKey(pubKey),
+        durability: "persistent",
       };
 
       const config = {
@@ -600,7 +601,6 @@ export class MercuryClient {
     } catch (error) {
       this.logger.error(error);
       const _error = JSON.stringify(error);
-      this.logger.error(_error);
       return {
         data: null,
         error: _error,
