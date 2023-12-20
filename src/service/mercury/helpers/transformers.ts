@@ -185,6 +185,7 @@ interface MercuryAccountHistory {
       node: {
         destination: string;
         startingBalance: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -197,6 +198,7 @@ interface MercuryAccountHistory {
       node: {
         destination: string;
         startingBalance: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -219,6 +221,7 @@ interface MercuryAccountHistory {
         accountByDestination: {
           publickey: string;
         };
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -241,6 +244,7 @@ interface MercuryAccountHistory {
         accountByDestination: {
           publickey: string;
         };
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -293,6 +297,7 @@ interface MercuryAccountHistory {
       path5Native: string;
       sendAmount: string;
       sendAssetNative: string;
+      opId: string;
       txInfoByTx: {
         fee: string;
         opCount: number;
@@ -344,6 +349,7 @@ interface MercuryAccountHistory {
       path5Native: string;
       sendAmount: string;
       sendAssetNative: string;
+      opId: string;
       txInfoByTx: {
         fee: string;
         opCount: number;
@@ -395,6 +401,7 @@ interface MercuryAccountHistory {
       path5Native: string;
       sendAmount: string;
       sendAssetNative: string;
+      opId: string;
       txInfoByTx: {
         fee: string;
         opCount: number;
@@ -446,6 +453,7 @@ interface MercuryAccountHistory {
       path5Native: string;
       sendAmount: string;
       sendAssetNative: string;
+      opId: string;
       txInfoByTx: {
         fee: string;
         opCount: number;
@@ -479,6 +487,7 @@ interface MercuryAccountHistory {
         priceD: string;
         priceN: string;
         sellingNative: boolean;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -513,6 +522,7 @@ interface MercuryAccountHistory {
         priceD: string;
         priceN: string;
         sellingNative: boolean;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -546,6 +556,7 @@ interface MercuryAccountHistory {
       priceD: string;
       priceN: string;
       sellingNative: boolean;
+      opId: string;
       txInfoByTx: {
         fee: string;
         opCount: number;
@@ -576,6 +587,7 @@ interface MercuryAccountHistory {
         };
         fee: string;
       };
+      opId: string;
       txInfoByTx: {
         fee: string;
         opCount: number;
@@ -589,6 +601,7 @@ interface MercuryAccountHistory {
         destinationMuxed: string;
         source: string;
         sourceMuxed: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -602,6 +615,7 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         bumpTo: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -615,6 +629,7 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         balanceId: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -630,6 +645,7 @@ interface MercuryAccountHistory {
         assetNative: boolean;
         source: string;
         sourceMuxed: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -645,6 +661,7 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         trustor: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -659,6 +676,7 @@ interface MercuryAccountHistory {
         dataValue: string;
         source: string;
         sourceMuxed: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -671,6 +689,7 @@ interface MercuryAccountHistory {
       node: {
         source: string;
         sourceMuxed: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -683,6 +702,7 @@ interface MercuryAccountHistory {
       node: {
         source: string;
         sourceMuxed: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -696,6 +716,7 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         sponsorship: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -713,6 +734,7 @@ interface MercuryAccountHistory {
         fromMuxed: string;
         source: string;
         sourceMuxed: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -730,6 +752,7 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         trustor: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -747,6 +770,7 @@ interface MercuryAccountHistory {
         minPriceD: string;
         source: string;
         sourceMuxed: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -762,6 +786,7 @@ interface MercuryAccountHistory {
         minAmountB: string;
         source: string;
         sourceMuxed: string;
+        opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
@@ -863,6 +888,7 @@ const transformAccountHistory = async (
         starting_balance: edge.node.startingBalance,
         type: "create_account",
         type_i: 0,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -879,6 +905,7 @@ const transformAccountHistory = async (
         starting_balance: edge.node.startingBalance,
         type: "create_account",
         type_i: 0,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -899,6 +926,7 @@ const transformAccountHistory = async (
         amount: edge.node.amount,
         type: "payment",
         type_i: 1,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -919,6 +947,7 @@ const transformAccountHistory = async (
         amount: edge.node.amount,
         type: "payment",
         type_i: 1,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -935,6 +964,7 @@ const transformAccountHistory = async (
           ...edge,
           type: "path_payment_strict_send",
           type_i: 13,
+          id: edge.opId,
           transaction_attr: {
             operation_count: edge.txInfoByTx.opCount,
             fee_charged: edge.txInfoByTx.fee,
@@ -951,6 +981,7 @@ const transformAccountHistory = async (
           ...edge,
           type: "path_payment_strict_send",
           type_i: 13,
+          id: edge.opId,
           transaction_attr: {
             operation_count: edge.txInfoByTx.opCount,
             fee_charged: edge.txInfoByTx.fee,
@@ -967,6 +998,7 @@ const transformAccountHistory = async (
           ...edge,
           type: "path_payment_strict_receive",
           type_i: 2,
+          id: edge.opId,
           transaction_attr: {
             operation_count: edge.txInfoByTx.opCount,
             fee_charged: edge.txInfoByTx.fee,
@@ -983,6 +1015,7 @@ const transformAccountHistory = async (
           ...edge,
           type: "path_payment_strict_receive",
           type_i: 2,
+          id: edge.opId,
           transaction_attr: {
             operation_count: edge.txInfoByTx.opCount,
             fee_charged: edge.txInfoByTx.fee,
@@ -998,6 +1031,7 @@ const transformAccountHistory = async (
         ...edge.node,
         type: "manage_sell_offer",
         type_i: 4,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -1013,6 +1047,7 @@ const transformAccountHistory = async (
         ...edge.node,
         type: "manage_sell_offer",
         type_i: 4,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -1029,6 +1064,7 @@ const transformAccountHistory = async (
           ...edge,
           type: "create_passive_sell_offer",
           type_i: 3,
+          id: edge.opId,
           transaction_attr: {
             operation_count: edge.txInfoByTx.opCount,
             fee_charged: edge.txInfoByTx.fee,
@@ -1044,6 +1080,7 @@ const transformAccountHistory = async (
         ...edge,
         type: "change_trust",
         type_i: 6,
+        id: edge.opId,
         transaction_attr: {
           operation_count: edge.txInfoByTx.opCount,
           fee_charged: edge.txInfoByTx.fee,
@@ -1059,6 +1096,7 @@ const transformAccountHistory = async (
         ...edge.node,
         type: "account_merge",
         type_i: 8,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -1074,6 +1112,7 @@ const transformAccountHistory = async (
         ...edge.node,
         type: "bump_sequence",
         type_i: 11,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -1090,6 +1129,7 @@ const transformAccountHistory = async (
           ...edge.node,
           type: "claim_claimable_balance",
           type_i: 15,
+          id: edge.node.opId,
           transaction_attr: {
             operation_count: edge.node.txInfoByTx.opCount,
             fee_charged: edge.node.txInfoByTx.fee,
@@ -1106,6 +1146,7 @@ const transformAccountHistory = async (
           ...edge.node,
           type: "create_claimable_balance",
           type_i: 14,
+          id: edge.node.opId,
           transaction_attr: {
             operation_count: edge.node.txInfoByTx.opCount,
             fee_charged: edge.node.txInfoByTx.fee,
@@ -1121,6 +1162,7 @@ const transformAccountHistory = async (
         ...edge.node,
         type: "allow_trust",
         type_i: 7,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -1136,6 +1178,7 @@ const transformAccountHistory = async (
         ...edge.node,
         type: "manage_data",
         type_i: 10,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -1152,6 +1195,7 @@ const transformAccountHistory = async (
           ...edge.node,
           type: "begin_sponsoring_future_reserves",
           type_i: 16,
+          id: edge.node.opId,
           transaction_attr: {
             operation_count: edge.node.txInfoByTx.opCount,
             fee_charged: edge.node.txInfoByTx.fee,
@@ -1168,6 +1212,7 @@ const transformAccountHistory = async (
           ...edge.node,
           type: "end_sponsoring_future_reserves",
           type_i: 17,
+          id: edge.node.opId,
           transaction_attr: {
             operation_count: edge.node.txInfoByTx.opCount,
             fee_charged: edge.node.txInfoByTx.fee,
@@ -1183,6 +1228,7 @@ const transformAccountHistory = async (
         ...edge.node,
         type: "revoke_sponsorship",
         type_i: 18,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -1198,6 +1244,7 @@ const transformAccountHistory = async (
         ...edge.node,
         type: "clawback",
         type_i: 19,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -1213,6 +1260,7 @@ const transformAccountHistory = async (
         ...edge.node,
         type: "set_trust_line_flags",
         type_i: 21,
+        id: edge.node.opId,
         transaction_attr: {
           operation_count: edge.node.txInfoByTx.opCount,
           fee_charged: edge.node.txInfoByTx.fee,
@@ -1229,6 +1277,7 @@ const transformAccountHistory = async (
           ...edge.node,
           type: "liquidity_pool_deposit",
           type_i: 22,
+          id: edge.node.opId,
           transaction_attr: {
             operation_count: edge.node.txInfoByTx.opCount,
             fee_charged: edge.node.txInfoByTx.fee,
@@ -1245,6 +1294,7 @@ const transformAccountHistory = async (
           ...edge.node,
           type: "liquidity_pool_withdraw",
           type_i: 23,
+          id: edge.node.opId,
           transaction_attr: {
             operation_count: edge.node.txInfoByTx.opCount,
             fee_charged: edge.node.txInfoByTx.fee,
