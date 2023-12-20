@@ -206,10 +206,6 @@ export const query = {
 
       pathPaymentsStrictSendByPublicKey(publicKeyText: $pubKey) {
         nodes {
-          ledgerByLedger {
-            closeTime
-            sequence
-          }
           accountBySource {
             publickey
           }
@@ -268,10 +264,6 @@ export const query = {
 
       pathPaymentsStrictSendToPublicKey(publicKeyText: $pubKey) {
         nodes {
-          ledgerByLedger {
-            closeTime
-            sequence
-          }
           accountBySource {
             publickey
           }
@@ -330,10 +322,6 @@ export const query = {
 
       pathPaymentsStrictReceiveByPublicKey(publicKeyText: $pubKey) {
         nodes {
-          ledgerByLedger {
-            closeTime
-            sequence
-          }
           accountBySource {
             publickey
           }
@@ -392,10 +380,6 @@ export const query = {
 
       pathPaymentsStrictReceiveToPublicKey(publicKeyText: $pubKey) {
         nodes {
-          ledgerByLedger {
-            closeTime
-            sequence
-          }
           accountBySource {
             publickey
           }
@@ -469,10 +453,6 @@ export const query = {
               code
               issuer
             }
-            ledgerByLedger {
-              closeTime
-              sequence
-            }
             muxedaccountBySourceMuxed {
               id
               publickey
@@ -512,10 +492,6 @@ export const query = {
               code
               issuer
             }
-            ledgerByLedger {
-              closeTime
-              sequence
-            }
             muxedaccountBySourceMuxed {
               id
               publickey
@@ -553,10 +529,6 @@ export const query = {
             issuer
           }
           buyingNative
-          ledgerByLedger {
-            closeTime
-            sequence
-          }
           muxedaccountBySourceMuxed {
             id
             publickey
@@ -585,10 +557,6 @@ export const query = {
           assetByLineAsset {
             issuer
             code
-          }
-          ledgerByLedger {
-            closeTime
-            sequence
           }
           limit
           lineNative
