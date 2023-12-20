@@ -130,6 +130,10 @@ const queryMockResponse = {
             accountByDestination: {
               publickey: pubKey,
             },
+            txInfoByTx: {
+              opCount: 1,
+              fee: "1000",
+            },
           },
         },
       ],
