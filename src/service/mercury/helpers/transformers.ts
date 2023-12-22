@@ -183,12 +183,17 @@ interface MercuryAccountHistory {
   createAccountByPublicKey: {
     edges: {
       node: {
-        destination: string;
+        accountByDestination: {
+          publickey: string;
+        };
         startingBalance: string;
         opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -196,12 +201,17 @@ interface MercuryAccountHistory {
   createAccountToPublicKey: {
     edges: {
       node: {
-        destination: string;
+        accountByDestination: {
+          publickey: string;
+        };
         startingBalance: string;
         opId: string;
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -225,6 +235,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -248,6 +261,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -301,6 +317,9 @@ interface MercuryAccountHistory {
       txInfoByTx: {
         fee: string;
         opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+        };
       };
     }[];
   };
@@ -353,6 +372,9 @@ interface MercuryAccountHistory {
       txInfoByTx: {
         fee: string;
         opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+        };
       };
     }[];
   };
@@ -405,6 +427,9 @@ interface MercuryAccountHistory {
       txInfoByTx: {
         fee: string;
         opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+        };
       };
     }[];
   };
@@ -457,6 +482,9 @@ interface MercuryAccountHistory {
       txInfoByTx: {
         fee: string;
         opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+        };
       };
     }[];
   };
@@ -476,7 +504,7 @@ interface MercuryAccountHistory {
           issuer: string;
         };
         ledgerByLedger: {
-          closeTime: string;
+          closeTime: number;
           sequence: string;
         };
         muxedaccountBySourceMuxed: {
@@ -491,6 +519,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -511,7 +542,7 @@ interface MercuryAccountHistory {
           issuer: string;
         };
         ledgerByLedger: {
-          closeTime: string;
+          closeTime: number;
           sequence: string;
         };
         muxedaccountBySourceMuxed: {
@@ -526,6 +557,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -546,7 +580,7 @@ interface MercuryAccountHistory {
       };
       buyingNative: boolean;
       ledgerByLedger: {
-        closeTime: string;
+        closeTime: number;
         sequence: string;
       };
       muxedaccountBySourceMuxed: {
@@ -560,6 +594,9 @@ interface MercuryAccountHistory {
       txInfoByTx: {
         fee: string;
         opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+        };
       };
     }[];
   };
@@ -571,10 +608,6 @@ interface MercuryAccountHistory {
       assetByLineAsset: {
         issuer: string;
         code: string;
-      };
-      ledgerByLedger: {
-        closeTime: string;
-        sequence: string;
       };
       limit: string;
       lineNative: boolean;
@@ -591,6 +624,10 @@ interface MercuryAccountHistory {
       txInfoByTx: {
         fee: string;
         opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+          sequence: string;
+        };
       };
     }[];
   };
@@ -605,6 +642,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -619,6 +659,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -633,6 +676,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -649,6 +695,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -665,6 +714,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -680,6 +732,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -693,6 +748,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -706,6 +764,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -720,6 +781,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -738,6 +802,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -756,6 +823,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -774,6 +844,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -790,6 +863,9 @@ interface MercuryAccountHistory {
         txInfoByTx: {
           fee: string;
           opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -884,7 +960,10 @@ const transformAccountHistory = async (
   const createAccount = createAccountEdges.map(
     (edge) =>
       ({
-        destination: edge.node.destination,
+        account: edge.node.accountByDestination.publickey,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         starting_balance: edge.node.startingBalance,
         type: "create_account",
         type_i: 0,
@@ -901,7 +980,10 @@ const transformAccountHistory = async (
   const createAccountTo = createAccountToEdges.map(
     (edge) =>
       ({
-        destination: edge.node.destination,
+        account: edge.node.accountByDestination.publickey,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         starting_balance: edge.node.startingBalance,
         type: "create_account",
         type_i: 0,
@@ -918,6 +1000,9 @@ const transformAccountHistory = async (
   const paymentsByPublicKey = paymentsByPublicKeyEdges.map(
     (edge) =>
       ({
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         from: edge.node.accountBySource.publickey,
         to: edge.node.accountByDestination.publickey,
         asset_type: getAssetType(edge.node.assetByAsset?.code),
@@ -939,6 +1024,9 @@ const transformAccountHistory = async (
   const paymentsToPublicKey = paymentsToPublicKeyEdges.map(
     (edge) =>
       ({
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         from: edge.node.accountBySource.publickey,
         to: edge.node.accountByDestination.publickey,
         asset_type: getAssetType(edge.node.assetByAsset?.code),
@@ -962,6 +1050,9 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          created_at: new Date(
+            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "path_payment_strict_send",
           type_i: 13,
           id: edge.opId,
@@ -979,6 +1070,9 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          created_at: new Date(
+            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "path_payment_strict_send",
           type_i: 13,
           id: edge.opId,
@@ -996,6 +1090,9 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          created_at: new Date(
+            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "path_payment_strict_receive",
           type_i: 2,
           id: edge.opId,
@@ -1013,6 +1110,9 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          created_at: new Date(
+            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "path_payment_strict_receive",
           type_i: 2,
           id: edge.opId,
@@ -1029,6 +1129,9 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "manage_sell_offer",
         type_i: 4,
         id: edge.node.opId,
@@ -1045,6 +1148,9 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "manage_sell_offer",
         type_i: 4,
         id: edge.node.opId,
@@ -1062,6 +1168,9 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          created_at: new Date(
+            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "create_passive_sell_offer",
           type_i: 3,
           id: edge.opId,
@@ -1078,6 +1187,9 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge,
+        created_at: new Date(
+          edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "change_trust",
         type_i: 6,
         id: edge.opId,
@@ -1094,6 +1206,9 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "account_merge",
         type_i: 8,
         id: edge.node.opId,
@@ -1110,6 +1225,9 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "bump_sequence",
         type_i: 11,
         id: edge.node.opId,
@@ -1127,6 +1245,9 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "claim_claimable_balance",
           type_i: 15,
           id: edge.node.opId,
@@ -1144,6 +1265,9 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "create_claimable_balance",
           type_i: 14,
           id: edge.node.opId,
@@ -1160,6 +1284,9 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "allow_trust",
         type_i: 7,
         id: edge.node.opId,
@@ -1176,6 +1303,9 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "manage_data",
         type_i: 10,
         id: edge.node.opId,
@@ -1193,6 +1323,9 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "begin_sponsoring_future_reserves",
           type_i: 16,
           id: edge.node.opId,
@@ -1210,6 +1343,9 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "end_sponsoring_future_reserves",
           type_i: 17,
           id: edge.node.opId,
@@ -1226,6 +1362,9 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "revoke_sponsorship",
         type_i: 18,
         id: edge.node.opId,
@@ -1242,6 +1381,9 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "clawback",
         type_i: 19,
         id: edge.node.opId,
@@ -1258,6 +1400,9 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "set_trust_line_flags",
         type_i: 21,
         id: edge.node.opId,
@@ -1275,6 +1420,9 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "liquidity_pool_deposit",
           type_i: 22,
           id: edge.node.opId,
@@ -1292,6 +1440,9 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "liquidity_pool_withdraw",
           type_i: 23,
           id: edge.node.opId,

@@ -134,6 +134,9 @@ const queryMockResponse = {
             txInfoByTx: {
               opCount: 1,
               fee: "1000",
+              ledgerByLedger: {
+                closeTime: 1703024113,
+              },
             },
           },
         },

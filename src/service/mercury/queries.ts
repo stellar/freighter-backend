@@ -114,7 +114,9 @@ export const query = {
       createAccountByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            destination
+            accountByDestination {
+              publickey
+            }
             startingBalance
             txInfoByTx {
               fee
@@ -132,7 +134,9 @@ export const query = {
       createAccountToPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            destination
+            accountByDestination {
+              publickey
+            }
             startingBalance
             txInfoByTx {
               fee

@@ -15,7 +15,7 @@ describe("Mercury Service", () => {
       "TESTNET",
       {}
     );
-    const payment = data.data?.find((d) => {
+    const payment = (data || []).find((d) => {
       if ("asset_code" in d && d.asset_code === "DT") {
         return true;
       }
@@ -41,7 +41,7 @@ describe("Mercury Service", () => {
       "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
       "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
     ];
-    const { data } = await mockMercuryClient.getAccountBalances(
+    const data = await mockMercuryClient.getAccountBalances(
       pubKey,
       contracts,
       "TESTNET",

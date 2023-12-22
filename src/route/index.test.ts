@@ -21,7 +21,7 @@ describe("API routes", () => {
       const response = await fetch(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-history/${pubKey}`
+        }/api/v1/account-history/${pubKey}?network=TESTNET&soroban_rpc_url=rpc_url`
       );
       const data = await response.json();
       expect(response.status).toEqual(200);
