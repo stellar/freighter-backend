@@ -94,13 +94,7 @@ const queryMockResponse = {
     },
   },
   [query.getAccountHistory]: {
-    transferFromEvent: {
-      edges: [],
-    },
-    transferToEvent: {
-      edges: [],
-    },
-    mintEvent: {
+    invokeHostFnByPublicKey: {
       edges: [],
     },
     createAccountByPublicKey: {
@@ -129,6 +123,14 @@ const queryMockResponse = {
             },
             accountByDestination: {
               publickey: pubKey,
+            },
+            id: "12235",
+            txInfoByTx: {
+              opCount: 1,
+              fee: "1000",
+              ledgerByLedger: {
+                closeTime: 1703024113,
+              },
             },
           },
         },

@@ -69,53 +69,36 @@ export const query = {
   `,
   getAccountHistory: `
     query GetAccountHistory($pubKey: String!, $xdrPubKey: String!) {
-      mintEvent: eventByTopic(t1: "AAAADgAAAARtaW50") {
+      invokeHostFnByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            contractId
-            data
-            ledger
-            ledgerTimestamp
-            topic1
-            topic2
-            topic3
-            topic4
-          }
-        }
-      }
-      transferToEvent: eventByTopic(t1: "AAAADgAAAAh0cmFuc2Zlcg==", t2: $xdrPubKey) {
-        edges {
-          node {
-            contractId
-            data
-            ledger
-            ledgerTimestamp
-            topic1
-            topic2
-            topic3
-            topic4
-          }
-        }
-      }
-      transferFromEvent: eventByTopic(t1: "AAAADwAAAAh0cmFuc2Zlcg==", t3: $xdrPubKey) {
-        edges {
-          node {
-            contractId
-            data
-            ledger
-            ledgerTimestamp
-            topic1
-            topic2
-            topic3
-            topic4
+            auth
+            hostFunction
+            sorobanMeta
+            source
+            tx
+            opId
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
           }
         }
       }
       createAccountByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            destination
+            accountByDestination {
+              publickey
+            }
             startingBalance
+            opId
             txInfoByTx {
               fee
               opCount
@@ -132,8 +115,11 @@ export const query = {
       createAccountToPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            destination
+            accountByDestination {
+              publickey
+            }
             startingBalance
+            opId
             txInfoByTx {
               fee
               opCount
@@ -162,6 +148,7 @@ export const query = {
             accountByDestination {
               publickey
             }
+            opId
             txInfoByTx {
               fee
               opCount
@@ -190,6 +177,7 @@ export const query = {
             accountByDestination {
               publickey
             }
+            opId
             txInfoByTx {
               fee
               opCount
@@ -206,10 +194,6 @@ export const query = {
 
       pathPaymentsStrictSendByPublicKey(publicKeyText: $pubKey) {
         nodes {
-          ledgerByLedger {
-            closeTime
-            sequence
-          }
           accountBySource {
             publickey
           }
@@ -253,6 +237,7 @@ export const query = {
           path5Native
           sendAmount
           sendAssetNative
+          opId
           txInfoByTx {
             fee
             opCount
@@ -268,10 +253,6 @@ export const query = {
 
       pathPaymentsStrictSendToPublicKey(publicKeyText: $pubKey) {
         nodes {
-          ledgerByLedger {
-            closeTime
-            sequence
-          }
           accountBySource {
             publickey
           }
@@ -315,6 +296,7 @@ export const query = {
           path5Native
           sendAmount
           sendAssetNative
+          opId
           txInfoByTx {
             fee
             opCount
@@ -330,10 +312,6 @@ export const query = {
 
       pathPaymentsStrictReceiveByPublicKey(publicKeyText: $pubKey) {
         nodes {
-          ledgerByLedger {
-            closeTime
-            sequence
-          }
           accountBySource {
             publickey
           }
@@ -377,6 +355,7 @@ export const query = {
           sendAssetNative
           destAmount
           sendMax
+          opId
           txInfoByTx {
             fee
             opCount
@@ -392,10 +371,6 @@ export const query = {
 
       pathPaymentsStrictReceiveToPublicKey(publicKeyText: $pubKey) {
         nodes {
-          ledgerByLedger {
-            closeTime
-            sequence
-          }
           accountBySource {
             publickey
           }
@@ -439,6 +414,7 @@ export const query = {
           sendAssetNative
           destAmount
           sendMax
+          opId
           txInfoByTx {
             fee
             opCount
@@ -469,10 +445,6 @@ export const query = {
               code
               issuer
             }
-            ledgerByLedger {
-              closeTime
-              sequence
-            }
             muxedaccountBySourceMuxed {
               id
               publickey
@@ -481,6 +453,7 @@ export const query = {
             priceD
             priceN
             sellingNative
+            opId
             txInfoByTx {
               fee
               opCount
@@ -512,10 +485,6 @@ export const query = {
               code
               issuer
             }
-            ledgerByLedger {
-              closeTime
-              sequence
-            }
             muxedaccountBySourceMuxed {
               id
               publickey
@@ -524,6 +493,7 @@ export const query = {
             priceD
             priceN
             sellingNative
+            opId
             txInfoByTx {
               fee
               opCount
@@ -553,10 +523,6 @@ export const query = {
             issuer
           }
           buyingNative
-          ledgerByLedger {
-            closeTime
-            sequence
-          }
           muxedaccountBySourceMuxed {
             id
             publickey
@@ -564,6 +530,7 @@ export const query = {
           priceD
           priceN
           sellingNative
+          opId
           txInfoByTx {
             fee
             opCount
@@ -586,10 +553,6 @@ export const query = {
             issuer
             code
           }
-          ledgerByLedger {
-            closeTime
-            sequence
-          }
           limit
           lineNative
           poolshareByLinePoolShare {
@@ -601,6 +564,7 @@ export const query = {
             }
             fee
           }
+          opId
           txInfoByTx {
             fee
             opCount
@@ -621,6 +585,7 @@ export const query = {
             destinationMuxed
             source
             sourceMuxed
+            opId
             txInfoByTx {
               fee
               opCount
@@ -641,6 +606,7 @@ export const query = {
             source
             sourceMuxed
             bumpTo
+            opId
             txInfoByTx {
               fee
               opCount
@@ -661,6 +627,7 @@ export const query = {
             source
             sourceMuxed
             balanceId
+            opId
             txInfoByTx {
               fee
               opCount
@@ -683,6 +650,7 @@ export const query = {
             assetNative
             source
             sourceMuxed
+            opId
             txInfoByTx {
               fee
               opCount
@@ -705,6 +673,7 @@ export const query = {
             source
             sourceMuxed
             trustor
+            opId
             txInfoByTx {
               fee
               opCount
@@ -726,6 +695,7 @@ export const query = {
             dataValue
             source
             sourceMuxed
+            opId
             txInfoByTx {
               fee
               opCount
@@ -745,6 +715,7 @@ export const query = {
           node {
             source
             sourceMuxed
+            opId
             txInfoByTx {
               fee
               opCount
@@ -764,6 +735,7 @@ export const query = {
           node {
             source
             sourceMuxed
+            opId
             txInfoByTx {
               fee
               opCount
@@ -784,6 +756,7 @@ export const query = {
             source
             sourceMuxed
             sponsorship
+            opId
             txInfoByTx {
               fee
               opCount
@@ -808,6 +781,7 @@ export const query = {
             fromMuxed
             source
             sourceMuxed
+            opId
             txInfoByTx {
               fee
               opCount
@@ -832,6 +806,7 @@ export const query = {
             source
             sourceMuxed
             trustor
+            opId
             txInfoByTx {
               fee
               opCount
@@ -856,6 +831,7 @@ export const query = {
             minPriceD
             source
             sourceMuxed
+            opId
             txInfoByTx {
               fee
               opCount
@@ -878,6 +854,7 @@ export const query = {
             minAmountB
             source
             sourceMuxed
+            opId
             txInfoByTx {
               fee
               opCount

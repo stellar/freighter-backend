@@ -120,7 +120,27 @@ const getTokenBalance = async (
   return result;
 };
 
+const buildTransfer = (
+  contractId: string,
+  params: xdr.ScVal[],
+  memo: string | undefined,
+  builder: TransactionBuilder
+) => {
+  const contract = new Contract(contractId);
+
+  const tx = builder
+    .addOperation(contract.call("transfer", ...params))
+    .setTimeout(TimeoutInfinite);
+
+  if (memo) {
+    tx.addMemo(Memo.text(memo));
+  }
+
+  return tx.build();
+};
+
 export {
+  buildTransfer,
   getServer,
   getTokenBalance,
   getTokenDecimals,

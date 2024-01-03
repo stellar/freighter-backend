@@ -8,7 +8,6 @@ import {
   getAssetType,
 } from "../../../helper/horizon-rpc";
 import { formatTokenAmount } from "../../../helper/format";
-import { NetworkNames } from "../../../helper/validate";
 
 // Transformers take an API response, and transform it/augment it for frontend consumption
 
@@ -148,51 +147,58 @@ const transformAccountBalances = async (
 };
 
 interface MercuryAccountHistory {
-  mintEvent: {
+  invokeHostFnByPublicKey: {
     edges: {
       node: {
-        contractId: string;
-        data: string;
-        topic1: string; // to
-        topic2: string; // amount
-      };
-    }[];
-  };
-  transferFromEvent: {
-    edges: {
-      node: {
-        contractId: string;
-        data: string;
-        topic1: string; // to
-        topic2: string; // from
-        topic3: string; // amount
-      };
-    }[];
-  };
-  transferToEvent: {
-    edges: {
-      node: {
-        contractId: string;
-        data: string;
-        topic1: string; // to
-        topic2: string; // from
-        topic3: string; // amount
+        auth: string;
+        hostFunction: string;
+        sorobanMeta: string;
+        source: string;
+        tx: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
   createAccountByPublicKey: {
     edges: {
       node: {
-        destination: string;
+        accountByDestination: {
+          publickey: string;
+        };
         startingBalance: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
   createAccountToPublicKey: {
     edges: {
       node: {
-        destination: string;
+        accountByDestination: {
+          publickey: string;
+        };
         startingBalance: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -211,6 +217,14 @@ interface MercuryAccountHistory {
         accountByDestination: {
           publickey: string;
         };
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -228,6 +242,14 @@ interface MercuryAccountHistory {
         };
         accountByDestination: {
           publickey: string;
+        };
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
         };
       };
     }[];
@@ -277,6 +299,14 @@ interface MercuryAccountHistory {
       path5Native: string;
       sendAmount: string;
       sendAssetNative: string;
+      opId: string;
+      txInfoByTx: {
+        fee: string;
+        opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+        };
+      };
     }[];
   };
   pathPaymentsStrictSendToPublicKey: {
@@ -324,6 +354,14 @@ interface MercuryAccountHistory {
       path5Native: string;
       sendAmount: string;
       sendAssetNative: string;
+      opId: string;
+      txInfoByTx: {
+        fee: string;
+        opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+        };
+      };
     }[];
   };
   pathPaymentsStrictReceiveByPublicKey: {
@@ -371,6 +409,14 @@ interface MercuryAccountHistory {
       path5Native: string;
       sendAmount: string;
       sendAssetNative: string;
+      opId: string;
+      txInfoByTx: {
+        fee: string;
+        opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+        };
+      };
     }[];
   };
   pathPaymentsStrictReceiveToPublicKey: {
@@ -418,6 +464,14 @@ interface MercuryAccountHistory {
       path5Native: string;
       sendAmount: string;
       sendAssetNative: string;
+      opId: string;
+      txInfoByTx: {
+        fee: string;
+        opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+        };
+      };
     }[];
   };
   manageBuyOfferByPublicKey: {
@@ -436,7 +490,7 @@ interface MercuryAccountHistory {
           issuer: string;
         };
         ledgerByLedger: {
-          closeTime: string;
+          closeTime: number;
           sequence: string;
         };
         muxedaccountBySourceMuxed: {
@@ -447,6 +501,14 @@ interface MercuryAccountHistory {
         priceD: string;
         priceN: string;
         sellingNative: boolean;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -466,7 +528,7 @@ interface MercuryAccountHistory {
           issuer: string;
         };
         ledgerByLedger: {
-          closeTime: string;
+          closeTime: number;
           sequence: string;
         };
         muxedaccountBySourceMuxed: {
@@ -477,6 +539,14 @@ interface MercuryAccountHistory {
         priceD: string;
         priceN: string;
         sellingNative: boolean;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -496,7 +566,7 @@ interface MercuryAccountHistory {
       };
       buyingNative: boolean;
       ledgerByLedger: {
-        closeTime: string;
+        closeTime: number;
         sequence: string;
       };
       muxedaccountBySourceMuxed: {
@@ -506,6 +576,14 @@ interface MercuryAccountHistory {
       priceD: string;
       priceN: string;
       sellingNative: boolean;
+      opId: string;
+      txInfoByTx: {
+        fee: string;
+        opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+        };
+      };
     }[];
   };
   changeTrustByPublicKey: {
@@ -516,10 +594,6 @@ interface MercuryAccountHistory {
       assetByLineAsset: {
         issuer: string;
         code: string;
-      };
-      ledgerByLedger: {
-        closeTime: string;
-        sequence: string;
       };
       limit: string;
       lineNative: boolean;
@@ -532,6 +606,15 @@ interface MercuryAccountHistory {
         };
         fee: string;
       };
+      opId: string;
+      txInfoByTx: {
+        fee: string;
+        opCount: number;
+        ledgerByLedger: {
+          closeTime: number;
+          sequence: string;
+        };
+      };
     }[];
   };
   accountMergeByPublicKey: {
@@ -541,6 +624,14 @@ interface MercuryAccountHistory {
         destinationMuxed: string;
         source: string;
         sourceMuxed: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -550,6 +641,14 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         bumpTo: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -559,6 +658,14 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         balanceId: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -570,6 +677,14 @@ interface MercuryAccountHistory {
         assetNative: boolean;
         source: string;
         sourceMuxed: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -581,6 +696,14 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         trustor: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -591,6 +714,14 @@ interface MercuryAccountHistory {
         dataValue: string;
         source: string;
         sourceMuxed: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -599,6 +730,14 @@ interface MercuryAccountHistory {
       node: {
         source: string;
         sourceMuxed: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -607,6 +746,14 @@ interface MercuryAccountHistory {
       node: {
         source: string;
         sourceMuxed: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -616,6 +763,14 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         sponsorship: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -629,6 +784,14 @@ interface MercuryAccountHistory {
         fromMuxed: string;
         source: string;
         sourceMuxed: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -642,6 +805,14 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         trustor: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -655,6 +826,14 @@ interface MercuryAccountHistory {
         minPriceD: string;
         source: string;
         sourceMuxed: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -666,92 +845,40 @@ interface MercuryAccountHistory {
         minAmountB: string;
         source: string;
         sourceMuxed: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
 }
 
 const transformAccountHistory = async (
-  rawResponse: OperationResult<MercuryAccountHistory>,
-  pubKey: string,
-  network: NetworkNames,
-  getTokenDetails: any // todo
+  rawResponse: OperationResult<MercuryAccountHistory>
 ): Promise<Partial<Horizon.ServerApi.OperationRecord>[]> => {
-  const transferFromEdges = rawResponse.data?.transferFromEvent.edges || [];
-  const transferFrom = await Promise.all(
-    transferFromEdges.map(async (edge) => {
-      const tokenDetails = await getTokenDetails(
-        pubKey,
-        edge.node.contractId,
-        network
-      );
-      const amountBigInt = scValToNative(
-        xdr.ScVal.fromXDR(edge.node.data, "base64")
-      ) as BigInt;
-      return {
-        source_account: pubKey,
-        asset_issuer: edge.node.contractId,
-        asset_code: tokenDetails.symbol,
+  const invokeHostFnEdges =
+    rawResponse.data?.invokeHostFnByPublicKey.edges || [];
+  const invokeHostFn = invokeHostFnEdges.map(
+    (edge) =>
+      ({
+        auth: edge.node.auth,
+        hostFunction: edge.node.hostFunction,
+        sorobanMeta: edge.node.sorobanMeta,
+        source: edge.node.source,
+        tx: edge.node.tx,
         type: "invoke_host_function",
         type_i: 24,
-        contractId: edge.node.contractId,
-        fnName: scValToNative(xdr.ScVal.fromXDR(edge.node.topic1, "base64")),
-        to: scValToNative(xdr.ScVal.fromXDR(edge.node.topic3, "base64")),
-        from: scValToNative(xdr.ScVal.fromXDR(edge.node.topic2, "base64")),
-        amount: amountBigInt.toString(),
-      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
-    })
-  );
-
-  const transferToEdges = rawResponse.data?.transferToEvent.edges || [];
-  const transferTo = await Promise.all(
-    transferToEdges.map(async (edge) => {
-      const tokenDetails = await getTokenDetails(
-        pubKey,
-        edge.node.contractId,
-        network
-      );
-      const amountBigInt = scValToNative(
-        xdr.ScVal.fromXDR(edge.node.data, "base64")
-      ) as BigInt;
-      return {
-        source_account: pubKey,
-        asset_issuer: edge.node.contractId,
-        asset_code: tokenDetails.symbol,
-        type: "invoke_host_function",
-        type_i: 24,
-        contractId: edge.node.contractId,
-        fnName: scValToNative(xdr.ScVal.fromXDR(edge.node.topic1, "base64")),
-        to: scValToNative(xdr.ScVal.fromXDR(edge.node.topic3, "base64")),
-        from: scValToNative(xdr.ScVal.fromXDR(edge.node.topic2, "base64")),
-        amount: amountBigInt.toString(),
-      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
-    })
-  );
-
-  const mintEdges = rawResponse.data?.mintEvent.edges || [];
-  const mint = await Promise.all(
-    mintEdges.map(async (edge) => {
-      const tokenDetails = await getTokenDetails(
-        pubKey,
-        edge.node.contractId,
-        network
-      );
-      const amountBigInt = scValToNative(
-        xdr.ScVal.fromXDR(edge.node.data, "base64")
-      ) as BigInt;
-      return {
-        source_account: pubKey,
-        asset_issuer: edge.node.contractId,
-        asset_code: tokenDetails.symbol,
-        type: "invoke_host_function",
-        type_i: 24,
-        contractId: edge.node.contractId,
-        fnName: scValToNative(xdr.ScVal.fromXDR(edge.node.topic1, "base64")),
-        to: scValToNative(xdr.ScVal.fromXDR(edge.node.topic2, "base64")),
-        amount: amountBigInt.toString(),
-      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
-    })
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
+      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>)
   );
 
   const createAccountEdges =
@@ -759,10 +886,18 @@ const transformAccountHistory = async (
   const createAccount = createAccountEdges.map(
     (edge) =>
       ({
-        destination: edge.node.destination,
+        account: edge.node.accountByDestination.publickey,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         starting_balance: edge.node.startingBalance,
         type: "create_account",
         type_i: 0,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>)
   );
 
@@ -771,10 +906,18 @@ const transformAccountHistory = async (
   const createAccountTo = createAccountToEdges.map(
     (edge) =>
       ({
-        destination: edge.node.destination,
+        account: edge.node.accountByDestination.publickey,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         starting_balance: edge.node.startingBalance,
         type: "create_account",
         type_i: 0,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>)
   );
 
@@ -783,6 +926,9 @@ const transformAccountHistory = async (
   const paymentsByPublicKey = paymentsByPublicKeyEdges.map(
     (edge) =>
       ({
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         from: edge.node.accountBySource.publickey,
         to: edge.node.accountByDestination.publickey,
         asset_type: getAssetType(edge.node.assetByAsset?.code),
@@ -791,6 +937,11 @@ const transformAccountHistory = async (
         amount: edge.node.amount,
         type: "payment",
         type_i: 1,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
   );
 
@@ -799,6 +950,9 @@ const transformAccountHistory = async (
   const paymentsToPublicKey = paymentsToPublicKeyEdges.map(
     (edge) =>
       ({
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         from: edge.node.accountBySource.publickey,
         to: edge.node.accountByDestination.publickey,
         asset_type: getAssetType(edge.node.assetByAsset?.code),
@@ -807,6 +961,11 @@ const transformAccountHistory = async (
         amount: edge.node.amount,
         type: "payment",
         type_i: 1,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
   );
 
@@ -817,8 +976,16 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          created_at: new Date(
+            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "path_payment_strict_send",
           type_i: 13,
+          id: edge.opId,
+          transaction_attr: {
+            operation_count: edge.txInfoByTx.opCount,
+            fee_charged: edge.txInfoByTx.fee,
+          },
         } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>)
     );
 
@@ -829,8 +996,16 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          created_at: new Date(
+            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "path_payment_strict_send",
           type_i: 13,
+          id: edge.opId,
+          transaction_attr: {
+            operation_count: edge.txInfoByTx.opCount,
+            fee_charged: edge.txInfoByTx.fee,
+          },
         } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>)
     );
 
@@ -841,8 +1016,16 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          created_at: new Date(
+            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "path_payment_strict_receive",
           type_i: 2,
+          id: edge.opId,
+          transaction_attr: {
+            operation_count: edge.txInfoByTx.opCount,
+            fee_charged: edge.txInfoByTx.fee,
+          },
         } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>)
     );
 
@@ -853,8 +1036,16 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          created_at: new Date(
+            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "path_payment_strict_receive",
           type_i: 2,
+          id: edge.opId,
+          transaction_attr: {
+            operation_count: edge.txInfoByTx.opCount,
+            fee_charged: edge.txInfoByTx.fee,
+          },
         } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>)
     );
 
@@ -864,8 +1055,16 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "manage_sell_offer",
         type_i: 4,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>)
   );
 
@@ -875,8 +1074,16 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "manage_sell_offer",
         type_i: 4,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>)
   );
 
@@ -887,8 +1094,16 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          created_at: new Date(
+            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "create_passive_sell_offer",
           type_i: 3,
+          id: edge.opId,
+          transaction_attr: {
+            operation_count: edge.txInfoByTx.opCount,
+            fee_charged: edge.txInfoByTx.fee,
+          },
         } as Partial<Horizon.ServerApi.PassiveOfferOperationRecord>)
     );
 
@@ -898,8 +1113,16 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge,
+        created_at: new Date(
+          edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "change_trust",
         type_i: 6,
+        id: edge.opId,
+        transaction_attr: {
+          operation_count: edge.txInfoByTx.opCount,
+          fee_charged: edge.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.ChangeTrustOperationRecord>)
   );
 
@@ -909,8 +1132,16 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "account_merge",
         type_i: 8,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.AccountMergeOperationRecord>)
   );
 
@@ -920,8 +1151,16 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "bump_sequence",
         type_i: 11,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.BumpSequenceOperationRecord>)
   );
 
@@ -932,8 +1171,16 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "claim_claimable_balance",
           type_i: 15,
+          id: edge.node.opId,
+          transaction_attr: {
+            operation_count: edge.node.txInfoByTx.opCount,
+            fee_charged: edge.node.txInfoByTx.fee,
+          },
         } as Partial<Horizon.ServerApi.ClaimClaimableBalanceOperationRecord>)
     );
 
@@ -944,8 +1191,16 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "create_claimable_balance",
           type_i: 14,
+          id: edge.node.opId,
+          transaction_attr: {
+            operation_count: edge.node.txInfoByTx.opCount,
+            fee_charged: edge.node.txInfoByTx.fee,
+          },
         } as Partial<Horizon.ServerApi.CreateClaimableBalanceOperationRecord>)
     );
 
@@ -955,8 +1210,16 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "allow_trust",
         type_i: 7,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.AllowTrustOperationRecord>)
   );
 
@@ -966,8 +1229,16 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "manage_data",
         type_i: 10,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.ManageDataOperationRecord>)
   );
 
@@ -978,8 +1249,16 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "begin_sponsoring_future_reserves",
           type_i: 16,
+          id: edge.node.opId,
+          transaction_attr: {
+            operation_count: edge.node.txInfoByTx.opCount,
+            fee_charged: edge.node.txInfoByTx.fee,
+          },
         } as Partial<Horizon.ServerApi.BeginSponsoringFutureReservesOperationRecord>)
     );
 
@@ -990,8 +1269,16 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "end_sponsoring_future_reserves",
           type_i: 17,
+          id: edge.node.opId,
+          transaction_attr: {
+            operation_count: edge.node.txInfoByTx.opCount,
+            fee_charged: edge.node.txInfoByTx.fee,
+          },
         } as Partial<Horizon.ServerApi.EndSponsoringFutureReservesOperationRecord>)
     );
 
@@ -1001,8 +1288,16 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "revoke_sponsorship",
         type_i: 18,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.RevokeSponsorshipOperationRecord>)
   );
 
@@ -1012,8 +1307,16 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "clawback",
         type_i: 19,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.ClawbackOperationRecord>)
   );
 
@@ -1023,8 +1326,16 @@ const transformAccountHistory = async (
     (edge) =>
       ({
         ...edge.node,
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
         type: "set_trust_line_flags",
         type_i: 21,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
       } as Partial<Horizon.ServerApi.SetTrustLineFlagsOperationRecord>)
   );
 
@@ -1035,8 +1346,16 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "liquidity_pool_deposit",
           type_i: 22,
+          id: edge.node.opId,
+          transaction_attr: {
+            operation_count: edge.node.txInfoByTx.opCount,
+            fee_charged: edge.node.txInfoByTx.fee,
+          },
         } as Partial<Horizon.ServerApi.DepositLiquidityOperationRecord>)
     );
 
@@ -1047,8 +1366,16 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge.node,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
           type: "liquidity_pool_withdraw",
           type_i: 23,
+          id: edge.node.opId,
+          transaction_attr: {
+            operation_count: edge.node.txInfoByTx.opCount,
+            fee_charged: edge.node.txInfoByTx.fee,
+          },
         } as Partial<Horizon.ServerApi.WithdrawLiquidityOperationRecord>)
     );
 
@@ -1078,9 +1405,7 @@ const transformAccountHistory = async (
     ...revokeSponsorshipByPublicKey,
     ...clawbackByPublicKey,
     ...setTrustLineFlagsByPublicKey,
-    ...transferTo,
-    ...transferFrom,
-    ...mint,
+    ...invokeHostFn,
   ];
 };
 

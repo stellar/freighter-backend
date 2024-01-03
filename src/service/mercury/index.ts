@@ -295,8 +295,9 @@ export class MercuryClient {
     try {
       const entrySub = {
         contract_id: contractId,
-        max_single_size: 150,
+        max_single_size: 300,
         key_xdr: this.tokenBalanceKey(pubKey),
+        durability: "persistent",
       };
 
       const config = {
@@ -412,7 +413,7 @@ export class MercuryClient {
     }
   };
 
-  getAccountHistoryMercury = async (pubKey: string, network: NetworkNames) => {
+  getAccountHistoryMercury = async (pubKey: string) => {
     try {
       const xdrPubKey = new Address(pubKey).toScVal().toXDR("base64");
       const getData = async () => {
@@ -429,12 +430,7 @@ export class MercuryClient {
       };
       const data = await this.renewAndRetry(getData);
       return {
-        data: await transformAccountHistory(
-          data,
-          pubKey,
-          network,
-          this.tokenDetails
-        ),
+        data: await transformAccountHistory(data),
         error: null,
       };
     } catch (error) {
@@ -453,22 +449,19 @@ export class MercuryClient {
     rpcUrls: { horizon?: string; soroban?: string }
   ) => {
     if (hasIndexerSupport(network)) {
-      const data = await this.getAccountHistoryMercury(pubKey, network);
-      return {
-        data,
-        error: null,
-      };
-    } else {
-      const data = await this.getAccountHistoryHorizon(
-        pubKey,
-        network,
-        rpcUrls.horizon
-      );
-      return {
-        data,
-        error: null,
-      };
+      const response = await this.getAccountHistoryMercury(pubKey);
+
+      if (!response.error) {
+        return response;
+      }
     }
+
+    const horizonResponse = await this.getAccountHistoryHorizon(
+      pubKey,
+      network,
+      rpcUrls.horizon
+    );
+    return horizonResponse;
   };
 
   getTokenBalancesSorobanRPC = async (
@@ -598,9 +591,8 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      this.logger.error(error);
+      // this.logger.error(error);
       const _error = JSON.stringify(error);
-      this.logger.error(_error);
       return {
         data: null,
         error: _error,
@@ -615,64 +607,70 @@ export class MercuryClient {
     rpcUrls: { horizon?: string; soroban?: string }
   ) => {
     if (hasIndexerSupport(network)) {
-      const data = await this.getAccountBalancesMercury(
+      const response = await this.getAccountBalancesMercury(
         pubKey,
         contractIds,
         network
       );
 
-      return {
-        data,
-        error: null,
-      };
-    } else {
-      let tokenBalances = {};
-      let classicBalances = {
-        balances: [],
-        isFunded: false,
-        subentryCount: 0,
-      };
-      try {
-        classicBalances = await this.getAccountBalancesHorizon(
-          pubKey,
-          network,
-          rpcUrls.horizon
-        );
-      } catch (error) {
-        this.logger.error(error);
-        this.logger.error(
-          `failed to fetch token classic balances from Horizon: ${pubKey}, ${network}`
-        );
+      // if Mercury returns an error, fallback to the RPCs
+      if (!response.error) {
+        return response;
       }
+    }
 
-      try {
-        tokenBalances = await this.getTokenBalancesSorobanRPC(
-          pubKey,
-          contractIds,
-          network,
-          rpcUrls.soroban
-        );
-      } catch (error) {
-        this.logger.error(error);
-        this.logger.error(
-          `failed to fetch token token balances from Soroban RPC: ${pubKey}, ${network}`
-        );
-      }
-
-      const data = {
-        balances: {
-          ...classicBalances.balances,
-          ...tokenBalances,
-        },
-        isFunded: classicBalances.isFunded,
-        subentryCount: classicBalances.subentryCount,
-      };
+    let tokenBalances = {};
+    let classicBalances = {
+      balances: [],
+      isFunded: false,
+      subentryCount: 0,
+    };
+    try {
+      classicBalances = await this.getAccountBalancesHorizon(
+        pubKey,
+        network,
+        rpcUrls.horizon
+      );
+    } catch (error) {
+      this.logger.error(error);
+      this.logger.error(
+        `failed to fetch token classic balances from Horizon: ${pubKey}, ${network}`
+      );
       return {
-        data: {
-          data,
-        },
-        error: null,
+        data: null,
+        error,
       };
     }
+
+    try {
+      tokenBalances = await this.getTokenBalancesSorobanRPC(
+        pubKey,
+        contractIds,
+        network,
+        rpcUrls.soroban
+      );
+    } catch (error) {
+      this.logger.error(error);
+      this.logger.error(
+        `failed to fetch token token balances from Soroban RPC: ${pubKey}, ${network}`
+      );
+      return {
+        data: null,
+        error,
+      };
+    }
+
+    const data = {
+      balances: {
+        ...classicBalances.balances,
+        ...tokenBalances,
+      },
+      isFunded: classicBalances.isFunded,
+      subentryCount: classicBalances.subentryCount,
+    };
+    return {
+      data,
+      error: null,
+    };
   };
 }

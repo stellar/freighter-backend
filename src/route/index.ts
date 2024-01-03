@@ -14,14 +14,16 @@ import {
 } from "../helper/validate";
 import { submitTransaction } from "../helper/horizon-rpc";
 import {
+  BASE_FEE,
   Memo,
   MemoType,
   Operation,
   SorobanRpc,
   Transaction,
   TransactionBuilder,
+  xdr,
 } from "stellar-sdk";
-import { simulateTx } from "../helper/soroban-rpc";
+import { buildTransfer, simulateTx } from "../helper/soroban-rpc";
 
 const API_VERSION = "v1";
 
@@ -414,6 +416,73 @@ export function initApiServer(
               tx as Transaction<Memo<MemoType>, Operation[]>,
               server
             );
+            reply.code(200).send(data);
+          } catch (error) {
+            reply.code(400).send(error);
+          }
+        },
+      });
+
+      instance.route({
+        method: "POST",
+        url: "/simulate-token-transfer",
+        schema: {
+          body: {
+            type: "object",
+            properties: {
+              address: { type: "string" },
+              pub_key: { type: "string" },
+              memo: { type: "string" },
+              fee: { type: "string" },
+              params: { type: "object" },
+              network_url: { type: "string" },
+              network_passphrase: { type: "string" },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Body: {
+              address: string;
+              pub_key: string;
+              memo: string;
+              fee?: string;
+              params: xdr.ScVal[];
+              network_url: string;
+              network_passphrase: string;
+            };
+          }>,
+          reply
+        ) => {
+          const {
+            address,
+            pub_key,
+            memo,
+            fee,
+            params,
+            network_url,
+            network_passphrase,
+          } = request.body;
+
+          try {
+            const _fee = fee || BASE_FEE;
+            const server = new SorobanRpc.Server(network_url, {
+              allowHttp: network_url.startsWith("http://"),
+            });
+            const sourceAccount = await server.getAccount(pub_key);
+            const builder = new TransactionBuilder(sourceAccount, {
+              fee: _fee,
+              networkPassphrase: network_passphrase,
+            });
+            const tx = buildTransfer(address, params, memo, builder);
+            const simulationResponse = await simulateTx<unknown>(
+              tx as Transaction<Memo<MemoType>, Operation[]>,
+              server
+            );
+            const data = {
+              simulationResponse,
+              raw: tx.toXDR(),
+            };
             reply.code(200).send(data);
           } catch (error) {
             reply.code(400).send(error);
