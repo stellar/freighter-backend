@@ -94,13 +94,7 @@ const queryMockResponse = {
     },
   },
   [query.getAccountHistory]: {
-    transferFromEvent: {
-      edges: [],
-    },
-    transferToEvent: {
-      edges: [],
-    },
-    mintEvent: {
+    invokeHostFnByPublicKey: {
       edges: [],
     },
     createAccountByPublicKey: {

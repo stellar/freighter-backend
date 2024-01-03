@@ -413,7 +413,7 @@ export class MercuryClient {
     }
   };
 
-  getAccountHistoryMercury = async (pubKey: string, network: NetworkNames) => {
+  getAccountHistoryMercury = async (pubKey: string) => {
     try {
       const xdrPubKey = new Address(pubKey).toScVal().toXDR("base64");
       const getData = async () => {
@@ -430,12 +430,7 @@ export class MercuryClient {
       };
       const data = await this.renewAndRetry(getData);
       return {
-        data: await transformAccountHistory(
-          data,
-          pubKey,
-          network,
-          this.tokenDetails
-        ),
+        data: await transformAccountHistory(data),
         error: null,
       };
     } catch (error) {
@@ -454,7 +449,7 @@ export class MercuryClient {
     rpcUrls: { horizon?: string; soroban?: string }
   ) => {
     if (hasIndexerSupport(network)) {
-      const response = await this.getAccountHistoryMercury(pubKey, network);
+      const response = await this.getAccountHistoryMercury(pubKey);
 
       if (!response.error) {
         return response;
@@ -596,7 +591,7 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      this.logger.error(error);
+      // this.logger.error(error);
       const _error = JSON.stringify(error);
       return {
         data: null,

@@ -8,7 +8,6 @@ import {
   getAssetType,
 } from "../../../helper/horizon-rpc";
 import { formatTokenAmount } from "../../../helper/format";
-import { NetworkNames } from "../../../helper/validate";
 
 // Transformers take an API response, and transform it/augment it for frontend consumption
 
@@ -148,35 +147,22 @@ const transformAccountBalances = async (
 };
 
 interface MercuryAccountHistory {
-  mintEvent: {
+  invokeHostFnByPublicKey: {
     edges: {
       node: {
-        contractId: string;
-        data: string;
-        topic1: string; // to
-        topic2: string; // amount
-      };
-    }[];
-  };
-  transferFromEvent: {
-    edges: {
-      node: {
-        contractId: string;
-        data: string;
-        topic1: string; // to
-        topic2: string; // from
-        topic3: string; // amount
-      };
-    }[];
-  };
-  transferToEvent: {
-    edges: {
-      node: {
-        contractId: string;
-        data: string;
-        topic1: string; // to
-        topic2: string; // from
-        topic3: string; // amount
+        auth: string;
+        hostFunction: string;
+        sorobanMeta: string;
+        source: string;
+        tx: string;
+        opId: string;
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
       };
     }[];
   };
@@ -873,86 +859,26 @@ interface MercuryAccountHistory {
 }
 
 const transformAccountHistory = async (
-  rawResponse: OperationResult<MercuryAccountHistory>,
-  pubKey: string,
-  network: NetworkNames,
-  getTokenDetails: any // todo
+  rawResponse: OperationResult<MercuryAccountHistory>
 ): Promise<Partial<Horizon.ServerApi.OperationRecord>[]> => {
-  const transferFromEdges = rawResponse.data?.transferFromEvent.edges || [];
-  const transferFrom = await Promise.all(
-    transferFromEdges.map(async (edge) => {
-      const tokenDetails = await getTokenDetails(
-        pubKey,
-        edge.node.contractId,
-        network
-      );
-      const amountBigInt = scValToNative(
-        xdr.ScVal.fromXDR(edge.node.data, "base64")
-      ) as BigInt;
-      return {
-        source_account: pubKey,
-        asset_issuer: edge.node.contractId,
-        asset_code: tokenDetails.symbol,
+  const invokeHostFnEdges =
+    rawResponse.data?.invokeHostFnByPublicKey.edges || [];
+  const invokeHostFn = invokeHostFnEdges.map(
+    (edge) =>
+      ({
+        auth: edge.node.auth,
+        hostFunction: edge.node.hostFunction,
+        sorobanMeta: edge.node.sorobanMeta,
+        source: edge.node.source,
+        tx: edge.node.tx,
         type: "invoke_host_function",
         type_i: 24,
-        contractId: edge.node.contractId,
-        fnName: scValToNative(xdr.ScVal.fromXDR(edge.node.topic1, "base64")),
-        to: scValToNative(xdr.ScVal.fromXDR(edge.node.topic3, "base64")),
-        from: scValToNative(xdr.ScVal.fromXDR(edge.node.topic2, "base64")),
-        amount: amountBigInt.toString(),
-      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
-    })
-  );
-
-  const transferToEdges = rawResponse.data?.transferToEvent.edges || [];
-  const transferTo = await Promise.all(
-    transferToEdges.map(async (edge) => {
-      const tokenDetails = await getTokenDetails(
-        pubKey,
-        edge.node.contractId,
-        network
-      );
-      const amountBigInt = scValToNative(
-        xdr.ScVal.fromXDR(edge.node.data, "base64")
-      ) as BigInt;
-      return {
-        source_account: pubKey,
-        asset_issuer: edge.node.contractId,
-        asset_code: tokenDetails.symbol,
-        type: "invoke_host_function",
-        type_i: 24,
-        contractId: edge.node.contractId,
-        fnName: scValToNative(xdr.ScVal.fromXDR(edge.node.topic1, "base64")),
-        to: scValToNative(xdr.ScVal.fromXDR(edge.node.topic3, "base64")),
-        from: scValToNative(xdr.ScVal.fromXDR(edge.node.topic2, "base64")),
-        amount: amountBigInt.toString(),
-      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
-    })
-  );
-
-  const mintEdges = rawResponse.data?.mintEvent.edges || [];
-  const mint = await Promise.all(
-    mintEdges.map(async (edge) => {
-      const tokenDetails = await getTokenDetails(
-        pubKey,
-        edge.node.contractId,
-        network
-      );
-      const amountBigInt = scValToNative(
-        xdr.ScVal.fromXDR(edge.node.data, "base64")
-      ) as BigInt;
-      return {
-        source_account: pubKey,
-        asset_issuer: edge.node.contractId,
-        asset_code: tokenDetails.symbol,
-        type: "invoke_host_function",
-        type_i: 24,
-        contractId: edge.node.contractId,
-        fnName: scValToNative(xdr.ScVal.fromXDR(edge.node.topic1, "base64")),
-        to: scValToNative(xdr.ScVal.fromXDR(edge.node.topic2, "base64")),
-        amount: amountBigInt.toString(),
-      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
-    })
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
+      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>)
   );
 
   const createAccountEdges =
@@ -1479,9 +1405,7 @@ const transformAccountHistory = async (
     ...revokeSponsorshipByPublicKey,
     ...clawbackByPublicKey,
     ...setTrustLineFlagsByPublicKey,
-    ...transferTo,
-    ...transferFrom,
-    ...mint,
+    ...invokeHostFn,
   ];
 };
 
