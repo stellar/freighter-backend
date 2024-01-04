@@ -3,6 +3,7 @@ import { expand } from "dotenv-expand";
 import yargs from "yargs";
 import { Client, fetchExchange } from "@urql/core";
 import Redis from "ioredis";
+import Prometheus from "prom-client";
 
 import { logger } from "./logger";
 import { buildConfig } from "./config";
@@ -36,6 +37,12 @@ async function main() {
 
   const env = argv.env || "development";
   const port = argv.port || 3002;
+
+  const register = new Prometheus.Registry();
+  register.setDefaultLabels({
+    app: "freighter-backend",
+  });
+  Prometheus.collectDefaultMetrics({ register });
 
   const client = new Client({
     url: conf.mercuryGraphQL,
@@ -82,9 +89,10 @@ async function main() {
     client,
     renewClient,
     logger,
+    register,
     redis
   );
-  const server = initApiServer(mercuryClient, logger, redis);
+  const server = initApiServer(mercuryClient, logger, register, redis);
 
   try {
     await server.listen({ port, host: "0.0.0.0" });
