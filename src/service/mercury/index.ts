@@ -509,20 +509,25 @@ export class MercuryClient {
     network: NetworkNames,
     customSorobanRpcUrl?: string
   ) => {
-    const server = await getServer(network, customSorobanRpcUrl);
     const balances = [];
-    for (const id of contractIds) {
-      const builder = await getTxBuilder(pubKey, network, server);
-      const params = [new Address(pubKey).toScVal()];
-      const balance = await getTokenBalance(id, params, server, builder);
-      const tokenDetails = await this.tokenDetails(pubKey, id, network);
-      balances.push({
-        id,
-        balance,
-        ...tokenDetails,
-      });
-    }
     const balanceMap = {} as Record<string, any>;
+    try {
+      const server = await getServer(network, customSorobanRpcUrl);
+      for (const id of contractIds) {
+        const builder = await getTxBuilder(pubKey, network, server);
+        const params = [new Address(pubKey).toScVal()];
+        const balance = await getTokenBalance(id, params, server, builder);
+        const tokenDetails = await this.tokenDetails(pubKey, id, network);
+        balances.push({
+          id,
+          balance,
+          ...tokenDetails,
+        });
+      }
+    } catch (error) {
+      this.logger.error(error);
+      return balanceMap;
+    }
     for (const balance of balances) {
       balanceMap[`${balance.symbol}:${balance.id}`] = {
         token: {
@@ -688,8 +693,10 @@ export class MercuryClient {
           rpc: "Horizon",
         })
         .inc();
+
+      // Horizon is supported on all networks, return error if Horizon does
       return {
-        data: null,
+        data: classicBalances,
         error,
       };
     }
@@ -711,10 +718,6 @@ export class MercuryClient {
           rpc: "Soroban",
         })
         .inc();
-      return {
-        data: null,
-        error,
-      };
     }
 
     const data = {
