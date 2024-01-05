@@ -40,7 +40,16 @@ const ERROR_MESSAGES = {
 function getGraphQlError(error?: CombinedError) {
   if (!error) return;
   const [err] = error.graphQLErrors;
-  return err.message;
+
+  if (err) {
+    return err.message;
+  }
+
+  if (error.networkError) {
+    return error.networkError.message;
+  }
+
+  return JSON.stringify(error);
 }
 
 const hasIndexerSupport = (network: NetworkNames) => {

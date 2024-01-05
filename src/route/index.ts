@@ -1,6 +1,7 @@
 import Fastify, { FastifyRequest } from "fastify";
 import helmet from "@fastify/helmet";
 import rateLimiter from "@fastify/rate-limit";
+import cors from "@fastify/cors";
 import { Logger } from "pino";
 import { Redis } from "ioredis";
 import Prometheus from "prom-client";
@@ -28,7 +29,7 @@ import { buildTransfer, simulateTx } from "../helper/soroban-rpc";
 
 const API_VERSION = "v1";
 
-export function initApiServer(
+export async function initApiServer(
   mercuryClient: MercuryClient,
   logger: Logger,
   register: Prometheus.Registry,
@@ -47,6 +48,9 @@ export function initApiServer(
   });
 
   server.register(helmet, { global: true });
+  await server.register(cors, {
+    origin: "*",
+  });
   server.register(
     (instance, _opts, next) => {
       instance.route({

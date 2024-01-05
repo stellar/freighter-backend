@@ -92,7 +92,7 @@ async function main() {
     register,
     redis
   );
-  const server = initApiServer(mercuryClient, logger, register, redis);
+  const server = await initApiServer(mercuryClient, logger, register, redis);
 
   try {
     await server.listen({ port, host: "0.0.0.0" });
