@@ -1,6 +1,7 @@
 import Fastify, { FastifyRequest } from "fastify";
 import helmet from "@fastify/helmet";
 import rateLimiter from "@fastify/rate-limit";
+import cors from "@fastify/cors";
 import { Logger } from "pino";
 import { Redis } from "ioredis";
 import Prometheus from "prom-client";
@@ -28,10 +29,11 @@ import { buildTransfer, simulateTx } from "../helper/soroban-rpc";
 
 const API_VERSION = "v1";
 
-export function initApiServer(
+export async function initApiServer(
   mercuryClient: MercuryClient,
   logger: Logger,
   register: Prometheus.Registry,
+  useMercury: boolean,
   redis?: Redis
 ) {
   const server = Fastify({
@@ -47,6 +49,9 @@ export function initApiServer(
   });
 
   server.register(helmet, { global: true });
+  await server.register(cors, {
+    origin: "*",
+  });
   server.register(
     (instance, _opts, next) => {
       instance.route({
@@ -105,7 +110,8 @@ export function initApiServer(
           const { data, error } = await mercuryClient.getAccountHistory(
             pubKey,
             network,
-            { horizon: horizon_url, soroban: soroban_url }
+            { horizon: horizon_url, soroban: soroban_url },
+            useMercury
           );
           if (error) {
             reply.code(400).send(error);
@@ -163,7 +169,8 @@ export function initApiServer(
             pubKey,
             contractIds,
             network,
-            { horizon: horizon_url, soroban: soroban_url }
+            { horizon: horizon_url, soroban: soroban_url },
+            useMercury
           );
           if (error) {
             reply.code(400).send(error);
@@ -211,6 +218,11 @@ export function initApiServer(
         ) => {
           const contractId = request.params["contractId"];
           const { network, pub_key, soroban_url } = request.query;
+
+          if (!useMercury) {
+            reply.code(400).send("Mercury disabled");
+          }
+
           try {
             const data = await mercuryClient.tokenDetails(
               pub_key,
@@ -257,6 +269,11 @@ export function initApiServer(
           reply
         ) => {
           const { contract_id, pub_key, network } = request.body;
+
+          if (!useMercury) {
+            reply.code(400).send("Mercury disabled");
+          }
+
           const { data, error } = await mercuryClient.tokenSubscription(
             contract_id,
             pub_key,
@@ -297,6 +314,11 @@ export function initApiServer(
           reply
         ) => {
           const { pub_key, network } = request.body;
+
+          if (!useMercury) {
+            reply.code(400).send("Mercury disabled");
+          }
+
           const { data, error } = await mercuryClient.accountSubscription(
             pub_key,
             network
@@ -341,6 +363,11 @@ export function initApiServer(
           reply
         ) => {
           const { pub_key, contract_id, network } = request.body;
+
+          if (!useMercury) {
+            reply.code(400).send("Mercury disabled");
+          }
+
           const { data, error } = await mercuryClient.tokenBalanceSubscription(
             contract_id,
             pub_key,

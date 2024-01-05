@@ -40,7 +40,16 @@ const ERROR_MESSAGES = {
 function getGraphQlError(error?: CombinedError) {
   if (!error) return;
   const [err] = error.graphQLErrors;
-  return err.message;
+
+  if (err) {
+    return err.message;
+  }
+
+  if (error.networkError) {
+    return error.networkError.message;
+  }
+
+  return JSON.stringify(error);
 }
 
 const hasIndexerSupport = (network: NetworkNames) => {
@@ -468,9 +477,10 @@ export class MercuryClient {
   getAccountHistory = async (
     pubKey: string,
     network: NetworkNames,
-    rpcUrls: { horizon?: string; soroban?: string }
+    rpcUrls: { horizon?: string; soroban?: string },
+    useMercury: boolean
   ) => {
-    if (hasIndexerSupport(network)) {
+    if (hasIndexerSupport(network) && useMercury) {
       const response = await this.getAccountHistoryMercury(pubKey);
 
       if (!response.error) {
@@ -638,9 +648,10 @@ export class MercuryClient {
     pubKey: string,
     contractIds: string[],
     network: NetworkNames,
-    rpcUrls: { horizon?: string; soroban?: string }
+    rpcUrls: { horizon?: string; soroban?: string },
+    useMercury: boolean
   ) => {
-    if (hasIndexerSupport(network)) {
+    if (hasIndexerSupport(network) && useMercury) {
       const response = await this.getAccountBalancesMercury(
         pubKey,
         contractIds,
