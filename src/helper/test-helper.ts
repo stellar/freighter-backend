@@ -278,7 +278,7 @@ jest
     }
   );
 async function getDevServer() {
-  const server = initApiServer(mockMercuryClient, testLogger, register);
+  const server = await initApiServer(mockMercuryClient, testLogger, register);
   await server.listen();
   return server;
 }
