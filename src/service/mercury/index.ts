@@ -4,6 +4,7 @@ import { Logger } from "pino";
 import { Address, Horizon, xdr } from "stellar-sdk";
 import { Redis } from "ioredis";
 import BigNumber from "bignumber.js";
+import Prometheus from "prom-client";
 
 import { mutation, query } from "./queries";
 import {
@@ -76,6 +77,8 @@ export class MercuryClient {
   accountSubUrl: string;
   redisClient?: Redis;
   logger: Logger;
+  mercuryErrorCounter: Prometheus.Counter<"endpoint">;
+  rpcErrorCounter: Prometheus.Counter<"rpc">;
 
   constructor(
     mercuryUrl: string,
@@ -83,6 +86,7 @@ export class MercuryClient {
     urqlClient: Client,
     renewClient: Client,
     logger: Logger,
+    register: Prometheus.Registry,
     redisClient?: Redis
   ) {
     this.mercuryUrl = mercuryUrl;
@@ -94,6 +98,19 @@ export class MercuryClient {
     this.renewClient = renewClient;
     this.logger = logger;
     this.redisClient = redisClient;
+
+    this.mercuryErrorCounter = new Prometheus.Counter({
+      name: "freighter_backend_mercury_error_count",
+      help: "Count of errors returned from Mercury",
+      labelNames: ["endpoint"],
+    });
+
+    this.rpcErrorCounter = new Prometheus.Counter({
+      name: "freighter_backend_rpc_error_count",
+      help: "Count of errors returned from Horizon or Soroban RPCs",
+      labelNames: ["rpc"],
+    });
+    register.registerMetric(this.mercuryErrorCounter);
   }
 
   tokenBalanceKey = (pubKey: string) => {
@@ -406,6 +423,11 @@ export class MercuryClient {
     } catch (error) {
       this.logger.error(error);
       const _error = JSON.stringify(error);
+      this.rpcErrorCounter
+        .labels({
+          rpc: "Horizon",
+        })
+        .inc();
       return {
         data: null,
         error: _error,
@@ -453,6 +475,13 @@ export class MercuryClient {
 
       if (!response.error) {
         return response;
+      } else {
+        this.logger.error(response.error);
+        this.mercuryErrorCounter
+          .labels({
+            endpoint: "getAccountHistory",
+          })
+          .inc();
       }
     }
 
@@ -616,6 +645,13 @@ export class MercuryClient {
       // if Mercury returns an error, fallback to the RPCs
       if (!response.error) {
         return response;
+      } else {
+        this.logger.error(response.error);
+        this.mercuryErrorCounter
+          .labels({
+            endpoint: "getAccountBalance",
+          })
+          .inc();
       }
     }
 
@@ -636,6 +672,11 @@ export class MercuryClient {
       this.logger.error(
         `failed to fetch token classic balances from Horizon: ${pubKey}, ${network}`
       );
+      this.rpcErrorCounter
+        .labels({
+          rpc: "Horizon",
+        })
+        .inc();
       return {
         data: null,
         error,
@@ -654,6 +695,11 @@ export class MercuryClient {
       this.logger.error(
         `failed to fetch token token balances from Soroban RPC: ${pubKey}, ${network}`
       );
+      this.rpcErrorCounter
+        .labels({
+          rpc: "Soroban",
+        })
+        .inc();
       return {
         data: null,
         error,

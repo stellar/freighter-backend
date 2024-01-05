@@ -39,6 +39,7 @@
     "ioredis": "^5.3.2",
     "pino": "^8.15.3",
     "pino-pretty": "^10.2.0",
+    "prom-client": "^15.1.0",
     "stellar-sdk": "11.1.0",
     "yargs": "^17.7.2"
   },

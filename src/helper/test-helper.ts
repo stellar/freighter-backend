@@ -1,6 +1,7 @@
 import { Client, fetchExchange } from "@urql/core";
 import pino from "pino";
 import { nativeToScVal } from "stellar-sdk";
+import Prometheus from "prom-client";
 
 import { mutation, query } from "../service/mercury/queries";
 import { MercuryClient } from "../service/mercury";
@@ -254,12 +255,15 @@ jest.spyOn(client, "mutation").mockImplementation((_mutation: any): any => {
   }
 });
 
+const register = new Prometheus.Registry();
+
 const mockMercuryClient = new MercuryClient(
   "http://example.com/graphql",
   mercurySession,
   client,
   renewClient,
-  testLogger
+  testLogger,
+  register
 );
 
 jest
@@ -274,7 +278,7 @@ jest
     }
   );
 async function getDevServer() {
-  const server = initApiServer(mockMercuryClient, testLogger);
+  const server = initApiServer(mockMercuryClient, testLogger, register);
   await server.listen();
   return server;
 }
