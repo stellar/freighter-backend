@@ -9,6 +9,7 @@ const ENV_KEYS = [
   "MODE",
   "REDIS_CONNECTION_NAME",
   "REDIS_PORT",
+  "USE_MERCURY",
 ];
 
 export function buildConfig(config: Record<string, string>) {
@@ -30,6 +31,7 @@ export function buildConfig(config: Record<string, string>) {
     redisConnectionName:
       config.REDIS_CONNECTION_NAME || process.env.REDIS_CONNECTION_NAME!,
     redisPort: Number(config.REDIS_PORT) || Number(process.env.REDIS_PORT!),
+    useMercury: config.USE_MERCURY || process.env.USE_MERCURY!,
   };
 }
 
