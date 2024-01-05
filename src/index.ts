@@ -92,7 +92,7 @@ async function main() {
     register,
     redis
   );
-  const server = initApiServer(
+  const server = await initApiServer(
     mercuryClient,
     logger,
     register,
