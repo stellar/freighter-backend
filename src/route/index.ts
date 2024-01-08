@@ -114,7 +114,7 @@ export async function initApiServer(
             useMercury
           );
           if (error) {
-            reply.code(400).send(error);
+            reply.code(400).send(JSON.stringify(error));
           } else {
             reply.code(200).send(data);
           }
@@ -173,7 +173,7 @@ export async function initApiServer(
             useMercury
           );
           if (error) {
-            reply.code(400).send(error);
+            reply.code(400).send(JSON.stringify(error));
           } else {
             reply.code(200).send(data);
           }
@@ -220,7 +220,7 @@ export async function initApiServer(
           const { network, pub_key, soroban_url } = request.query;
 
           if (!useMercury) {
-            reply.code(400).send("Mercury disabled");
+            reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
           try {
@@ -232,7 +232,7 @@ export async function initApiServer(
             );
             reply.code(200).send(data);
           } catch (error) {
-            reply.code(400).send(error);
+            reply.code(400).send(JSON.stringify(error));
           }
         },
       });
@@ -271,7 +271,7 @@ export async function initApiServer(
           const { contract_id, pub_key, network } = request.body;
 
           if (!useMercury) {
-            reply.code(400).send("Mercury disabled");
+            reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
           const { data, error } = await mercuryClient.tokenSubscription(
@@ -280,7 +280,7 @@ export async function initApiServer(
             network
           );
           if (error) {
-            reply.code(400).send(error);
+            reply.code(400).send(JSON.stringify(error));
           } else {
             reply.code(200).send(data);
           }
@@ -316,7 +316,7 @@ export async function initApiServer(
           const { pub_key, network } = request.body;
 
           if (!useMercury) {
-            reply.code(400).send("Mercury disabled");
+            reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
           const { data, error } = await mercuryClient.accountSubscription(
@@ -324,7 +324,7 @@ export async function initApiServer(
             network
           );
           if (error) {
-            reply.code(400).send(error);
+            reply.code(400).send(JSON.stringify(error));
           } else {
             reply.code(200).send(data);
           }
@@ -365,7 +365,7 @@ export async function initApiServer(
           const { pub_key, contract_id, network } = request.body;
 
           if (!useMercury) {
-            reply.code(400).send("Mercury disabled");
+            reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
           const { data, error } = await mercuryClient.tokenBalanceSubscription(
@@ -374,7 +374,7 @@ export async function initApiServer(
             network
           );
           if (error) {
-            reply.code(400).send(error);
+            reply.code(400).send(JSON.stringify(error));
           } else {
             reply.code(200).send(data);
           }
@@ -411,7 +411,7 @@ export async function initApiServer(
             network_passphrase
           );
           if (error) {
-            reply.code(400).send(error);
+            reply.code(400).send(JSON.stringify(error));
           } else {
             reply.code(200).send(data);
           }
@@ -456,7 +456,7 @@ export async function initApiServer(
             );
             reply.code(200).send(data);
           } catch (error) {
-            reply.code(400).send(error);
+            reply.code(400).send(JSON.stringify(error));
           }
         },
       });
@@ -523,7 +523,7 @@ export async function initApiServer(
             };
             reply.code(200).send(data);
           } catch (error) {
-            reply.code(400).send(error);
+            reply.code(400).send(JSON.stringify(error));
           }
         },
       });
