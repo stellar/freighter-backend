@@ -432,11 +432,18 @@ export class MercuryClient {
     } catch (error) {
       this.logger.error(error);
       const _error = JSON.stringify(error);
-      this.rpcErrorCounter
-        .labels({
-          rpc: "Horizon",
-        })
-        .inc();
+      if (error && typeof error === "object" && "message" in error) {
+        const err = JSON.parse(error.message as string);
+        // Not found errors are normal for unfunded accounts, dont alert
+        if (err.name !== "NotFoundError") {
+          this.rpcErrorCounter
+            .labels({
+              rpc: "Horizon",
+            })
+            .inc();
+        }
+      }
+
       return {
         data: null,
         error: _error,
@@ -446,11 +453,9 @@ export class MercuryClient {
 
   getAccountHistoryMercury = async (pubKey: string) => {
     try {
-      const xdrPubKey = new Address(pubKey).toScVal().toXDR("base64");
       const getData = async () => {
         const data = await this.urqlClient.query(query.getAccountHistory, {
           pubKey,
-          xdrPubKey,
         });
         const errorMessage = getGraphQlError(data.error);
         if (errorMessage) {
