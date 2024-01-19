@@ -4,7 +4,6 @@ import rateLimiter from "@fastify/rate-limit";
 import cors from "@fastify/cors";
 import { Logger } from "pino";
 import { Redis } from "ioredis";
-import Prometheus from "prom-client";
 
 import { MercuryClient } from "../service/mercury";
 import { ajv } from "./validators";
@@ -32,7 +31,6 @@ const API_VERSION = "v1";
 export async function initApiServer(
   mercuryClient: MercuryClient,
   logger: Logger,
-  register: Prometheus.Registry,
   useMercury: boolean,
   redis?: Redis
 ) {
@@ -59,15 +57,6 @@ export async function initApiServer(
         url: "/ping",
         handler: async (_request, reply) => {
           reply.code(200).send("Alive!");
-        },
-      });
-
-      instance.route({
-        method: "GET",
-        url: "/metrics",
-        handler: async (_request, reply) => {
-          reply.header("Content-Type", register.contentType);
-          register.metrics().then((data) => reply.code(200).send(data));
         },
       });
 

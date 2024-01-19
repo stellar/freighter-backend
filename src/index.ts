@@ -9,6 +9,7 @@ import { logger } from "./logger";
 import { buildConfig } from "./config";
 import { MercuryClient } from "./service/mercury";
 import { initApiServer } from "./route";
+import { initMetricsServer } from "./route/metrics";
 
 interface CliArgs {
   env: string;
@@ -95,13 +96,15 @@ async function main() {
   const server = await initApiServer(
     mercuryClient,
     logger,
-    register,
     conf.useMercury,
     redis
   );
+  const metricsServer = await initMetricsServer(register, redis);
 
   try {
     await server.listen({ port, host: "0.0.0.0" });
+    await metricsServer.listen({ port: 9090, host: "0.0.0.0" });
+
     logger.info(`Running in ${env} mode`);
   } catch (err) {
     server.log.error(err);
