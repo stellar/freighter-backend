@@ -58,9 +58,17 @@ export const query = {
             contractId
             keyXdr
             valueXdr
-            ledgerTimestamp
-            ledger
             entryDurability
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
           }
         }
         `
@@ -68,14 +76,16 @@ export const query = {
     }
   `,
   getAccountHistory: `
-    query GetAccountHistory($pubKey: String!, $xdrPubKey: String!) {
+    query GetAccountHistory($pubKey: String!) {
       invokeHostFnByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
             auth
             hostFunction
             sorobanMeta
-            source
+            accountBySource {
+              publickey
+            }
             tx
             opId
             txInfoByTx {

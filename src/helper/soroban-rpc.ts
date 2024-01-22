@@ -11,6 +11,7 @@ import {
   scValToNative,
   xdr,
   SorobanRpc,
+  StrKey,
 } from "stellar-sdk";
 import { NetworkNames } from "./validate";
 
@@ -139,8 +140,43 @@ const buildTransfer = (
   return tx.build();
 };
 
+// https://github.com/stellar/soroban-examples/blob/main/token/src/contract.rs
+enum SorobanTokenInterface {
+  transfer = "transfer",
+  mint = "mint",
+}
+
+const getOpArgs = (fnName: string, args: xdr.ScVal[]) => {
+  let amount: number;
+  let from;
+  let to;
+
+  switch (fnName) {
+    case SorobanTokenInterface.transfer:
+      from = StrKey.encodeEd25519PublicKey(
+        args[0].address().accountId().ed25519()
+      );
+      to = StrKey.encodeEd25519PublicKey(
+        args[1].address().accountId().ed25519()
+      );
+      amount = scValToNative(args[2]);
+      break;
+    case SorobanTokenInterface.mint:
+      to = StrKey.encodeEd25519PublicKey(
+        args[0].address().accountId().ed25519()
+      );
+      amount = scValToNative(args[1]).toString();
+      break;
+    default:
+      amount = 0;
+  }
+
+  return { from, to, amount };
+};
+
 export {
   buildTransfer,
+  getOpArgs,
   getServer,
   getTokenBalance,
   getTokenDecimals,
