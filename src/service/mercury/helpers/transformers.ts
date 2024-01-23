@@ -410,7 +410,7 @@ interface MercuryAccountHistory {
       path3Native: string;
       path4Native: string;
       path5Native: string;
-      sendAmount: string;
+      destAmount: string;
       sendAssetNative: string;
       opId: string;
       txInfoByTx: {
@@ -465,7 +465,7 @@ interface MercuryAccountHistory {
       path3Native: string;
       path4Native: string;
       path5Native: string;
-      sendAmount: string;
+      destAmount: string;
       sendAssetNative: string;
       opId: string;
       txInfoByTx: {
@@ -904,7 +904,10 @@ const transformAccountHistory = async (
         created_at: new Date(
           edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
         ).toISOString(),
-        starting_balance: edge.node.startingBalance,
+        starting_balance: formatTokenAmount(
+          new BigNumber(edge.node.startingBalance),
+          7
+        ),
         type: "create_account",
         type_i: 0,
         id: edge.node.opId,
@@ -924,7 +927,10 @@ const transformAccountHistory = async (
         created_at: new Date(
           edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
         ).toISOString(),
-        starting_balance: edge.node.startingBalance,
+        starting_balance: formatTokenAmount(
+          new BigNumber(edge.node.startingBalance),
+          7
+        ),
         type: "create_account",
         type_i: 0,
         id: edge.node.opId,
@@ -948,7 +954,7 @@ const transformAccountHistory = async (
         asset_type: getAssetType(edge.node.assetByAsset?.code),
         asset_code: edge.node.assetByAsset?.code,
         asset_issuer: edge.node.assetByAsset?.code,
-        amount: edge.node.amount,
+        amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
         type: "payment",
         type_i: 1,
         id: edge.node.opId,
@@ -972,7 +978,7 @@ const transformAccountHistory = async (
         asset_type: getAssetType(edge.node.assetByAsset?.code),
         asset_code: edge.node.assetByAsset?.code,
         asset_issuer: edge.node.assetByAsset?.code,
-        amount: edge.node.amount,
+        amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
         type: "payment",
         type_i: 1,
         id: edge.node.opId,
@@ -990,6 +996,7 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          sendAmount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
           created_at: new Date(
             edge.txInfoByTx.ledgerByLedger.closeTime * 1000
           ).toISOString(),
@@ -1010,6 +1017,7 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          sendAmount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
           created_at: new Date(
             edge.txInfoByTx.ledgerByLedger.closeTime * 1000
           ).toISOString(),
@@ -1030,6 +1038,7 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          destAmount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
           created_at: new Date(
             edge.txInfoByTx.ledgerByLedger.closeTime * 1000
           ).toISOString(),
@@ -1050,6 +1059,7 @@ const transformAccountHistory = async (
       (edge) =>
         ({
           ...edge,
+          destAmount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
           created_at: new Date(
             edge.txInfoByTx.ledgerByLedger.closeTime * 1000
           ).toISOString(),
