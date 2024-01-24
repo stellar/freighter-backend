@@ -22,7 +22,7 @@ describe("Mercury Service", () => {
       }
       return false;
     }) as Partial<Horizon.ServerApi.PaymentOperationRecord>;
-    expect(payment.amount).toEqual("50000000");
+    expect(payment.amount).toEqual("5");
   });
 
   it("can build a balance ledger key for a pub key", async () => {
