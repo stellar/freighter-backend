@@ -97,6 +97,7 @@ async function main() {
     mercuryClient,
     logger,
     conf.useMercury,
+    register,
     redis
   );
   const metricsServer = await initMetricsServer(register, redis);
