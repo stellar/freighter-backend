@@ -255,7 +255,7 @@ jest.spyOn(client, "mutation").mockImplementation((_mutation: any): any => {
   }
 });
 
-const register = new Prometheus.Registry();
+export const register = new Prometheus.Registry();
 
 const mockMercuryClient = new MercuryClient(
   "http://example.com/graphql",
@@ -278,7 +278,12 @@ jest
     }
   );
 async function getDevServer() {
-  const server = await initApiServer(mockMercuryClient, testLogger, true);
+  const server = await initApiServer(
+    mockMercuryClient,
+    testLogger,
+    true,
+    register
+  );
 
   await server.listen();
   return server;
