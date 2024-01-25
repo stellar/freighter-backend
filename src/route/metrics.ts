@@ -27,7 +27,8 @@ export async function initMetricsServer(
       url: "/metrics",
       handler: async (_request, reply) => {
         reply.header("Content-Type", register.contentType);
-        register.metrics().then((data) => reply.code(200).send(data));
+        const data = await register.metrics();
+        reply.code(200).send(data);
       },
     });
     next();
