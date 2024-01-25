@@ -41,10 +41,10 @@ export async function initApiServer(
     (labels?: Prometheus.LabelValues<string>) => number
   >();
   const httpRequestDurationMicroseconds = new Prometheus.Histogram({
-    name: "http_request_duration_ms",
-    help: "Duration of HTTP requests in ms",
+    name: "http_request_duration_s",
+    help: "Duration of HTTP requests in seconds",
     labelNames: ["method", "route", "status"],
-    buckets: [0.1, 5, 15, 50, 100, 200, 300, 400, 500, 1000, 2000],
+    buckets: [0.1, 0.5, 1, 2, 5],
     registers: [register],
   });
   register.registerMetric(httpRequestDurationMicroseconds);
