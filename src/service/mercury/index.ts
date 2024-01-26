@@ -112,12 +112,14 @@ export class MercuryClient {
       name: "freighter_backend_mercury_error_count",
       help: "Count of errors returned from Mercury",
       labelNames: ["endpoint"],
+      registers: [register],
     });
 
     this.rpcErrorCounter = new Prometheus.Counter({
       name: "freighter_backend_rpc_error_count",
       help: "Count of errors returned from Horizon or Soroban RPCs",
       labelNames: ["rpc"],
+      registers: [register],
     });
     register.registerMetric(this.mercuryErrorCounter);
   }

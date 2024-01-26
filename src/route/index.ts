@@ -4,6 +4,7 @@ import rateLimiter from "@fastify/rate-limit";
 import cors from "@fastify/cors";
 import { Logger } from "pino";
 import { Redis } from "ioredis";
+import Prometheus from "prom-client";
 
 import { MercuryClient } from "../service/mercury";
 import { ajv } from "./validators";
@@ -32,8 +33,22 @@ export async function initApiServer(
   mercuryClient: MercuryClient,
   logger: Logger,
   useMercury: boolean,
+  register: Prometheus.Registry,
   redis?: Redis
 ) {
+  const routeMetricsStore = new WeakMap<
+    FastifyRequest,
+    (labels?: Prometheus.LabelValues<string>) => number
+  >();
+  const httpRequestDurationMicroseconds = new Prometheus.Histogram({
+    name: "http_request_duration_s",
+    help: "Duration of HTTP requests in seconds",
+    labelNames: ["method", "route", "status"],
+    buckets: [0.1, 0.5, 1, 2, 5],
+    registers: [register],
+  });
+  register.registerMetric(httpRequestDurationMicroseconds);
+
   const server = Fastify({
     logger,
   });
@@ -50,6 +65,30 @@ export async function initApiServer(
   await server.register(cors, {
     origin: "*",
   });
+
+  server.addHook("onRequest", (request, _, done) => {
+    routeMetricsStore.set(
+      request,
+      httpRequestDurationMicroseconds.startTimer()
+    );
+    return done();
+  });
+
+  server.addHook("onResponse", (request, reply, done) => {
+    const histMetric = routeMetricsStore.get(request);
+    if (!histMetric) {
+      return done();
+    }
+
+    const labels = {
+      method: request.method,
+      route: request.url,
+      status: reply.statusCode,
+    };
+    histMetric(labels);
+    return done();
+  });
+
   server.register(
     (instance, _opts, next) => {
       instance.route({

@@ -97,6 +97,7 @@ async function main() {
     mercuryClient,
     logger,
     conf.useMercury,
+    register,
     redis
   );
   const metricsServer = await initMetricsServer(register, redis);
@@ -111,7 +112,9 @@ async function main() {
     process.exit(1);
   }
 
-  process.on("SIGTERM", () => {
+  process.on("SIGTERM", async () => {
+    register.clear();
+    await server.close();
     process.exit(0);
   });
 

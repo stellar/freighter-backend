@@ -1,4 +1,9 @@
-import { getDevServer, queryMockResponse, pubKey } from "../helper/test-helper";
+import {
+  getDevServer,
+  queryMockResponse,
+  pubKey,
+  register,
+} from "../helper/test-helper";
 import { transformAccountHistory } from "../service/mercury/helpers/transformers";
 import { query } from "../service/mercury/queries";
 
@@ -18,7 +23,8 @@ describe("API routes", () => {
           data: queryMockResponse[query.getAccountHistory],
         } as any)
       );
-      server.close();
+      register.clear();
+      await server.close();
     });
 
     it("rejects requests for non strings that are not pub keys", async () => {
@@ -30,7 +36,8 @@ describe("API routes", () => {
         }/api/v1/account-history/${notPubkey}`
       );
       expect(response.status).toEqual(400);
-      server.close();
+      register.clear();
+      await server.close();
     });
   });
 
@@ -43,7 +50,8 @@ describe("API routes", () => {
         }/api/v1/account-balances/${pubKey}?contract_ids=CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP&network=TESTNET`
       );
       expect(response.status).toEqual(200);
-      server.close();
+      register.clear();
+      await server.close();
     });
 
     it("can fetch account balances for a pub key & multiple contract IDs", async () => {
@@ -63,7 +71,8 @@ describe("API routes", () => {
         )}`
       );
       expect(response.status).toEqual(200);
-      server.close();
+      register.clear();
+      await server.close();
     });
 
     it("rejects if any contract ID is not valid", async () => {
@@ -82,7 +91,8 @@ describe("API routes", () => {
         )}`
       );
       expect(response.status).toEqual(400);
-      server.close();
+      register.clear();
+      await server.close();
     });
 
     it("rejects requests for non strings that are not pub keys", async () => {
@@ -94,7 +104,8 @@ describe("API routes", () => {
         }/api/v1/account-balances/${notPubkey}?contract_ids=CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP`
       );
       expect(response.status).toEqual(400);
-      server.close();
+      register.clear();
+      await server.close();
     });
 
     it("rejects requests with bad contract IDs query param", async () => {
@@ -106,7 +117,8 @@ describe("API routes", () => {
         }/api/v1/account-balances/${pubKey}?contract_ids=${notContractId}`
       );
       expect(response.status).toEqual(400);
-      server.close();
+      register.clear();
+      await server.close();
     });
   });
 });
