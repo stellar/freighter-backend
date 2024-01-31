@@ -16,6 +16,7 @@ import {
 } from "../helper/validate";
 import { submitTransaction } from "../helper/horizon-rpc";
 import {
+  Address,
   BASE_FEE,
   Memo,
   MemoType,
@@ -23,6 +24,7 @@ import {
   SorobanRpc,
   Transaction,
   TransactionBuilder,
+  XdrLargeInt,
   xdr,
 } from "stellar-sdk";
 import { buildTransfer, simulateTx } from "../helper/soroban-rpc";
@@ -513,7 +515,7 @@ export async function initApiServer(
               pub_key: string;
               memo: string;
               fee?: string;
-              params: xdr.ScVal[];
+              params: Record<string, string>;
               network_url: string;
               network_passphrase: string;
             };
@@ -540,14 +542,22 @@ export async function initApiServer(
               fee: _fee,
               networkPassphrase: network_passphrase,
             });
-            const tx = buildTransfer(address, params, memo, builder);
-            const simulationResponse = await simulateTx<unknown>(
-              tx as Transaction<Memo<MemoType>, Operation[]>,
-              server
+            const _params = [
+              new Address(params.publicKey).toScVal(), // from
+              new Address(params.destination).toScVal(), // to
+              new XdrLargeInt("i128", params.amount).toI128(), // amount
+            ];
+            const tx = buildTransfer(address, _params, memo, builder);
+            const simulationResponse = (await server.simulateTransaction(
+              tx
+            )) as SorobanRpc.Api.SimulateTransactionSuccessResponse;
+            const preparedTransaction = SorobanRpc.assembleTransaction(
+              tx,
+              simulationResponse
             );
             const data = {
               simulationResponse,
-              raw: tx.toXDR(),
+              preparedTransaction: preparedTransaction.build().toXDR(),
             };
             reply.code(200).send(data);
           } catch (error) {

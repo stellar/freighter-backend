@@ -1,4 +1,5 @@
 import BigNumber from "bignumber.js";
+import { ServerResponse } from "http";
 import { AssetType, Horizon, TransactionBuilder } from "stellar-sdk";
 
 export const BASE_RESERVE = 0.5;
