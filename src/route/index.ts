@@ -25,7 +25,6 @@ import {
   Transaction,
   TransactionBuilder,
   XdrLargeInt,
-  xdr,
 } from "stellar-sdk";
 import { buildTransfer, simulateTx } from "../helper/soroban-rpc";
 
