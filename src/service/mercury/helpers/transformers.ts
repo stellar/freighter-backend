@@ -866,34 +866,44 @@ const transformAccountHistory = async (
 ): Promise<Partial<Horizon.ServerApi.OperationRecord>[]> => {
   const invokeHostFnEdges =
     rawResponse.data?.invokeHostFnByPublicKey.edges || [];
-  const invokeHostFn = invokeHostFnEdges.map((edge) => {
-    const hostFn = xdr.HostFunction.fromXDR(
-      Buffer.from(edge.node.hostFunction, "base64")
-    );
-    const invocation = hostFn.invokeContract();
-    const fnName = invocation.functionName().toString();
-    return {
-      auth: edge.node.auth,
-      created_at: new Date(
-        edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-      ).toISOString(),
-      sorobanMeta: edge.node.sorobanMeta,
-      source_account: edge.node.accountBySource.publickey,
-      tx: edge.node.tx,
-      type: "invoke_host_function",
-      type_i: 24,
-      id: edge.node.opId,
-      transaction_attr: {
-        contractId: StrKey.encodeContract(
-          invocation.contractAddress().contractId()
-        ),
-        fnName,
-        args: getOpArgs(fnName, invocation.args()),
-        operation_count: edge.node.txInfoByTx.opCount,
-        fee_charged: edge.node.txInfoByTx.fee,
-      },
-    } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
-  });
+  const invokeHostFn = invokeHostFnEdges
+    .map((edge) => {
+      const hostFn = xdr.HostFunction.fromXDR(
+        Buffer.from(edge.node.hostFunction, "base64")
+      );
+
+      // we only want to keep these history entries if the Host Fn is
+      // for invoking a contract, we dont show contract create or wasm upload in wallet history right now.
+      try {
+        const invocation = hostFn.invokeContract();
+        const fnName = invocation.functionName().toString();
+        return {
+          auth: edge.node.auth,
+          created_at: new Date(
+            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+          ).toISOString(),
+          sorobanMeta: edge.node.sorobanMeta,
+          source_account: edge.node.accountBySource.publickey,
+          tx: edge.node.tx,
+          type: "invoke_host_function",
+          type_i: 24,
+          id: edge.node.opId,
+          transaction_attr: {
+            contractId: StrKey.encodeContract(
+              invocation.contractAddress().contractId()
+            ),
+            fnName,
+            args: getOpArgs(fnName, invocation.args()),
+            operation_count: edge.node.txInfoByTx.opCount,
+            fee_charged: edge.node.txInfoByTx.fee,
+          },
+        } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
+      } catch (error) {
+        return null;
+      }
+    })
+    // filters out cases where the Host fn is not a contract invocation
+    .filter(Boolean);
 
   const createAccountEdges =
     rawResponse.data?.createAccountByPublicKey.edges || [];

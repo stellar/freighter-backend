@@ -162,8 +162,9 @@ export async function initApiServer(
           },
           querystring: {
             ["contract_ids"]: {
-              type: "string",
-              validator: (qStr: string) => qStr.split(",").every(isContractId),
+              type: "array",
+              validator: (qStr: Array<unknown>) =>
+                qStr.map((q) => String(q)).every(isContractId),
             },
             ["network"]: {
               type: "string",
@@ -181,7 +182,7 @@ export async function initApiServer(
           request: FastifyRequest<{
             Params: { ["pubKey"]: string };
             Querystring: {
-              ["contract_ids"]: string;
+              ["contract_ids"]: string[];
               ["network"]: NetworkNames;
               ["horizon_url"]?: string;
               ["soroban_url"]?: string;
@@ -191,9 +192,7 @@ export async function initApiServer(
         ) => {
           const pubKey = request.params["pubKey"];
           const { network, horizon_url, soroban_url } = request.query;
-          const contractIds = request.query["contract_ids"]
-            ? request.query["contract_ids"].split(",")
-            : [];
+          const contractIds = request.query["contract_ids"] || ([] as string[]);
           const { data, error } = await mercuryClient.getAccountBalances(
             pubKey,
             contractIds,
