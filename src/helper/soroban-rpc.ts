@@ -159,7 +159,7 @@ const getOpArgs = (fnName: string, args: xdr.ScVal[]) => {
       to = StrKey.encodeEd25519PublicKey(
         args[1].address().accountId().ed25519()
       );
-      amount = scValToNative(args[2]);
+      amount = scValToNative(args[2]).toString();
       break;
     case SorobanTokenInterface.mint:
       to = StrKey.encodeEd25519PublicKey(

@@ -55,21 +55,21 @@ describe("API routes", () => {
     });
 
     it("can fetch account balances for a pub key & multiple contract IDs", async () => {
-      const params = {
-        contract_ids: [
-          "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
-          "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
-        ],
-        network: "TESTNET",
-      };
+      const contractIds = [
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+        "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+      ];
       const server = await getDevServer();
-      const response = await fetch(
+      const url = new URL(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-balances/${pubKey}?${new URLSearchParams(
-          params as any
-        )}`
+        }/api/v1/account-balances/${pubKey}`
       );
+      url.searchParams.append("network", "TESTNET");
+      for (const id of contractIds) {
+        url.searchParams.append("contract_ids", id);
+      }
+      const response = await fetch(url.href);
       expect(response.status).toEqual(200);
       register.clear();
       await server.close();
