@@ -7,7 +7,7 @@ import Ajv, {
 const ajv = new Ajv({
   removeAdditional: true,
   useDefaults: true,
-  coerceTypes: true,
+  coerceTypes: "array",
 });
 
 ajv.addKeyword("validator", {
