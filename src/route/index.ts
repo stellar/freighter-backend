@@ -249,10 +249,6 @@ export async function initApiServer(
           const contractId = request.params["contractId"];
           const { network, pub_key, soroban_url } = request.query;
 
-          if (!useMercury) {
-            reply.code(400).send(JSON.stringify("Mercury disabled"));
-          }
-
           try {
             const data = await mercuryClient.tokenDetails(
               pub_key,
