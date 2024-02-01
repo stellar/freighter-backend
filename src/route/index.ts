@@ -569,18 +569,7 @@ export async function initApiServer(
               ) {
                 throw new Error(ERROR.ACCOUNT_NOT_SOURCE);
               }
-              if (
-                auth.credentials().switch() ===
-                  xdr.SorobanCredentialsType.sorobanCredentialsAddress() &&
-                auth
-                  .credentials()
-                  ?.address()
-                  ?.address()
-                  .contractId()
-                  .toString() !== address
-              ) {
-                throw new Error(ERROR.FOREIGN_CONTRACT_AUTH);
-              }
+
               if (auth.rootInvocation().subInvocations().length) {
                 throw new Error(ERROR.SUB_INVOCATIONS);
               }
