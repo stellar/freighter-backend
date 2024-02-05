@@ -34,7 +34,7 @@ enum NETWORK_URLS {
 }
 
 const ERROR_MESSAGES = {
-  JWT_EXPIRED: "jwt expired",
+  JWT_EXPIRED: "1_kJdMBB7ytvgRIqF1clh2iz2iI",
 };
 
 function getGraphQlError(error?: CombinedError) {
@@ -179,7 +179,7 @@ export class MercuryClient {
     } catch (error: unknown) {
       // renew and retry 0n 401, otherwise throw the error back up to the caller
       if (error instanceof Error) {
-        if (error.message === ERROR_MESSAGES.JWT_EXPIRED) {
+        if (error.message.includes(ERROR_MESSAGES.JWT_EXPIRED)) {
           await this.renewMercuryToken();
           this.logger.info("renewed expired jwt");
           return await method();

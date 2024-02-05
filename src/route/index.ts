@@ -554,20 +554,24 @@ export async function initApiServer(
             );
 
             const built = preparedTransaction.build();
-            const sorobanOp = built
-              .operations[0] as Operation.InvokeHostFunction;
-            const auths = sorobanOp.auth || [];
+            switch (built.operations[0].type) {
+              case "invokeHostFunction": {
+                const sorobanOp = built
+                  .operations[0] as Operation.InvokeHostFunction;
+                const auths = sorobanOp.auth || [];
 
-            for (const auth of auths) {
-              if (
-                auth.credentials().switch() !==
-                xdr.SorobanCredentialsType.sorobanCredentialsSourceAccount()
-              ) {
-                throw new Error(ERROR.ACCOUNT_NOT_SOURCE);
-              }
+                for (const auth of auths) {
+                  if (
+                    auth.credentials().switch() !==
+                    xdr.SorobanCredentialsType.sorobanCredentialsSourceAccount()
+                  ) {
+                    throw new Error(ERROR.ACCOUNT_NOT_SOURCE);
+                  }
 
-              if (auth.rootInvocation().subInvocations().length) {
-                throw new Error(ERROR.SUB_INVOCATIONS);
+                  if (auth.rootInvocation().subInvocations().length) {
+                    throw new Error(ERROR.SUB_INVOCATIONS);
+                  }
+                }
               }
             }
 
