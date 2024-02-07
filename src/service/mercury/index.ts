@@ -518,9 +518,10 @@ export class MercuryClient {
   ) => {
     const balances = [];
     const balanceMap = {} as Record<string, any>;
-    try {
-      const server = await getServer(network, customSorobanRpcUrl);
-      for (const id of contractIds) {
+
+    const server = await getServer(network, customSorobanRpcUrl);
+    for (const id of contractIds) {
+      try {
         const builder = await getTxBuilder(pubKey, network, server);
         const params = [new Address(pubKey).toScVal()];
         const balance = await getTokenBalance(id, params, server, builder);
@@ -530,11 +531,12 @@ export class MercuryClient {
           balance,
           ...tokenDetails,
         });
+      } catch (error) {
+        this.logger.error(error);
+        continue;
       }
-    } catch (error) {
-      this.logger.error(error);
-      return balanceMap;
     }
+
     for (const balance of balances) {
       balanceMap[`${balance.symbol}:${balance.id}`] = {
         token: {
