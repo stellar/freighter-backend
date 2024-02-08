@@ -569,7 +569,7 @@ export async function initApiServer(
                   }
 
                   if (auth.rootInvocation().subInvocations().length) {
-                    throw new Error(ERROR.SUB_INVOCATIONS);
+                    throw new Error(ERROR.AUTH_SUB_INVOCATIONS);
                   }
                 }
               }
