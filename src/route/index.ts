@@ -25,8 +25,10 @@ import {
   Transaction,
   TransactionBuilder,
   XdrLargeInt,
+  xdr,
 } from "stellar-sdk";
 import { buildTransfer, simulateTx } from "../helper/soroban-rpc";
+import { ERROR } from "../helper/error";
 
 const API_VERSION = "v1";
 
@@ -545,17 +547,41 @@ export async function initApiServer(
             const simulationResponse = (await server.simulateTransaction(
               tx
             )) as SorobanRpc.Api.SimulateTransactionSuccessResponse;
+
             const preparedTransaction = SorobanRpc.assembleTransaction(
               tx,
               simulationResponse
             );
+
+            const built = preparedTransaction.build();
+            switch (built.operations[0].type) {
+              case "invokeHostFunction": {
+                const sorobanOp = built
+                  .operations[0] as Operation.InvokeHostFunction;
+                const auths = sorobanOp.auth || [];
+
+                for (const auth of auths) {
+                  if (
+                    auth.credentials().switch() !==
+                    xdr.SorobanCredentialsType.sorobanCredentialsSourceAccount()
+                  ) {
+                    throw new Error(ERROR.ACCOUNT_NOT_SOURCE);
+                  }
+
+                  if (auth.rootInvocation().subInvocations().length) {
+                    throw new Error(ERROR.AUTH_SUB_INVOCATIONS);
+                  }
+                }
+              }
+            }
+
             const data = {
               simulationResponse,
-              preparedTransaction: preparedTransaction.build().toXDR(),
+              preparedTransaction: built.toXDR(),
             };
             reply.code(200).send(data);
           } catch (error) {
-            reply.code(400).send(JSON.stringify(error));
+            reply.code(400).send(error);
           }
         },
       });
