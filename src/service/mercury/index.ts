@@ -8,6 +8,7 @@ import Prometheus from "prom-client";
 
 import { mutation, query } from "./queries";
 import {
+  SOROBAN_RPC_URLS,
   getServer,
   getTokenBalance,
   getTokenDecimals,
@@ -516,16 +517,28 @@ export class MercuryClient {
     network: NetworkNames,
     customSorobanRpcUrl?: string
   ) => {
+    const networkUrl = !SOROBAN_RPC_URLS[network]
+      ? customSorobanRpcUrl
+      : SOROBAN_RPC_URLS[network];
+    if (!networkUrl) {
+      throw new Error("network not supported");
+    }
+
     const balances = [];
     const balanceMap = {} as Record<string, any>;
 
-    const server = await getServer(network, customSorobanRpcUrl);
+    const server = await getServer(network, networkUrl);
     for (const id of contractIds) {
       try {
         const builder = await getTxBuilder(pubKey, network, server);
         const params = [new Address(pubKey).toScVal()];
         const balance = await getTokenBalance(id, params, server, builder);
-        const tokenDetails = await this.tokenDetails(pubKey, id, network);
+        const tokenDetails = await this.tokenDetails(
+          pubKey,
+          id,
+          network,
+          networkUrl
+        );
         balances.push({
           id,
           balance,
