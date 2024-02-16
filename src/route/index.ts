@@ -105,6 +105,14 @@ export async function initApiServer(
 
       instance.route({
         method: "GET",
+        url: "/feature-flags",
+        handler: async (_request, reply) => {
+          reply.code(200).send({ useSorobanPublic });
+        },
+      });
+
+      instance.route({
+        method: "GET",
         url: "/account-history/:pubKey",
         schema: {
           params: {
