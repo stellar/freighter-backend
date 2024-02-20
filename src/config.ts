@@ -33,6 +33,7 @@ export function buildConfig(config: Record<string, string>) {
     redisPort: Number(config.REDIS_PORT) || Number(process.env.REDIS_PORT!),
     useMercury:
       config.USE_MERCURY === "true" || process.env.USE_MERCURY === "true",
+    useSorobanPublic: true,
   };
 }
 

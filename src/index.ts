@@ -97,6 +97,7 @@ async function main() {
     mercuryClient,
     logger,
     conf.useMercury,
+    conf.useSorobanPublic,
     register,
     redis
   );

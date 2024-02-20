@@ -36,6 +36,7 @@ export async function initApiServer(
   mercuryClient: MercuryClient,
   logger: Logger,
   useMercury: boolean,
+  useSorobanPublic: boolean,
   register: Prometheus.Registry,
   redis?: Redis
 ) {
@@ -99,6 +100,14 @@ export async function initApiServer(
         url: "/ping",
         handler: async (_request, reply) => {
           reply.code(200).send("Alive!");
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/feature-flags",
+        handler: async (_request, reply) => {
+          reply.code(200).send({ useSorobanPublic });
         },
       });
 
@@ -194,10 +203,13 @@ export async function initApiServer(
         ) => {
           const pubKey = request.params["pubKey"];
           const { network, horizon_url, soroban_url } = request.query;
+
+          const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
           const contractIds = request.query["contract_ids"] || ([] as string[]);
+
           const { data, error } = await mercuryClient.getAccountBalances(
             pubKey,
-            contractIds,
+            skipSorobanPubnet ? [] : contractIds,
             network,
             { horizon: horizon_url, soroban: soroban_url },
             useMercury
@@ -248,6 +260,11 @@ export async function initApiServer(
         ) => {
           const contractId = request.params["contractId"];
           const { network, pub_key, soroban_url } = request.query;
+
+          const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
+          if (skipSorobanPubnet) {
+            return reply.code(400).send("Soroban has been disabled on pubnet");
+          }
 
           try {
             const data = await mercuryClient.tokenDetails(

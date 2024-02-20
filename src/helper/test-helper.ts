@@ -282,6 +282,7 @@ async function getDevServer() {
     mockMercuryClient,
     testLogger,
     true,
+    true,
     register
   );
 
