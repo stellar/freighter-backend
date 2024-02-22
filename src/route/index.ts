@@ -27,7 +27,11 @@ import {
   XdrLargeInt,
   xdr,
 } from "stellar-sdk";
-import { buildTransfer, simulateTx } from "../helper/soroban-rpc";
+import {
+  SOROBAN_RPC_URLS,
+  buildTransfer,
+  simulateTx,
+} from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
 
 const API_VERSION = "v1";
@@ -100,6 +104,40 @@ export async function initApiServer(
         url: "/ping",
         handler: async (_request, reply) => {
           reply.code(200).send("Alive!");
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/rpc-health",
+        schema: {
+          querystring: {
+            ["network"]: {
+              type: "string",
+              validator: (qStr: string) => isNetwork(qStr),
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Querystring: {
+              ["network"]: NetworkNames;
+            };
+          }>,
+          reply
+        ) => {
+          const networkUrl = SOROBAN_RPC_URLS[request.query.network];
+
+          if (!networkUrl) {
+            return reply.code(400).send("Unknown network");
+          }
+
+          const server = new SorobanRpc.Server(networkUrl, {
+            allowHttp: networkUrl.startsWith("http://"),
+          });
+
+          const health = await server.getHealth();
+          reply.code(200).send(health);
         },
       });
 
