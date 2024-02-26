@@ -560,6 +560,7 @@ export class MercuryClient {
           },
         },
         contractId: balance.id,
+        symbol: balance.symbol,
         decimals: balance.decimals,
         total: new BigNumber(balance.balance),
         available: new BigNumber(balance.balance),
