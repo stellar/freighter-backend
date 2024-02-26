@@ -25,6 +25,7 @@ import {
   fetchAccountHistory,
 } from "../../helper/horizon-rpc";
 import { NetworkNames } from "../../helper/validate";
+import { ERROR } from "../../helper/error";
 
 enum NETWORK_URLS {
   PUBLIC = "https://horizon.stellar.org",
@@ -407,7 +408,7 @@ export class MercuryClient {
       };
     } catch (error) {
       this.logger.error(error);
-      return;
+      throw ERROR.FAILED_TO_SIM;
     }
   };
 
@@ -558,6 +559,7 @@ export class MercuryClient {
             key: balance.id,
           },
         },
+        contractId: balance.id,
         decimals: balance.decimals,
         total: new BigNumber(balance.balance),
         available: new BigNumber(balance.balance),
