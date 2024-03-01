@@ -6,6 +6,8 @@ import Prometheus from "prom-client";
 import { mutation, query } from "../service/mercury/queries";
 import { MercuryClient } from "../service/mercury";
 import { initApiServer } from "../route";
+import { NetworkNames } from "./validate";
+import { hasIndexerSupport } from "./mercury";
 
 const testLogger = pino({
   name: "test-logger",
@@ -22,24 +24,97 @@ const testLogger = pino({
   },
 });
 
-const client = new Client({
-  url: `::1:5000/graphql`,
-  exchanges: [fetchExchange],
-  fetchOptions: () => {
-    return {
-      headers: { authorization: "Bearer JWT" },
-    };
-  },
-});
+function renewClientMaker(network: NetworkNames) {
+  if (!hasIndexerSupport(network)) {
+    throw new Error(`network not currently supported: ${network}`);
+  }
 
-const renewClient = new Client({
-  url: `::1:5000/graphql`,
-  exchanges: [fetchExchange],
-});
+  const client = new Client({
+    url: `::1:5000/graphql`,
+    exchanges: [fetchExchange],
+  });
+
+  jest.spyOn(client, "mutation").mockImplementation((_mutation: any): any => {
+    switch (_mutation) {
+      case mutation.authenticate: {
+        return Promise.resolve({
+          data: queryMockResponse[mutation.authenticate],
+          error: null,
+        });
+      }
+      default:
+        throw new Error("unknown mutation in mock");
+    }
+  });
+
+  return client;
+}
+
+function backendClientMaker(network: NetworkNames) {
+  if (!hasIndexerSupport(network)) {
+    throw new Error(`network not currently supported: ${network}`);
+  }
+
+  const client = new Client({
+    url: `::1:5000/graphql`,
+    exchanges: [fetchExchange],
+    fetchOptions: () => {
+      return {
+        headers: { authorization: "Bearer JWT" },
+      };
+    },
+  });
+
+  jest.spyOn(client, "query").mockImplementation((_query: any): any => {
+    switch (_query) {
+      case query.getAccountHistory: {
+        return Promise.resolve({
+          data: queryMockResponse[query.getAccountHistory],
+          error: null,
+        });
+      }
+      case query.getAccountBalances(pubKey, tokenBalanceLedgerKey, [
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+      ]): {
+        return Promise.resolve({
+          data: queryMockResponse["query.getAccountBalances"],
+          error: null,
+        });
+      }
+      case query.getAccountBalances(pubKey, tokenBalanceLedgerKey, [
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+        "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+      ]): {
+        return Promise.resolve({
+          data: queryMockResponse["query.getAccountBalances"],
+          error: null,
+        });
+      }
+      default:
+        throw new Error("unknown query in mock");
+    }
+  });
+
+  jest.spyOn(client, "mutation").mockImplementation((_mutation: any): any => {
+    switch (_mutation) {
+      default:
+        throw new Error("unknown mutation in mock");
+    }
+  });
+
+  return client;
+}
+
+const backends = {
+  TESTNET: `::1:5000/graphql`,
+  PUBLIC: `::1:5000/graphql`,
+};
 
 const mercurySession = {
   token: "mercury-token",
-  backend: "mercury-url",
+  renewClientMaker,
+  backendClientMaker,
+  backends,
   email: "user-email",
   password: "user-password",
   userId: "1",
@@ -203,65 +278,10 @@ const queryMockResponse = {
   },
 };
 
-jest
-  .spyOn(renewClient, "mutation")
-  .mockImplementation((_mutation: any): any => {
-    switch (_mutation) {
-      case mutation.authenticate: {
-        return Promise.resolve({
-          data: queryMockResponse[mutation.authenticate],
-          error: null,
-        });
-      }
-      default:
-        throw new Error("unknown mutation in mock");
-    }
-  });
-
-jest.spyOn(client, "query").mockImplementation((_query: any): any => {
-  switch (_query) {
-    case query.getAccountHistory: {
-      return Promise.resolve({
-        data: queryMockResponse[query.getAccountHistory],
-        error: null,
-      });
-    }
-    case query.getAccountBalances(pubKey, tokenBalanceLedgerKey, [
-      "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
-    ]): {
-      return Promise.resolve({
-        data: queryMockResponse["query.getAccountBalances"],
-        error: null,
-      });
-    }
-    case query.getAccountBalances(pubKey, tokenBalanceLedgerKey, [
-      "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
-      "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
-    ]): {
-      return Promise.resolve({
-        data: queryMockResponse["query.getAccountBalances"],
-        error: null,
-      });
-    }
-    default:
-      throw new Error("unknown query in mock");
-  }
-});
-
-jest.spyOn(client, "mutation").mockImplementation((_mutation: any): any => {
-  switch (_mutation) {
-    default:
-      throw new Error("unknown mutation in mock");
-  }
-});
-
 export const register = new Prometheus.Registry();
 
 const mockMercuryClient = new MercuryClient(
-  "http://example.com/graphql",
   mercurySession,
-  client,
-  renewClient,
   testLogger,
   register
 );

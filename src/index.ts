@@ -10,6 +10,9 @@ import { buildConfig } from "./config";
 import { MercuryClient } from "./service/mercury";
 import { initApiServer } from "./route";
 import { initMetricsServer } from "./route/metrics";
+import { Networks } from "stellar-sdk";
+import { NetworkNames } from "./helper/validate";
+import { MercurySupportedNetworks, hasIndexerSupport } from "./helper/mercury";
 
 interface CliArgs {
   env: string;
@@ -45,23 +48,48 @@ async function main() {
   });
   Prometheus.collectDefaultMetrics({ register });
 
-  const client = new Client({
-    url: conf.mercuryGraphQL,
-    exchanges: [fetchExchange],
-    fetchOptions: () => {
-      return {
-        headers: { authorization: `Bearer ${conf.mercuryKey}` },
-      };
-    },
-  });
-  // we need a second client because the authenticate muation does not ignore the current jwt
-  const renewClient = new Client({
-    url: conf.mercuryGraphQL,
-    exchanges: [fetchExchange],
-  });
+  const graphQlEndpoints = {
+    TESTNET: conf.mercuryGraphQLTestnet,
+    PUBLIC: conf.mercuryGraphQLPubnet,
+  };
+
+  const backends = {
+    TESTNET: conf.mercuryBackendTestnet,
+    PUBLIC: conf.mercuryBackendPubnet,
+  };
+
+  function renewClientMaker(network: NetworkNames) {
+    if (!hasIndexerSupport(network)) {
+      throw new Error(`network not currently supported: ${network}`);
+    }
+
+    return new Client({
+      url: graphQlEndpoints[network as MercurySupportedNetworks],
+      exchanges: [fetchExchange],
+    });
+  }
+
+  function backendClientMaker(network: NetworkNames) {
+    if (!hasIndexerSupport(network)) {
+      throw new Error(`network not currently supported: ${network}`);
+    }
+
+    return new Client({
+      url: `${backends[network as MercurySupportedNetworks]}`,
+      exchanges: [fetchExchange],
+      fetchOptions: () => {
+        return {
+          headers: { authorization: `Bearer ${conf.mercuryKey}` },
+        };
+      },
+    });
+  }
+
   const mercurySession = {
     token: conf.mercuryKey,
-    backend: conf.mercuryBackend,
+    renewClientMaker,
+    backendClientMaker,
+    backends,
     email: conf.mercuryEmail,
     password: conf.mercuryPassword,
     userId: conf.mercuryUserId,
@@ -85,10 +113,7 @@ async function main() {
   }
 
   const mercuryClient = new MercuryClient(
-    conf.mercuryGraphQL,
     mercurySession,
-    client,
-    renewClient,
     logger,
     register,
     redis

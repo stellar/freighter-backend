@@ -73,7 +73,7 @@ describe("Mercury Service", () => {
   });
 
   it("can renew a token", async () => {
-    const response = await mockMercuryClient.renewMercuryToken();
+    const response = await mockMercuryClient.renewMercuryToken("TESTNET");
     const expected = {
       data: queryMockResponse[mutation.authenticate],
       error: null,

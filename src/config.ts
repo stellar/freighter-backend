@@ -21,9 +21,11 @@ export function buildConfig(config: Record<string, string>) {
 
   return {
     hostname: config.HOSTNAME || process.env.HOSTNAME!,
-    mercuryBackend: config.MERCURY_BACKEND || process.env.MERCURY_BACKEND!,
+    mercuryBackendTestnet: "https://api.mercurydata.app:8443",
+    mercuryGraphQLTestnet: "https://api.mercurydata.app:2083/graphql",
+    mercuryBackendPubnet: "https://mainnet.mercurydata.app:8443",
+    mercuryGraphQLPubnet: "https://mainnet.mercurydata.app:2083/graphql",
     mercuryEmail: config.AUTH_EMAIL || process.env.AUTH_EMAIL!,
-    mercuryGraphQL: config.MERCURY_GRAPHQL || process.env.MERCURY_GRAPHQL!,
     mercuryKey: config.MERCURY_KEY || process.env.MERCURY_KEY!,
     mercuryPassword: config.AUTH_PASS || process.env.AUTH_PASS!,
     mercuryUserId: config.MERCURY_USER_ID || process.env.MERCURY_USER_ID!,
