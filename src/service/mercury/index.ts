@@ -489,9 +489,9 @@ export class MercuryClient {
       const response = await this.getAccountHistoryMercury(pubKey, network);
 
       if (!response.error) {
-        return response.error;
+        return response;
       } else {
-        this.logger.error(response);
+        this.logger.error(response.error);
         this.mercuryErrorCounter
           .labels({
             endpoint: "getAccountHistory",
@@ -686,7 +686,7 @@ export class MercuryClient {
 
       // if Mercury returns an error, fallback to the RPCs
       if (!response.error) {
-        return response.error;
+        return response;
       } else {
         this.logger.error(response.error);
         this.mercuryErrorCounter
