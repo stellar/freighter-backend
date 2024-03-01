@@ -9,4 +9,5 @@ export const ERROR = {
   INVALID_SIMULATION: "Invalid response from simulateTransaction",
   INVALID_VALIDATOR_DEF: "Invalid definition for custom validator",
   TOKEN_SUB_FAILED: "Failed to subscribe to token events",
+  SERVER_ERROR: "Unexpected server error",
 };
