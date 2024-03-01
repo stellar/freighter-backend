@@ -10,7 +10,6 @@ import { buildConfig } from "./config";
 import { MercuryClient } from "./service/mercury";
 import { initApiServer } from "./route";
 import { initMetricsServer } from "./route/metrics";
-import { Networks } from "stellar-sdk";
 import { NetworkNames } from "./helper/validate";
 import { MercurySupportedNetworks, hasIndexerSupport } from "./helper/mercury";
 
