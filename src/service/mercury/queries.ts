@@ -332,23 +332,23 @@ export const query = {
             code
             issuer
           }
-          assetByPath1Asset {
+          assetByPath1 {
             code
             issuer
           }
-          assetByPath2Asset {
+          assetByPath2 {
             code
             issuer
           }
-          assetByPath2Asset {
+          assetByPath2 {
             issuer
             code
           }
-          assetByPath4Asset {
+          assetByPath4 {
             issuer
             code
           }
-          assetByPath5Asset {
+          assetByPath5 {
             issuer
             code
           }
@@ -357,11 +357,11 @@ export const query = {
             issuer
           }
           destAssetNative
-          path1AssetNative
-          path2AssetNative
-          path3AssetNative
-          path4AssetNative
-          path5AssetNative
+          path1Native
+          path2Native
+          path3Native
+          path4Native
+          path5Native
           sendAssetNative
           destAmount
           sendMax
@@ -391,23 +391,23 @@ export const query = {
             code
             issuer
           }
-          assetByPath1Asset {
+          assetByPath1 {
             code
             issuer
           }
-          assetByPath2Asset {
+          assetByPath2 {
             code
             issuer
           }
-          assetByPath2Asset {
+          assetByPath2 {
             issuer
             code
           }
-          assetByPath4Asset {
+          assetByPath4 {
             issuer
             code
           }
-          assetByPath5Asset {
+          assetByPath5 {
             issuer
             code
           }
@@ -416,11 +416,11 @@ export const query = {
             issuer
           }
           destAssetNative
-          path1AssetNative
-          path2AssetNative
-          path3AssetNative
-          path4AssetNative
-          path5AssetNative
+          path1Native
+          path2Native
+          path3Native
+          path4Native
+          path5Native
           sendAssetNative
           destAmount
           sendMax

@@ -68,17 +68,20 @@ async function main() {
     });
   }
 
-  function backendClientMaker(network: NetworkNames) {
+  function backendClientMaker(
+    network: NetworkNames,
+    key: string = conf.mercuryKey
+  ) {
     if (!hasIndexerSupport(network)) {
       throw new Error(`network not currently supported: ${network}`);
     }
 
     return new Client({
-      url: `${backends[network as MercurySupportedNetworks]}`,
+      url: `${graphQlEndpoints[network as MercurySupportedNetworks]}`,
       exchanges: [fetchExchange],
       fetchOptions: () => {
         return {
-          headers: { authorization: `Bearer ${conf.mercuryKey}` },
+          headers: { authorization: `Bearer ${key}` },
         };
       },
     });

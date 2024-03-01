@@ -72,7 +72,7 @@ export interface NewEntrySubscriptionPayload {
 
 interface MercurySession {
   renewClientMaker(network: NetworkNames): Client;
-  backendClientMaker(network: NetworkNames): Client;
+  backendClientMaker(network: NetworkNames, key: string): Client;
   backends: {
     TESTNET: string;
     PUBLIC: string;
@@ -150,7 +150,6 @@ export class MercuryClient {
       };
     } catch (error) {
       const _error = JSON.stringify(error);
-      this.logger.error(error);
       return {
         data: null,
         error: _error,
@@ -172,6 +171,7 @@ export class MercuryClient {
           this.logger.info("renewed expired jwt");
           return await method();
         }
+
         this.logger.error(error.message);
         throw new Error(error.message);
       }
@@ -424,7 +424,6 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      this.logger.error(error);
       const _error = JSON.stringify(error);
       if (error && typeof error === "object" && "message" in error) {
         const err = JSON.parse(error.message as string);
@@ -450,11 +449,15 @@ export class MercuryClient {
       if (!hasIndexerSupport(network)) {
         throw new Error(`network not currently supported: ${network}`);
       }
-      const urqlClient = this.mercurySession.backendClientMaker(network);
+      const urqlClient = this.mercurySession.backendClientMaker(
+        network,
+        this.mercurySession.token
+      );
       const getData = async () => {
         const data = await urqlClient.query(query.getAccountHistory, {
           pubKey,
         });
+
         const errorMessage = getGraphQlError(data.error);
         if (errorMessage) {
           throw new Error(errorMessage);
@@ -469,7 +472,6 @@ export class MercuryClient {
       };
     } catch (error) {
       const _error = JSON.stringify(error);
-      this.logger.error(error);
       return {
         data: null,
         error: _error,
@@ -487,9 +489,9 @@ export class MercuryClient {
       const response = await this.getAccountHistoryMercury(pubKey, network);
 
       if (!response.error) {
-        return response;
+        return response.error;
       } else {
-        this.logger.error(response.error);
+        this.logger.error(response);
         this.mercuryErrorCounter
           .labels({
             endpoint: "getAccountHistory",
@@ -628,7 +630,10 @@ export class MercuryClient {
       if (!hasIndexerSupport(network)) {
         throw new Error(`network not currently supported: ${network}`);
       }
-      const urqlClient = this.mercurySession.backendClientMaker(network);
+      const urqlClient = this.mercurySession.backendClientMaker(
+        network,
+        this.mercurySession.token
+      );
       const getData = async () => {
         const response = await urqlClient.query(
           query.getAccountBalances(
@@ -658,11 +663,9 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      // this.logger.error(error);
-      const _error = JSON.stringify(error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
@@ -683,7 +686,7 @@ export class MercuryClient {
 
       // if Mercury returns an error, fallback to the RPCs
       if (!response.error) {
-        return response;
+        return response.error;
       } else {
         this.logger.error(response.error);
         this.mercuryErrorCounter
