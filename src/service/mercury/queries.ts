@@ -34,6 +34,9 @@ export const query = {
           }
           nativeBalance
           numSubEntries
+          numSponsored
+          numSponsoring
+          sellingLiabilities
         }
       }
       balanceByPublicKey(

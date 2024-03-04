@@ -33,6 +33,9 @@ interface MercuryAccountBalancesData {
       };
       nativeBalance: string;
       numSubEntries: string;
+      numSponsored: string;
+      numSponsoring: string;
+      sellingLiabilities: string;
     }[];
   };
   balanceByPublicKey: {
@@ -75,10 +78,6 @@ const transformAccountBalances = async (
   const classicBalanceData = rawResponse?.data?.balanceByPublicKey.nodes || [];
 
   const accountObject = accountObjectData[0];
-  // TODO: get these into query
-  const numSponsoring = 0;
-  const numSponsored = 0;
-  const sellingLiabilities = 0;
 
   const accountBalance = {
     native: {
@@ -86,10 +85,10 @@ const transformAccountBalances = async (
       total: formatTokenAmount(new BigNumber(accountObject.nativeBalance), 7),
       available: new BigNumber(BASE_RESERVE_MIN_COUNT)
         .plus(accountObject.numSubEntries)
-        .plus(numSponsoring)
-        .minus(numSponsored)
+        .plus(accountObject.numSponsoring)
+        .minus(accountObject.numSponsored)
         .times(BASE_RESERVE)
-        .plus(sellingLiabilities),
+        .plus(accountObject.sellingLiabilities),
     },
   };
 
