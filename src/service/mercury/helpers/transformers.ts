@@ -958,51 +958,51 @@ const transformAccountHistory = async (
 
   const paymentsByPublicKeyEdges =
     rawResponse.data?.paymentsByPublicKey.edges || [];
-  const paymentsByPublicKey = paymentsByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        from: edge.node.accountBySource.publickey,
-        to: edge.node.accountByDestination.publickey,
-        asset_type: getAssetType(edge.node.assetByAsset?.code),
-        asset_code: edge.node.assetByAsset?.code,
-        asset_issuer: edge.node.assetByAsset?.code,
-        amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
-        type: "payment",
-        type_i: 1,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
-  );
+  const paymentsByPublicKey = paymentsByPublicKeyEdges.map((edge) => {
+    const code = atob(edge.node.assetByAsset?.code!);
+    return {
+      created_at: new Date(
+        edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+      ).toISOString(),
+      from: edge.node.accountBySource.publickey,
+      to: edge.node.accountByDestination.publickey,
+      asset_type: getAssetType(code),
+      asset_code: code,
+      asset_issuer: edge.node.assetByAsset?.issuer,
+      amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
+      type: "payment",
+      type_i: 1,
+      id: edge.node.opId,
+      transaction_attr: {
+        operation_count: edge.node.txInfoByTx.opCount,
+        fee_charged: edge.node.txInfoByTx.fee,
+      },
+    } as Partial<Horizon.ServerApi.PaymentOperationRecord>;
+  });
 
   const paymentsToPublicKeyEdges =
     rawResponse.data?.paymentsToPublicKey.edges || [];
-  const paymentsToPublicKey = paymentsToPublicKeyEdges.map(
-    (edge) =>
-      ({
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        from: edge.node.accountBySource.publickey,
-        to: edge.node.accountByDestination.publickey,
-        asset_type: getAssetType(edge.node.assetByAsset?.code),
-        asset_code: edge.node.assetByAsset?.code,
-        asset_issuer: edge.node.assetByAsset?.code,
-        amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
-        type: "payment",
-        type_i: 1,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
-  );
+  const paymentsToPublicKey = paymentsToPublicKeyEdges.map((edge) => {
+    const code = atob(edge.node.assetByAsset?.code!);
+    return {
+      created_at: new Date(
+        edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+      ).toISOString(),
+      from: edge.node.accountBySource.publickey,
+      to: edge.node.accountByDestination.publickey,
+      asset_type: code,
+      asset_code: code,
+      asset_issuer: edge.node.assetByAsset?.issuer,
+      amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
+      type: "payment",
+      type_i: 1,
+      id: edge.node.opId,
+      transaction_attr: {
+        operation_count: edge.node.txInfoByTx.opCount,
+        fee_charged: edge.node.txInfoByTx.fee,
+      },
+    } as Partial<Horizon.ServerApi.PaymentOperationRecord>;
+  });
 
   const pathPaymentsStrictSendByPublicKeyEdges =
     rawResponse.data?.pathPaymentsStrictSendByPublicKey.nodes || [];
