@@ -196,7 +196,7 @@ const queryMockResponse = {
                 "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
             },
             assetByAsset: {
-              code: "DT",
+              code: btoa("DT"),
               issuer:
                 "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
             },
