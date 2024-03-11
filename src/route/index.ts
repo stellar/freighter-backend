@@ -132,12 +132,16 @@ export async function initApiServer(
             return reply.code(400).send("Unknown network");
           }
 
-          const server = new SorobanRpc.Server(networkUrl, {
-            allowHttp: networkUrl.startsWith("http://"),
-          });
+          try {
+            const server = new SorobanRpc.Server(networkUrl, {
+              allowHttp: networkUrl.startsWith("http://"),
+            });
 
-          const health = await server.getHealth();
-          reply.code(200).send(health);
+            const health = await server.getHealth();
+            reply.code(200).send(health);
+          } catch (error) {
+            reply.code(200).send({ status: "unhealthy" });
+          }
         },
       });
 
@@ -183,18 +187,23 @@ export async function initApiServer(
           }>,
           reply
         ) => {
-          const pubKey = request.params["pubKey"];
-          const { network, horizon_url, soroban_url } = request.query;
-          const { data, error } = await mercuryClient.getAccountHistory(
-            pubKey,
-            network,
-            { horizon: horizon_url, soroban: soroban_url },
-            useMercury
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
-            reply.code(200).send(data);
+          try {
+            const pubKey = request.params["pubKey"];
+            const { network, horizon_url, soroban_url } = request.query;
+            const { data, error } = await mercuryClient.getAccountHistory(
+              pubKey,
+              network,
+              { horizon: horizon_url, soroban: soroban_url },
+              useMercury
+            );
+            if (error) {
+              reply.code(400).send(JSON.stringify(error));
+            } else {
+              reply.code(200).send(data);
+            }
+          } catch (error) {
+            logger.error(error);
+            reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
@@ -239,23 +248,28 @@ export async function initApiServer(
           }>,
           reply
         ) => {
-          const pubKey = request.params["pubKey"];
-          const { network, horizon_url, soroban_url } = request.query;
+          try {
+            const pubKey = request.params["pubKey"];
+            const { network, horizon_url, soroban_url } = request.query;
 
-          const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
-          const contractIds = request.query["contract_ids"] || ([] as string[]);
+            const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
+            const contractIds =
+              request.query["contract_ids"] || ([] as string[]);
 
-          const { data, error } = await mercuryClient.getAccountBalances(
-            pubKey,
-            skipSorobanPubnet ? [] : contractIds,
-            network,
-            { horizon: horizon_url, soroban: soroban_url },
-            useMercury
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
-            reply.code(200).send(data);
+            const { data, error } = await mercuryClient.getAccountBalances(
+              pubKey,
+              skipSorobanPubnet ? [] : contractIds,
+              network,
+              { horizon: horizon_url, soroban: soroban_url },
+              useMercury
+            );
+            if (error) {
+              reply.code(400).send(JSON.stringify(error));
+            } else {
+              reply.code(200).send(data);
+            }
+          } catch (error) {
+            reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });

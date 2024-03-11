@@ -1,3 +1,5 @@
+import { ERROR } from "./helper/error";
+
 const ENV_KEYS = [
   "AUTH_EMAIL",
   "AUTH_PASS",
@@ -15,7 +17,7 @@ const ENV_KEYS = [
 export function buildConfig(config: Record<string, string>) {
   Object.keys(config).forEach((key) => {
     if (!ENV_KEYS.includes(key)) {
-      throw new Error(`ENV configuration invalid - missing ${key}`);
+      throw new Error(ERROR.INVALID_ENV(key));
     }
   });
 
