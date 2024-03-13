@@ -14,6 +14,7 @@ import {
   StrKey,
 } from "stellar-sdk";
 import { NetworkNames } from "./validate";
+import { ERROR } from "./error";
 
 const SOROBAN_RPC_URLS: { [key in keyof typeof Networks]?: string } = {
   PUBLIC:
@@ -27,7 +28,7 @@ const getServer = async (network: NetworkNames, customRpcUrl?: string) => {
     ? customRpcUrl
     : SOROBAN_RPC_URLS[network];
   if (!serverUrl) {
-    throw new Error("network not supported");
+    throw new Error(ERROR.UNSUPPORTED_NETWORK);
   }
 
   return new SorobanRpc.Server(serverUrl, {
@@ -56,7 +57,7 @@ const simulateTx = async <ArgType>(
     return scValToNative(simulatedTX.result.retval);
   }
 
-  throw new Error("Invalid response from simulateTransaction");
+  throw new Error(ERROR.INVALID_SIMULATION);
 };
 
 const getTokenDecimals = async (

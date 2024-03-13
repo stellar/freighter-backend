@@ -3,6 +3,7 @@ import Ajv, {
   ValidateFunction,
   SchemaValidateFunction,
 } from "ajv";
+import { ERROR } from "../helper/error";
 
 const ajv = new Ajv({
   removeAdditional: true,
@@ -43,7 +44,7 @@ ajv.addKeyword("validator", {
         }
         return valid;
       } else {
-        throw new Error("Invalid definition for custom validator");
+        throw new Error(ERROR.INVALID_VALIDATOR_DEF);
       }
     };
   },

@@ -150,10 +150,9 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      const _error = JSON.stringify(error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
@@ -254,7 +253,7 @@ export class MercuryClient {
         await this.renewAndRetry(subscribe, network);
 
       if (!transferFromRes || !transferToRes || !mintRes) {
-        throw new Error("Failed to subscribe to token events");
+        throw new Error(ERROR.TOKEN_SUB_FAILED);
       }
 
       return {
@@ -262,11 +261,9 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(_error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
@@ -303,7 +300,6 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      this.logger.error(error);
       return {
         data: null,
         error,
@@ -348,11 +344,9 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(_error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
@@ -419,7 +413,7 @@ export class MercuryClient {
         ? customHorizonRpcUrl
         : NETWORK_URLS[network];
       if (!networkUrl) {
-        throw new Error("network not supported");
+        throw new Error(ERROR.UNSUPPORTED_NETWORK);
       }
 
       const server = new Horizon.Server(networkUrl, {
@@ -478,10 +472,9 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      const _error = JSON.stringify(error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
@@ -525,7 +518,7 @@ export class MercuryClient {
       ? customSorobanRpcUrl
       : SOROBAN_RPC_URLS[network];
     if (!networkUrl) {
-      throw new Error("network not supported");
+      throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
 
     const balances = [];
@@ -581,7 +574,7 @@ export class MercuryClient {
       ? customHorizonRpcUrl
       : NETWORK_URLS[network];
     if (!networkUrl) {
-      throw new Error("network not supported");
+      throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
 
     let balances: any = null;
