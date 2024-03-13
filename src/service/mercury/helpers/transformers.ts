@@ -78,15 +78,16 @@ const transformAccountBalances = async (
   const classicBalanceData = rawResponse?.data?.balanceByPublicKey.nodes || [];
 
   const accountObject = accountObjectData[0];
-  const numSubEntries = accountObject.numSubEntries || "0";
-  const numSponsoring = accountObject.numSponsoring || "0";
-  const numSponsored = accountObject.numSponsored || "0";
-  const sellingLiabilities = accountObject.sellingLiabilities || "0";
+  const numSubEntries = accountObject?.numSubEntries || "0";
+  const numSponsoring = accountObject?.numSponsoring || "0";
+  const numSponsored = accountObject?.numSponsored || "0";
+  const sellingLiabilities = accountObject?.sellingLiabilities || "0";
+  const nativeBalance = accountObject?.nativeBalance || "0";
 
   const accountBalance = {
     native: {
       token: { type: "native", code: "XLM" },
-      total: formatTokenAmount(new BigNumber(accountObject.nativeBalance), 7),
+      total: formatTokenAmount(new BigNumber(nativeBalance), 7),
       available: new BigNumber(BASE_RESERVE_MIN_COUNT)
         .plus(new BigNumber(numSubEntries))
         .plus(new BigNumber(numSponsoring))
@@ -143,7 +144,7 @@ const transformAccountBalances = async (
       ...balances,
     },
     isFunded: true,
-    subentryCount: accountObject.numSubEntries,
+    subentryCount: numSubEntries,
   };
 };
 

@@ -142,6 +142,7 @@ export class MercuryClient {
       if (error) {
         throw new Error(getGraphQlError(error));
       }
+
       this.mercurySession.token = data.authenticate.jwtToken;
 
       return {
@@ -163,7 +164,7 @@ export class MercuryClient {
   ) => {
     try {
       return await method();
-    } catch (error: unknown) {
+    } catch (error: any) {
       // renew and retry 0n 401, otherwise throw the error back up to the caller
       if (error instanceof Error) {
         if (error.message.includes(ERROR_MESSAGES.JWT_EXPIRED)) {
@@ -174,6 +175,13 @@ export class MercuryClient {
 
         this.logger.error(error.message);
         throw new Error(error.message);
+      }
+
+      // In the case of subscription posts or non graphQL queries, the 401 response is different
+      if (error.response?.status === 401) {
+        await this.renewMercuryToken(network);
+        this.logger.info("renewed expired jwt");
+        return await method();
       }
 
       const _error = JSON.stringify(error);
@@ -295,11 +303,10 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(_error);
+      this.logger.error(error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
