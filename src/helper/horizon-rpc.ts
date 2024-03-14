@@ -256,7 +256,7 @@ export const submitTransaction = async (
     }
     return {
       data: null,
-      error: e,
+      error: e.response.data,
     };
   }
 };
