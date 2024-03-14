@@ -18,7 +18,6 @@ import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
 import {
   Address,
   BASE_FEE,
-  Horizon,
   Memo,
   MemoType,
   Operation,
@@ -178,13 +177,11 @@ export async function initApiServer(
             console.log(health.data);
             reply.code(200).send(health.data);
           } catch (error) {
-            reply
-              .code(500)
-              .send({
-                database_connected: null,
-                core_up: null,
-                core_synced: null,
-              });
+            reply.code(500).send({
+              database_connected: null,
+              core_up: null,
+              core_synced: null,
+            });
           }
         },
       });
