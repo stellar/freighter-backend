@@ -5,6 +5,14 @@ export const BASE_RESERVE = 0.5;
 export const BASE_RESERVE_MIN_COUNT = 2;
 const TRANSACTIONS_LIMIT = 100;
 
+export enum NETWORK_URLS {
+  PUBLIC = "https://horizon.stellar.org",
+  TESTNET = "https://horizon-testnet.stellar.org",
+  FUTURENET = "https://horizon-futurenet.stellar.org",
+  SANDBOX = "",
+  STANDALONE = "",
+}
+
 export interface Issuer {
   key: string;
   name?: string;

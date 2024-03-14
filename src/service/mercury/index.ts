@@ -23,17 +23,10 @@ import {
 import {
   fetchAccountDetails,
   fetchAccountHistory,
+  NETWORK_URLS,
 } from "../../helper/horizon-rpc";
 import { NetworkNames } from "../../helper/validate";
 import { ERROR } from "../../helper/error";
-
-enum NETWORK_URLS {
-  PUBLIC = "https://horizon.stellar.org",
-  TESTNET = "https://horizon-testnet.stellar.org",
-  FUTURENET = "https://horizon-futurenet.stellar.org",
-  SANDBOX = "",
-  STANDALONE = "",
-}
 
 const ERROR_MESSAGES = {
   JWT_EXPIRED: "1_kJdMBB7ytvgRIqF1clh2iz2iI",
