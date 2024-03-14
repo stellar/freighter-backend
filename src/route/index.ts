@@ -14,10 +14,11 @@ import {
   isNetwork,
   NetworkNames,
 } from "../helper/validate";
-import { submitTransaction } from "../helper/horizon-rpc";
+import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
 import {
   Address,
   BASE_FEE,
+  Horizon,
   Memo,
   MemoType,
   Operation,
@@ -33,6 +34,7 @@ import {
   simulateTx,
 } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
+import axios from "axios";
 
 const API_VERSION = "v1";
 
@@ -147,9 +149,63 @@ export async function initApiServer(
 
       instance.route({
         method: "GET",
+        url: "/horizon-health",
+        schema: {
+          querystring: {
+            ["network"]: {
+              type: "string",
+              validator: (qStr: string) => isNetwork(qStr),
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Querystring: {
+              ["network"]: NetworkNames;
+            };
+          }>,
+          reply
+        ) => {
+          const networkUrl = NETWORK_URLS[request.query.network];
+
+          if (!networkUrl) {
+            return reply.code(400).send("Unknown network");
+          }
+
+          try {
+            // cant use the horizon class from sdk, does not expose health)
+            const health = await axios.get(`${networkUrl}/health`);
+            console.log(health.data);
+            reply.code(200).send(health.data);
+          } catch (error) {
+            reply
+              .code(500)
+              .send({
+                database_connected: null,
+                core_up: null,
+                core_synced: null,
+              });
+          }
+        },
+      });
+
+      instance.route({
+        method: "GET",
         url: "/feature-flags",
         handler: async (_request, reply) => {
           reply.code(200).send({ useSorobanPublic });
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/user-notification",
+        handler: async (_request, reply) => {
+          const response = {
+            enabled: false,
+            message: "",
+          };
+          reply.code(200).send(response);
         },
       });
 
