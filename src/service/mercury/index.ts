@@ -717,7 +717,7 @@ export class MercuryClient {
         .inc();
     }
 
-    const data = {
+    return {
       balances: {
         ...classicBalances.balances,
         ...tokenBalances,
@@ -727,9 +727,6 @@ export class MercuryClient {
         ? null
         : Boolean(Object.keys(classicBalances.balances).length),
       subentryCount: horizonError ? null : classicBalances.subentryCount,
-    };
-    return {
-      data,
       error: {
         horizon: horizonError,
         soroban: rpcError,
