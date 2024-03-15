@@ -309,18 +309,16 @@ export async function initApiServer(
             const contractIds =
               request.query["contract_ids"] || ([] as string[]);
 
-            const { data, error } = await mercuryClient.getAccountBalances(
+            // this returns a composite error/response so we always pass through the whole thing and let the client pick out data/errors.
+            const data = await mercuryClient.getAccountBalances(
               pubKey,
               skipSorobanPubnet ? [] : contractIds,
               network,
               { horizon: horizon_url, soroban: soroban_url },
               useMercury
             );
-            if (error) {
-              reply.code(400).send(JSON.stringify(error));
-            } else {
-              reply.code(200).send(data);
-            }
+
+            reply.code(200).send(data);
           } catch (error) {
             reply.code(500).send(ERROR.SERVER_ERROR);
           }
