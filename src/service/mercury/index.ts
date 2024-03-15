@@ -679,13 +679,13 @@ export class MercuryClient {
         rpcUrls.horizon
       );
     } catch (error) {
-      horizonError = error;
       this.logger.error(error);
       this.logger.error(
         `failed to fetch classic balances from Horizon: ${pubKey}, ${network}`
       );
       if (error && typeof error === "object" && "message" in error) {
         const err = JSON.parse(error.message as string);
+        horizonError = err;
         // Not found errors are normal for unfunded accounts, dont alert
         if (err.name !== "NotFoundError") {
           this.rpcErrorCounter

@@ -174,7 +174,6 @@ export async function initApiServer(
           try {
             // cant use the horizon class from sdk, does not expose health)
             const health = await axios.get(`${networkUrl}/health`);
-            console.log(health.data);
             reply.code(200).send(health.data);
           } catch (error) {
             reply.code(500).send({
@@ -417,7 +416,7 @@ export async function initApiServer(
           const { contract_id, pub_key, network } = request.body;
 
           if (!useMercury) {
-            reply.code(400).send(JSON.stringify("Mercury disabled"));
+            return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
           const { data, error } = await mercuryClient.tokenSubscription(
@@ -462,7 +461,7 @@ export async function initApiServer(
           const { pub_key, network } = request.body;
 
           if (!useMercury) {
-            reply.code(400).send(JSON.stringify("Mercury disabled"));
+            return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
           const { data, error } = await mercuryClient.accountSubscription(
@@ -511,7 +510,7 @@ export async function initApiServer(
           const { pub_key, contract_id, network } = request.body;
 
           if (!useMercury) {
-            reply.code(400).send(JSON.stringify("Mercury disabled"));
+            return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
           const { data, error } = await mercuryClient.tokenBalanceSubscription(
