@@ -14,7 +14,7 @@ import {
   isNetwork,
   NetworkNames,
 } from "../helper/validate";
-import { submitTransaction } from "../helper/horizon-rpc";
+import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
 import {
   Address,
   BASE_FEE,
@@ -33,6 +33,7 @@ import {
   simulateTx,
 } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
+import axios from "axios";
 
 const API_VERSION = "v1";
 
@@ -132,12 +133,55 @@ export async function initApiServer(
             return reply.code(400).send("Unknown network");
           }
 
-          const server = new SorobanRpc.Server(networkUrl, {
-            allowHttp: networkUrl.startsWith("http://"),
-          });
+          try {
+            const server = new SorobanRpc.Server(networkUrl, {
+              allowHttp: networkUrl.startsWith("http://"),
+            });
 
-          const health = await server.getHealth();
-          reply.code(200).send(health);
+            const health = await server.getHealth();
+            reply.code(200).send(health);
+          } catch (error) {
+            reply.code(200).send({ status: "unhealthy" });
+          }
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/horizon-health",
+        schema: {
+          querystring: {
+            ["network"]: {
+              type: "string",
+              validator: (qStr: string) => isNetwork(qStr),
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Querystring: {
+              ["network"]: NetworkNames;
+            };
+          }>,
+          reply
+        ) => {
+          const networkUrl = NETWORK_URLS[request.query.network];
+
+          if (!networkUrl) {
+            return reply.code(400).send("Unknown network");
+          }
+
+          try {
+            // cant use the horizon class from sdk, does not expose health)
+            const health = await axios.get(`${networkUrl}/health`);
+            reply.code(200).send(health.data);
+          } catch (error) {
+            reply.code(500).send({
+              database_connected: null,
+              core_up: null,
+              core_synced: null,
+            });
+          }
         },
       });
 
@@ -146,6 +190,18 @@ export async function initApiServer(
         url: "/feature-flags",
         handler: async (_request, reply) => {
           reply.code(200).send({ useSorobanPublic });
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/user-notification",
+        handler: async (_request, reply) => {
+          const response = {
+            enabled: false,
+            message: "",
+          };
+          reply.code(200).send(response);
         },
       });
 
@@ -183,18 +239,23 @@ export async function initApiServer(
           }>,
           reply
         ) => {
-          const pubKey = request.params["pubKey"];
-          const { network, horizon_url, soroban_url } = request.query;
-          const { data, error } = await mercuryClient.getAccountHistory(
-            pubKey,
-            network,
-            { horizon: horizon_url, soroban: soroban_url },
-            useMercury
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
-            reply.code(200).send(data);
+          try {
+            const pubKey = request.params["pubKey"];
+            const { network, horizon_url, soroban_url } = request.query;
+            const { data, error } = await mercuryClient.getAccountHistory(
+              pubKey,
+              network,
+              { horizon: horizon_url, soroban: soroban_url },
+              useMercury
+            );
+            if (error) {
+              reply.code(400).send(JSON.stringify(error));
+            } else {
+              reply.code(200).send(data);
+            }
+          } catch (error) {
+            logger.error(error);
+            reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
@@ -239,23 +300,26 @@ export async function initApiServer(
           }>,
           reply
         ) => {
-          const pubKey = request.params["pubKey"];
-          const { network, horizon_url, soroban_url } = request.query;
+          try {
+            const pubKey = request.params["pubKey"];
+            const { network, horizon_url, soroban_url } = request.query;
 
-          const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
-          const contractIds = request.query["contract_ids"] || ([] as string[]);
+            const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
+            const contractIds =
+              request.query["contract_ids"] || ([] as string[]);
 
-          const { data, error } = await mercuryClient.getAccountBalances(
-            pubKey,
-            skipSorobanPubnet ? [] : contractIds,
-            network,
-            { horizon: horizon_url, soroban: soroban_url },
-            useMercury
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
+            // this returns a composite error/response so we always pass through the whole thing and let the client pick out data/errors.
+            const data = await mercuryClient.getAccountBalances(
+              pubKey,
+              skipSorobanPubnet ? [] : contractIds,
+              network,
+              { horizon: horizon_url, soroban: soroban_url },
+              useMercury
+            );
+
             reply.code(200).send(data);
+          } catch (error) {
+            reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
@@ -352,7 +416,7 @@ export async function initApiServer(
           const { contract_id, pub_key, network } = request.body;
 
           if (!useMercury) {
-            reply.code(400).send(JSON.stringify("Mercury disabled"));
+            return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
           const { data, error } = await mercuryClient.tokenSubscription(
@@ -397,7 +461,7 @@ export async function initApiServer(
           const { pub_key, network } = request.body;
 
           if (!useMercury) {
-            reply.code(400).send(JSON.stringify("Mercury disabled"));
+            return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
           const { data, error } = await mercuryClient.accountSubscription(
@@ -446,7 +510,7 @@ export async function initApiServer(
           const { pub_key, contract_id, network } = request.body;
 
           if (!useMercury) {
-            reply.code(400).send(JSON.stringify("Mercury disabled"));
+            return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
           const { data, error } = await mercuryClient.tokenBalanceSubscription(

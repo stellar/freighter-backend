@@ -21,19 +21,14 @@ import {
   transformAccountHistory,
 } from "./helpers/transformers";
 import {
+  AssetBalance,
   fetchAccountDetails,
   fetchAccountHistory,
+  NativeBalance,
+  NETWORK_URLS,
 } from "../../helper/horizon-rpc";
 import { NetworkNames } from "../../helper/validate";
 import { ERROR } from "../../helper/error";
-
-enum NETWORK_URLS {
-  PUBLIC = "https://horizon.stellar.org",
-  TESTNET = "https://horizon-testnet.stellar.org",
-  FUTURENET = "https://horizon-futurenet.stellar.org",
-  SANDBOX = "",
-  STANDALONE = "",
-}
 
 const ERROR_MESSAGES = {
   JWT_EXPIRED: "1_kJdMBB7ytvgRIqF1clh2iz2iI",
@@ -166,11 +161,9 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
@@ -261,7 +254,7 @@ export class MercuryClient {
         await this.renewAndRetry(subscribe);
 
       if (!transferFromRes || !transferToRes || !mintRes) {
-        throw new Error("Failed to subscribe to token events");
+        throw new Error(ERROR.TOKEN_SUB_FAILED);
       }
 
       return {
@@ -269,11 +262,9 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(_error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
@@ -308,11 +299,9 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(_error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
@@ -351,11 +340,9 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(_error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
@@ -422,7 +409,7 @@ export class MercuryClient {
         ? customHorizonRpcUrl
         : NETWORK_URLS[network];
       if (!networkUrl) {
-        throw new Error("network not supported");
+        throw new Error(ERROR.UNSUPPORTED_NETWORK);
       }
 
       const server = new Horizon.Server(networkUrl, {
@@ -474,11 +461,9 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      const _error = JSON.stringify(error);
-      this.logger.error(error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
@@ -522,7 +507,7 @@ export class MercuryClient {
       ? customSorobanRpcUrl
       : SOROBAN_RPC_URLS[network];
     if (!networkUrl) {
-      throw new Error("network not supported");
+      throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
 
     const balances = [];
@@ -578,51 +563,37 @@ export class MercuryClient {
       ? customHorizonRpcUrl
       : NETWORK_URLS[network];
     if (!networkUrl) {
-      throw new Error("network not supported");
+      throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
 
-    let balances: any = null;
-    let isFunded = null;
-    let subentryCount = 0;
+    const server = new Horizon.Server(networkUrl, {
+      allowHttp: !networkUrl.includes("https"),
+    });
+    const resp = await fetchAccountDetails(pubKey, server);
 
-    try {
-      const server = new Horizon.Server(networkUrl, {
-        allowHttp: !networkUrl.includes("https"),
-      });
-      const resp = await fetchAccountDetails(pubKey, server);
-      balances = resp.balances;
-      subentryCount = resp.subentryCount;
-
-      for (let i = 0; i < Object.keys(resp.balances).length; i++) {
-        const k = Object.keys(resp.balances)[i];
-        const v: any = resp.balances[k];
-        if (v.liquidity_pool_id) {
-          const lp = await server
-            .liquidityPools()
-            .liquidityPoolId(v.liquidity_pool_id)
-            .call();
-          balances[k] = {
-            ...balances[k],
-            liquidityPoolId: v.liquidity_pool_id,
-            reserves: lp.reserves,
-          };
-          delete balances[k].liquidity_pool_id;
-        }
+    for (let i = 0; i < Object.keys(resp.balances).length; i++) {
+      const k = Object.keys(resp.balances)[i];
+      const v = resp.balances[k];
+      if ("liquidity_pool_id" in v) {
+        const _v = v as any as Horizon.HorizonApi.BalanceLineLiquidityPool;
+        const lp = await server
+          .liquidityPools()
+          .liquidityPoolId(_v.liquidity_pool_id)
+          .call();
+        resp.balances[k] = {
+          ...resp.balances[k],
+          liquidityPoolId: _v.liquidity_pool_id,
+          reserves: lp.reserves,
+        } as
+          | AssetBalance
+          | (NativeBalance & {
+              liquidityPoolId: string;
+              reserves: Horizon.HorizonApi.Reserve[];
+            });
+        delete (resp.balances[k] as any).liquidity_pool_id;
       }
-      isFunded = true;
-    } catch (error) {
-      this.logger.error(error);
-      return {
-        balances,
-        isFunded: false,
-        subentryCount,
-      };
     }
-    return {
-      balances,
-      isFunded,
-      subentryCount,
-    };
+    return resp;
   };
 
   getAccountBalancesMercury = async (
@@ -660,11 +631,9 @@ export class MercuryClient {
         error: null,
       };
     } catch (error) {
-      // this.logger.error(error);
-      const _error = JSON.stringify(error);
       return {
         data: null,
-        error: _error,
+        error,
       };
     }
   };
@@ -698,10 +667,11 @@ export class MercuryClient {
 
     let tokenBalances = {};
     let classicBalances = {
-      balances: [],
-      isFunded: false,
+      balances: {},
       subentryCount: 0,
     };
+    let horizonError = null;
+    let rpcError = null;
     try {
       classicBalances = await this.getAccountBalancesHorizon(
         pubKey,
@@ -711,19 +681,20 @@ export class MercuryClient {
     } catch (error) {
       this.logger.error(error);
       this.logger.error(
-        `failed to fetch token classic balances from Horizon: ${pubKey}, ${network}`
+        `failed to fetch classic balances from Horizon: ${pubKey}, ${network}`
       );
-      this.rpcErrorCounter
-        .labels({
-          rpc: "Horizon",
-        })
-        .inc();
-
-      // Horizon is supported on all networks, return error if Horizon does
-      return {
-        data: classicBalances,
-        error,
-      };
+      if (error && typeof error === "object" && "message" in error) {
+        const err = JSON.parse(error.message as string);
+        // Not found errors are normal for unfunded accounts, dont alert
+        if (err.name !== "NotFoundError") {
+          horizonError = err;
+          this.rpcErrorCounter
+            .labels({
+              rpc: "Horizon",
+            })
+            .inc();
+        }
+      }
     }
 
     try {
@@ -734,9 +705,10 @@ export class MercuryClient {
         rpcUrls.soroban
       );
     } catch (error) {
+      rpcError = error;
       this.logger.error(error);
       this.logger.error(
-        `failed to fetch token token balances from Soroban RPC: ${pubKey}, ${network}`
+        `failed to fetch token balances from Soroban RPC: ${pubKey}, ${network}`
       );
       this.rpcErrorCounter
         .labels({
@@ -745,17 +717,20 @@ export class MercuryClient {
         .inc();
     }
 
-    const data = {
+    return {
       balances: {
         ...classicBalances.balances,
         ...tokenBalances,
       },
-      isFunded: classicBalances.isFunded,
-      subentryCount: classicBalances.subentryCount,
-    };
-    return {
-      data,
-      error: null,
+      // Horizon 400s when an account is unfunded, so if we have anything in balances we are funded
+      isFunded: horizonError
+        ? null
+        : Boolean(Object.keys(classicBalances.balances).length),
+      subentryCount: horizonError ? null : classicBalances.subentryCount,
+      error: {
+        horizon: horizonError,
+        soroban: rpcError,
+      },
     };
   };
 }
