@@ -1,6 +1,6 @@
 {
   "name": "freighter-backend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Freighter's indexer integration layer and general backend",
   "main": "index.js",
   "scripts": {
