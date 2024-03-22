@@ -882,6 +882,30 @@ export const query = {
         }
       }
 
+      createClaimableBalanceToPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            amount
+            asset
+            assetNative
+            source
+            claimants
+            opId
+            destinationsPublic
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+
     }
   `,
 };

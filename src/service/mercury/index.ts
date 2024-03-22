@@ -641,7 +641,10 @@ export class MercuryClient {
 
       return {
         data,
-        error: null,
+        error: {
+          horizon: null,
+          soroban: null,
+        },
       };
     } catch (error) {
       return {

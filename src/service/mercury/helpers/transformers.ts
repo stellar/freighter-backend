@@ -1,5 +1,5 @@
 import { OperationResult } from "@urql/core";
-import { Horizon, StrKey, scValToNative, xdr } from "stellar-sdk";
+import { Claimant, Horizon, StrKey, scValToNative, xdr } from "stellar-sdk";
 import BigNumber from "bignumber.js";
 import {
   BASE_RESERVE,
@@ -860,6 +860,26 @@ interface MercuryAccountHistory {
       };
     }[];
   };
+  createClaimableBalanceToPublicKey: {
+    edges: {
+      node: {
+        amount: string;
+        asset: string;
+        assetNative: boolean;
+        source: string;
+        claimants: string;
+        opId: string;
+        destinationsPublic: string[];
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
+      };
+    }[];
+  };
 }
 
 const transformAccountHistory = async (
@@ -1457,9 +1477,32 @@ const transformAccountHistory = async (
         } as Partial<Horizon.ServerApi.WithdrawLiquidityOperationRecord>)
     );
 
+  const createClaimableBalanceToPublicKeyEdges =
+    rawResponse.data?.createClaimableBalanceToPublicKey.edges || [];
+  const createClaimableBalanceToPublicKey =
+    createClaimableBalanceToPublicKeyEdges.map((edge) => {
+      return {
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
+        type: "create_claimable_balance",
+        type_i: 14,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
+        amount: edge.node.amount,
+        // This is an VecM<Claimant> from the rust sdk which doesnt seem to have a JS counter part, but we dont use this field yet
+        // claimants: edge.node.claimants,
+        source_account: edge.node.source,
+      } as Partial<Horizon.ServerApi.CreateClaimableBalanceOperationRecord>;
+    });
+
   return [
     ...createAccount,
     ...createAccountTo,
+    ...createClaimableBalanceToPublicKey,
     ...paymentsByPublicKey,
     ...paymentsToPublicKey,
     ...changeTrustByPublicKey,
