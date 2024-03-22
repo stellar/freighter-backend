@@ -1,5 +1,5 @@
 import { OperationResult } from "@urql/core";
-import { Claimant, Horizon, StrKey, scValToNative, xdr } from "stellar-sdk";
+import { Horizon, StrKey, scValToNative, xdr } from "stellar-sdk";
 import BigNumber from "bignumber.js";
 import {
   BASE_RESERVE,
