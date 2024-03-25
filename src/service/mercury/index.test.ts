@@ -13,7 +13,6 @@ describe("Mercury Service", () => {
     const { data } = await mockMercuryClient.getAccountHistory(
       pubKey,
       "TESTNET",
-      {},
       true
     );
     const payment = (data || []).find((d) => {
@@ -46,7 +45,6 @@ describe("Mercury Service", () => {
       pubKey,
       contracts,
       "TESTNET",
-      {},
       true
     );
     const tokenDetails = {
