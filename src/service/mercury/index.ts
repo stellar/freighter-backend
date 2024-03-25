@@ -350,8 +350,7 @@ export class MercuryClient {
   tokenDetails = async (
     pubKey: string,
     contractId: string,
-    network: NetworkNames,
-    customRpcUrl?: string
+    network: NetworkNames
   ): Promise<
     { name: string; symbol: string; decimals: number } | undefined
   > => {
@@ -364,7 +363,7 @@ export class MercuryClient {
           return JSON.parse(tokenDetails);
         }
       }
-      const server = await getServer(network, customRpcUrl);
+      const server = await getServer(network);
       // we need a builder per operation, 1 op per tx in Soroban
       const decimalsBuilder = await getTxBuilder(pubKey, network, server);
       const decimals = await getTokenDecimals(
@@ -399,15 +398,9 @@ export class MercuryClient {
     }
   };
 
-  getAccountHistoryHorizon = async (
-    pubKey: string,
-    network: NetworkNames,
-    customHorizonRpcUrl?: string
-  ) => {
+  getAccountHistoryHorizon = async (pubKey: string, network: NetworkNames) => {
     try {
-      const networkUrl = !NETWORK_URLS[network]
-        ? customHorizonRpcUrl
-        : NETWORK_URLS[network];
+      const networkUrl = NETWORK_URLS[network];
       if (!networkUrl) {
         throw new Error(ERROR.UNSUPPORTED_NETWORK);
       }
@@ -471,7 +464,6 @@ export class MercuryClient {
   getAccountHistory = async (
     pubKey: string,
     network: NetworkNames,
-    rpcUrls: { horizon?: string; soroban?: string },
     useMercury: boolean
   ) => {
     if (hasIndexerSupport(network) && useMercury) {
@@ -491,8 +483,7 @@ export class MercuryClient {
 
     const horizonResponse = await this.getAccountHistoryHorizon(
       pubKey,
-      network,
-      rpcUrls.horizon
+      network
     );
     return horizonResponse;
   };
@@ -500,12 +491,9 @@ export class MercuryClient {
   getTokenBalancesSorobanRPC = async (
     pubKey: string,
     contractIds: string[],
-    network: NetworkNames,
-    customSorobanRpcUrl?: string
+    network: NetworkNames
   ) => {
-    const networkUrl = !SOROBAN_RPC_URLS[network]
-      ? customSorobanRpcUrl
-      : SOROBAN_RPC_URLS[network];
+    const networkUrl = SOROBAN_RPC_URLS[network];
     if (!networkUrl) {
       throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
@@ -513,18 +501,13 @@ export class MercuryClient {
     const balances = [];
     const balanceMap = {} as Record<string, any>;
 
-    const server = await getServer(network, networkUrl);
+    const server = await getServer(network);
     for (const id of contractIds) {
       try {
         const builder = await getTxBuilder(pubKey, network, server);
         const params = [new Address(pubKey).toScVal()];
         const balance = await getTokenBalance(id, params, server, builder);
-        const tokenDetails = await this.tokenDetails(
-          pubKey,
-          id,
-          network,
-          networkUrl
-        );
+        const tokenDetails = await this.tokenDetails(pubKey, id, network);
         balances.push({
           id,
           balance,
@@ -554,14 +537,8 @@ export class MercuryClient {
     return balanceMap;
   };
 
-  getAccountBalancesHorizon = async (
-    pubKey: string,
-    network: NetworkNames,
-    customHorizonRpcUrl?: string
-  ) => {
-    const networkUrl = !NETWORK_URLS[network]
-      ? customHorizonRpcUrl
-      : NETWORK_URLS[network];
+  getAccountBalancesHorizon = async (pubKey: string, network: NetworkNames) => {
+    const networkUrl = NETWORK_URLS[network];
     if (!networkUrl) {
       throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
@@ -642,7 +619,6 @@ export class MercuryClient {
     pubKey: string,
     contractIds: string[],
     network: NetworkNames,
-    rpcUrls: { horizon?: string; soroban?: string },
     useMercury: boolean
   ) => {
     if (hasIndexerSupport(network) && useMercury) {
@@ -673,11 +649,7 @@ export class MercuryClient {
     let horizonError = null;
     let rpcError = null;
     try {
-      classicBalances = await this.getAccountBalancesHorizon(
-        pubKey,
-        network,
-        rpcUrls.horizon
-      );
+      classicBalances = await this.getAccountBalancesHorizon(pubKey, network);
     } catch (error) {
       this.logger.error(error);
       this.logger.error(
@@ -701,8 +673,7 @@ export class MercuryClient {
       tokenBalances = await this.getTokenBalancesSorobanRPC(
         pubKey,
         contractIds,
-        network,
-        rpcUrls.soroban
+        network
       );
     } catch (error) {
       rpcError = error;

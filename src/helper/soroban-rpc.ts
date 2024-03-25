@@ -23,10 +23,8 @@ const SOROBAN_RPC_URLS: { [key in keyof typeof Networks]?: string } = {
   FUTURENET: "https://rpc-futurenet.stellar.org/",
 };
 
-const getServer = async (network: NetworkNames, customRpcUrl?: string) => {
-  const serverUrl = !SOROBAN_RPC_URLS[network]
-    ? customRpcUrl
-    : SOROBAN_RPC_URLS[network];
+const getServer = async (network: NetworkNames) => {
+  const serverUrl = SOROBAN_RPC_URLS[network];
   if (!serverUrl) {
     throw new Error(ERROR.UNSUPPORTED_NETWORK);
   }
