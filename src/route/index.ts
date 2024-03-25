@@ -220,12 +220,6 @@ export async function initApiServer(
               type: "string",
               validator: (qStr: string) => isNetwork(qStr),
             },
-            ["horizon_url"]: {
-              type: "string",
-            },
-            ["soroban_url"]: {
-              type: "string",
-            },
           },
         },
         handler: async (
@@ -233,19 +227,16 @@ export async function initApiServer(
             Params: { ["pubKey"]: string };
             Querystring: {
               ["network"]: NetworkNames;
-              ["horizon_url"]?: string;
-              ["soroban_url"]?: string;
             };
           }>,
           reply
         ) => {
           try {
             const pubKey = request.params["pubKey"];
-            const { network, horizon_url, soroban_url } = request.query;
+            const { network } = request.query;
             const { data, error } = await mercuryClient.getAccountHistory(
               pubKey,
               network,
-              { horizon: horizon_url, soroban: soroban_url },
               useMercury
             );
             if (error) {
@@ -280,12 +271,6 @@ export async function initApiServer(
               type: "string",
               validator: (qStr: string) => isNetwork(qStr),
             },
-            ["horizon_url"]: {
-              type: "string",
-            },
-            ["soroban_url"]: {
-              type: "string",
-            },
           },
         },
         handler: async (
@@ -294,15 +279,13 @@ export async function initApiServer(
             Querystring: {
               ["contract_ids"]: string[];
               ["network"]: NetworkNames;
-              ["horizon_url"]?: string;
-              ["soroban_url"]?: string;
             };
           }>,
           reply
         ) => {
           try {
             const pubKey = request.params["pubKey"];
-            const { network, horizon_url, soroban_url } = request.query;
+            const { network } = request.query;
 
             const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
             const contractIds =
@@ -313,7 +296,6 @@ export async function initApiServer(
               pubKey,
               skipSorobanPubnet ? [] : contractIds,
               network,
-              { horizon: horizon_url, soroban: soroban_url },
               useMercury
             );
 
@@ -343,9 +325,6 @@ export async function initApiServer(
               type: "string",
               validator: (qStr: string) => isNetwork(qStr),
             },
-            ["soroban_url"]: {
-              type: "string",
-            },
           },
         },
         handler: async (
@@ -355,13 +334,12 @@ export async function initApiServer(
               ["contract_ids"]: string;
               ["pub_key"]: string;
               ["network"]: NetworkNames;
-              ["soroban_url"]?: string;
             };
           }>,
           reply
         ) => {
           const contractId = request.params["contractId"];
-          const { network, pub_key, soroban_url } = request.query;
+          const { network, pub_key } = request.query;
 
           const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
           if (skipSorobanPubnet) {
@@ -372,8 +350,7 @@ export async function initApiServer(
             const data = await mercuryClient.tokenDetails(
               pub_key,
               contractId,
-              network,
-              soroban_url
+              network
             );
             reply.code(200).send(data);
           } catch (error) {
