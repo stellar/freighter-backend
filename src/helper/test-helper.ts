@@ -278,6 +278,9 @@ const queryMockResponse = {
     liquidityPoolWithdrawByPublicKey: {
       edges: [],
     },
+    createClaimableBalanceToPublicKey: {
+      edges: [],
+    },
   },
 };
 

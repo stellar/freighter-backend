@@ -624,6 +624,7 @@ export class MercuryClient {
           ),
           {}
         );
+
         const errorMessage = getGraphQlError(response.error);
         if (errorMessage) {
           throw new Error(errorMessage);
@@ -641,10 +642,7 @@ export class MercuryClient {
 
       return {
         data,
-        error: {
-          horizon: null,
-          soroban: null,
-        },
+        error: null,
       };
     } catch (error) {
       return {
