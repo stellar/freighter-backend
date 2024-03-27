@@ -67,7 +67,10 @@ describe("Mercury Service", () => {
     );
     const expected = {
       data: transformedData,
-      error: null,
+      error: {
+        horizon: null,
+        soroban: null,
+      },
     };
     expect(data).toEqual(expected);
   });
