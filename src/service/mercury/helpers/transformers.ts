@@ -33,6 +33,9 @@ interface MercuryAccountBalancesData {
       };
       nativeBalance: string;
       numSubEntries: string;
+      numSponsored: string;
+      numSponsoring: string;
+      sellingLiabilities: string;
     }[];
   };
   balanceByPublicKey: {
@@ -75,21 +78,22 @@ const transformAccountBalances = async (
   const classicBalanceData = rawResponse?.data?.balanceByPublicKey.nodes || [];
 
   const accountObject = accountObjectData[0];
-  // TODO: get these into query
-  const numSponsoring = 0;
-  const numSponsored = 0;
-  const sellingLiabilities = 0;
+  const numSubEntries = accountObject?.numSubEntries || "0";
+  const numSponsoring = accountObject?.numSponsoring || "0";
+  const numSponsored = accountObject?.numSponsored || "0";
+  const sellingLiabilities = accountObject?.sellingLiabilities || "0";
+  const nativeBalance = accountObject?.nativeBalance || "0";
 
   const accountBalance = {
     native: {
       token: { type: "native", code: "XLM" },
-      total: formatTokenAmount(new BigNumber(accountObject.nativeBalance), 7),
+      total: formatTokenAmount(new BigNumber(nativeBalance), 7),
       available: new BigNumber(BASE_RESERVE_MIN_COUNT)
-        .plus(accountObject.numSubEntries)
-        .plus(numSponsoring)
-        .minus(numSponsored)
-        .times(BASE_RESERVE)
-        .plus(sellingLiabilities),
+        .plus(new BigNumber(numSubEntries))
+        .plus(new BigNumber(numSponsoring))
+        .minus(new BigNumber(numSponsored))
+        .times(new BigNumber(BASE_RESERVE))
+        .plus(new BigNumber(sellingLiabilities)),
     },
   };
 
@@ -119,10 +123,7 @@ const transformAccountBalances = async (
   }, {} as NonNullable<AccountBalancesInterface["balances"]>);
 
   const classicBalances = classicBalanceData.reduce((prev, curr) => {
-    const codeAscii = Buffer.from(
-      curr.assetByAsset.code.substring(2),
-      "hex"
-    ).toString("utf8");
+    const codeAscii = atob(curr.assetByAsset.code);
     prev[`${codeAscii}:${curr.assetByAsset.issuer}`] = {
       token: {
         code: codeAscii,
@@ -143,7 +144,7 @@ const transformAccountBalances = async (
       ...balances,
     },
     isFunded: true,
-    subentryCount: accountObject.numSubEntries,
+    subentryCount: numSubEntries,
   };
 };
 
@@ -859,6 +860,26 @@ interface MercuryAccountHistory {
       };
     }[];
   };
+  createClaimableBalanceToPublicKey: {
+    edges: {
+      node: {
+        amount: string;
+        asset: string;
+        assetNative: boolean;
+        source: string;
+        claimants: string;
+        opId: string;
+        destinationsPublic: string[];
+        txInfoByTx: {
+          fee: string;
+          opCount: number;
+          ledgerByLedger: {
+            closeTime: number;
+          };
+        };
+      };
+    }[];
+  };
 }
 
 const transformAccountHistory = async (
@@ -958,135 +979,173 @@ const transformAccountHistory = async (
 
   const paymentsByPublicKeyEdges =
     rawResponse.data?.paymentsByPublicKey.edges || [];
-  const paymentsByPublicKey = paymentsByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        from: edge.node.accountBySource.publickey,
-        to: edge.node.accountByDestination.publickey,
-        asset_type: getAssetType(edge.node.assetByAsset?.code),
-        asset_code: edge.node.assetByAsset?.code,
-        asset_issuer: edge.node.assetByAsset?.code,
-        amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
-        type: "payment",
-        type_i: 1,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
-  );
+  const paymentsByPublicKey = paymentsByPublicKeyEdges.map((edge) => {
+    const code = edge.node.assetByAsset
+      ? getAssetType(atob(edge.node.assetByAsset?.code!))
+      : null;
+    const issuer = edge.node.assetByAsset
+      ? edge.node.assetByAsset.issuer
+      : null;
+    return {
+      created_at: new Date(
+        edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+      ).toISOString(),
+      from: edge.node.accountBySource.publickey,
+      to: edge.node.accountByDestination.publickey,
+      asset_type: code,
+      asset_code: code,
+      asset_issuer: issuer,
+      amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
+      type: "payment",
+      type_i: 1,
+      id: edge.node.opId,
+      transaction_attr: {
+        operation_count: edge.node.txInfoByTx.opCount,
+        fee_charged: edge.node.txInfoByTx.fee,
+      },
+    } as Partial<Horizon.ServerApi.PaymentOperationRecord>;
+  });
 
   const paymentsToPublicKeyEdges =
     rawResponse.data?.paymentsToPublicKey.edges || [];
-  const paymentsToPublicKey = paymentsToPublicKeyEdges.map(
-    (edge) =>
-      ({
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        from: edge.node.accountBySource.publickey,
-        to: edge.node.accountByDestination.publickey,
-        asset_type: getAssetType(edge.node.assetByAsset?.code),
-        asset_code: edge.node.assetByAsset?.code,
-        asset_issuer: edge.node.assetByAsset?.code,
-        amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
-        type: "payment",
-        type_i: 1,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.PaymentOperationRecord>)
-  );
+  const paymentsToPublicKey = paymentsToPublicKeyEdges.map((edge) => {
+    const code = edge.node.assetByAsset
+      ? atob(edge.node.assetByAsset?.code!)
+      : null;
+    const issuer = edge.node.assetByAsset
+      ? edge.node.assetByAsset.issuer
+      : null;
+    return {
+      created_at: new Date(
+        edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+      ).toISOString(),
+      from: edge.node.accountBySource.publickey,
+      to: edge.node.accountByDestination.publickey,
+      asset_type: code,
+      asset_code: code,
+      asset_issuer: issuer,
+      amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
+      type: "payment",
+      type_i: 1,
+      id: edge.node.opId,
+      transaction_attr: {
+        operation_count: edge.node.txInfoByTx.opCount,
+        fee_charged: edge.node.txInfoByTx.fee,
+      },
+    } as Partial<Horizon.ServerApi.PaymentOperationRecord>;
+  });
 
   const pathPaymentsStrictSendByPublicKeyEdges =
     rawResponse.data?.pathPaymentsStrictSendByPublicKey.nodes || [];
   const pathPaymentsStrictSendByPublicKey =
-    pathPaymentsStrictSendByPublicKeyEdges.map(
-      (edge) =>
-        ({
-          ...edge,
-          sendAmount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
-          created_at: new Date(
-            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
-          ).toISOString(),
-          type: "path_payment_strict_send",
-          type_i: 13,
-          id: edge.opId,
-          transaction_attr: {
-            operation_count: edge.txInfoByTx.opCount,
-            fee_charged: edge.txInfoByTx.fee,
-          },
-        } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>)
-    );
+    pathPaymentsStrictSendByPublicKeyEdges.map((edge) => {
+      const code = atob(edge.assetByDestAsset.code);
+      return {
+        ...edge,
+        created_at: new Date(
+          edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
+        type: "path_payment_strict_send",
+        type_i: 13,
+        id: edge.opId,
+        transaction_attr: {
+          operation_count: edge.txInfoByTx.opCount,
+          fee_charged: edge.txInfoByTx.fee,
+        },
+        asset_code: code,
+        asset_issuer: edge.assetByDestAsset.issuer,
+        asset_type: getAssetType(code),
+        source_account: edge.accountBySource.publickey,
+        from: edge.accountBySource.publickey,
+        to: edge.accountByDestination.publickey,
+        destination_min: edge.destMin,
+        amount: edge.sendAmount,
+      } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
+    });
 
   const pathPaymentsStrictSendToPublicKeyEdges =
     rawResponse.data?.pathPaymentsStrictSendToPublicKey.nodes || [];
   const pathPaymentsStrictSendToPublicKey =
-    pathPaymentsStrictSendToPublicKeyEdges.map(
-      (edge) =>
-        ({
-          ...edge,
-          sendAmount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
-          created_at: new Date(
-            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
-          ).toISOString(),
-          type: "path_payment_strict_send",
-          type_i: 13,
-          id: edge.opId,
-          transaction_attr: {
-            operation_count: edge.txInfoByTx.opCount,
-            fee_charged: edge.txInfoByTx.fee,
-          },
-        } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>)
-    );
+    pathPaymentsStrictSendToPublicKeyEdges.map((edge) => {
+      const code = atob(edge.assetByDestAsset.code);
+      return {
+        ...edge,
+        created_at: new Date(
+          edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
+        type: "path_payment_strict_send",
+        type_i: 13,
+        id: edge.opId,
+        transaction_attr: {
+          operation_count: edge.txInfoByTx.opCount,
+          fee_charged: edge.txInfoByTx.fee,
+        },
+        asset_code: code,
+        asset_issuer: edge.assetByDestAsset.issuer,
+        asset_type: getAssetType(code),
+        source_account: edge.accountBySource.publickey,
+        from: edge.accountBySource.publickey,
+        to: edge.accountByDestination.publickey,
+        destination_min: edge.destMin,
+        amount: edge.sendAmount,
+      } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
+    });
 
   const pathPaymentsStrictReceiveByPublicKeyEdges =
     rawResponse.data?.pathPaymentsStrictReceiveByPublicKey.nodes || [];
   const pathPaymentsStrictReceiveByPublicKey =
-    pathPaymentsStrictReceiveByPublicKeyEdges.map(
-      (edge) =>
-        ({
-          ...edge,
-          destAmount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
-          created_at: new Date(
-            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
-          ).toISOString(),
-          type: "path_payment_strict_receive",
-          type_i: 2,
-          id: edge.opId,
-          transaction_attr: {
-            operation_count: edge.txInfoByTx.opCount,
-            fee_charged: edge.txInfoByTx.fee,
-          },
-        } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>)
-    );
+    pathPaymentsStrictReceiveByPublicKeyEdges.map((edge) => {
+      const code = edge.assetByDestAsset.code;
+      return {
+        ...edge,
+        created_at: new Date(
+          edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
+        type: "path_payment_strict_receive",
+        type_i: 2,
+        id: edge.opId,
+        transaction_attr: {
+          operation_count: edge.txInfoByTx.opCount,
+          fee_charged: edge.txInfoByTx.fee,
+        },
+        asset_code: code,
+        asset_issuer: edge.assetByDestAsset.issuer,
+        asset_type: getAssetType(code),
+        source_account: edge.accountBySource.publickey,
+        from: edge.accountBySource.publickey,
+        to: edge.accountByDestination.publickey,
+        destination_min: edge.destMin,
+        amount: edge.destAmount,
+      } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>;
+    });
 
   const pathPaymentsStrictReceiveToPublicKeyEdges =
     rawResponse.data?.pathPaymentsStrictReceiveToPublicKey.nodes || [];
   const pathPaymentsStrictReceiveToPublicKey =
-    pathPaymentsStrictReceiveToPublicKeyEdges.map(
-      (edge) =>
-        ({
-          ...edge,
-          destAmount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
-          created_at: new Date(
-            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
-          ).toISOString(),
-          type: "path_payment_strict_receive",
-          type_i: 2,
-          id: edge.opId,
-          transaction_attr: {
-            operation_count: edge.txInfoByTx.opCount,
-            fee_charged: edge.txInfoByTx.fee,
-          },
-        } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>)
-    );
+    pathPaymentsStrictReceiveToPublicKeyEdges.map((edge) => {
+      const code = edge.assetByDestAsset.code;
+      return {
+        ...edge,
+        created_at: new Date(
+          edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
+        type: "path_payment_strict_receive",
+        type_i: 2,
+        id: edge.opId,
+        transaction_attr: {
+          operation_count: edge.txInfoByTx.opCount,
+          fee_charged: edge.txInfoByTx.fee,
+        },
+        asset_code: code,
+        asset_issuer: edge.assetByDestAsset.issuer,
+        asset_type: getAssetType(code),
+        source_account: edge.accountBySource.publickey,
+        from: edge.accountBySource.publickey,
+        to: edge.accountByDestination.publickey,
+        destination_min: edge.destMin,
+        amount: edge.destAmount,
+      } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>;
+    });
 
   const manageBuyOfferByPublicKeyEdges =
     rawResponse.data?.manageBuyOfferByPublicKey.edges || [];
@@ -1418,9 +1477,32 @@ const transformAccountHistory = async (
         } as Partial<Horizon.ServerApi.WithdrawLiquidityOperationRecord>)
     );
 
+  const createClaimableBalanceToPublicKeyEdges =
+    rawResponse.data?.createClaimableBalanceToPublicKey.edges || [];
+  const createClaimableBalanceToPublicKey =
+    createClaimableBalanceToPublicKeyEdges.map((edge) => {
+      return {
+        created_at: new Date(
+          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
+        ).toISOString(),
+        type: "create_claimable_balance",
+        type_i: 14,
+        id: edge.node.opId,
+        transaction_attr: {
+          operation_count: edge.node.txInfoByTx.opCount,
+          fee_charged: edge.node.txInfoByTx.fee,
+        },
+        amount: edge.node.amount,
+        // This is an VecM<Claimant> from the rust sdk which doesnt seem to have a JS counter part, but we dont use this field yet
+        // claimants: edge.node.claimants,
+        source_account: edge.node.source,
+      } as Partial<Horizon.ServerApi.CreateClaimableBalanceOperationRecord>;
+    });
+
   return [
     ...createAccount,
     ...createAccountTo,
+    ...createClaimableBalanceToPublicKey,
     ...paymentsByPublicKey,
     ...paymentsToPublicKey,
     ...changeTrustByPublicKey,
@@ -1445,7 +1527,11 @@ const transformAccountHistory = async (
     ...clawbackByPublicKey,
     ...setTrustLineFlagsByPublicKey,
     ...invokeHostFn,
-  ];
+  ].sort((a, b) => {
+    const createdA = a.created_at!;
+    const createdB = b.created_at!;
+    return new Date(createdB).getTime() - new Date(createdA).getTime();
+  }); // Mercury indexes first to last and sort is TODO
 };
 
 export { transformAccountBalances, transformAccountHistory };
