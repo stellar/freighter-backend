@@ -51,11 +51,15 @@ const simulateTx = async <ArgType>(
   server: SorobanRpc.Server
 ): Promise<ArgType> => {
   const simulatedTX = await server.simulateTransaction(tx);
-  if ("result" in simulatedTX && simulatedTX.result !== undefined) {
+  if (SorobanRpc.Api.isSimulationSuccess(simulatedTX) && simulatedTX.result) {
     return scValToNative(simulatedTX.result.retval);
   }
 
-  throw new Error(ERROR.INVALID_SIMULATION);
+  if (SorobanRpc.Api.isSimulationError(simulatedTX)) {
+    throw new Error(simulatedTX.error);
+  }
+
+  throw new Error(ERROR.FAILED_TO_SIM);
 };
 
 const getTokenDecimals = async (
