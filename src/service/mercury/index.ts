@@ -668,7 +668,13 @@ export class MercuryClient {
 
       // if Mercury returns an error, fallback to the RPCs
       if (!response.error) {
-        return response;
+        return {
+          data: response.data,
+          error: {
+            horizon: null,
+            soroban: null,
+          },
+        };
       } else {
         this.logger.error(response.error);
         this.mercuryErrorCounter
