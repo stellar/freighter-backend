@@ -392,8 +392,10 @@ export class MercuryClient {
         symbol,
       };
     } catch (error) {
-      this.logger.error(error);
-      throw ERROR.FAILED_TO_SIM;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(JSON.stringify(error));
     }
   };
 
