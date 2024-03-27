@@ -354,7 +354,7 @@ export async function initApiServer(
             );
             reply.code(200).send(data);
           } catch (error) {
-            reply.code(400).send(JSON.stringify(error));
+            reply.code(400).send(error);
           }
         },
       });
