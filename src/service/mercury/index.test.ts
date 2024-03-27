@@ -65,13 +65,16 @@ describe("Mercury Service", () => {
     );
     const expected = {
       data: transformedData,
-      error: null,
+      error: {
+        horizon: null,
+        soroban: null,
+      },
     };
     expect(data).toEqual(expected);
   });
 
   it("can renew a token", async () => {
-    const response = await mockMercuryClient.renewMercuryToken();
+    const response = await mockMercuryClient.renewMercuryToken("TESTNET");
     const expected = {
       data: queryMockResponse[mutation.authenticate],
       error: null,
