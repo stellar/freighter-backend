@@ -57,7 +57,7 @@ async function main() {
     PUBLIC: conf.mercuryBackendPubnet,
   };
 
-  function renewClientMaker(network: NetworkNames) {
+  const renewClientMaker = (network: NetworkNames) => {
     if (!hasIndexerSupport(network)) {
       throw new Error(`network not currently supported: ${network}`);
     }
@@ -66,12 +66,12 @@ async function main() {
       url: graphQlEndpoints[network as MercurySupportedNetworks],
       exchanges: [fetchExchange],
     });
-  }
+  };
 
-  function backendClientMaker(
+  const backendClientMaker = (
     network: NetworkNames,
     key: string = conf.mercuryKey
-  ) {
+  ) => {
     if (!hasIndexerSupport(network)) {
       throw new Error(`network not currently supported: ${network}`);
     }
@@ -85,7 +85,7 @@ async function main() {
         };
       },
     });
-  }
+  };
 
   const mercurySession = {
     token: conf.mercuryKey,
