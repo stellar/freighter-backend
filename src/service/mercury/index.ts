@@ -643,9 +643,12 @@ export class MercuryClient {
       );
 
       // if Mercury returns an error, fallback to the RPCs
-      if (!response.error) {
+      if (!response.error && response.data) {
+        const { balances, isFunded, subentryCount } = response.data;
         return {
-          data: response.data,
+          balances,
+          isFunded,
+          subentryCount,
           error: {
             horizon: null,
             soroban: null,
