@@ -137,7 +137,6 @@ export class MercuryClient {
       if (error) {
         throw new Error(getGraphQlError(error));
       }
-
       this.mercurySession.token = data.authenticate.jwtToken;
 
       return {
@@ -438,6 +437,14 @@ export class MercuryClient {
       if (!hasIndexerSupport(network)) {
         throw new Error(`network not currently supported: ${network}`);
       }
+      const subs = await this.getAccountSubForPubKey(pubKey, network);
+      const hasSubForPublicKey = subs.some(
+        (sub: { publickey: string }) => sub.publickey === pubKey
+      );
+      if (!hasSubForPublicKey) {
+        throw new Error(ERROR.MISSING_SUB_FOR_PUBKEY);
+      }
+
       const urqlClient = this.mercurySession.backendClientMaker(
         network,
         this.mercurySession.token
@@ -588,6 +595,14 @@ export class MercuryClient {
       if (!hasIndexerSupport(network)) {
         throw new Error(`network not currently supported: ${network}`);
       }
+      const subs = await this.getAccountSubForPubKey(pubKey, network);
+      const hasSubForPublicKey = subs.some(
+        (sub: { publickey: string }) => sub.publickey === pubKey
+      );
+      if (!hasSubForPublicKey) {
+        throw new Error(ERROR.MISSING_SUB_FOR_PUBKEY);
+      }
+
       const urqlClient = this.mercurySession.backendClientMaker(
         network,
         this.mercurySession.token
@@ -726,5 +741,35 @@ export class MercuryClient {
         soroban: rpcError,
       },
     };
+  };
+
+  getAccountSubForPubKey = async (
+    publicKey: string,
+    network: NetworkNames
+  ): Promise<{ publickey: string }[]> => {
+    try {
+      const getData = async () => {
+        const urqlClient = this.mercurySession.backendClientMaker(
+          network,
+          this.mercurySession.token
+        );
+        const response = await urqlClient.query(
+          query.getAccountSubForPubKey(publicKey),
+          {}
+        );
+
+        const errorMessage = getGraphQlError(response.error);
+        if (errorMessage) {
+          throw new Error(errorMessage);
+        }
+
+        return response.data.allFullAccountSubscriptionsList;
+      };
+      const response = await this.renewAndRetry(getData, network);
+      return response;
+    } catch (error) {
+      this.logger.error(error);
+      return [];
+    }
   };
 }
