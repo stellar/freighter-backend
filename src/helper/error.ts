@@ -10,4 +10,6 @@ export const ERROR = {
   INVALID_VALIDATOR_DEF: "Invalid definition for custom validator",
   TOKEN_SUB_FAILED: "Failed to subscribe to token events",
   SERVER_ERROR: "Unexpected server error",
+  MISSING_SUB_FOR_PUBKEY:
+    "Tried to query for data without a subscription setup for a public key",
 };

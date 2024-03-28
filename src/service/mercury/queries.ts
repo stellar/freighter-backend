@@ -19,6 +19,13 @@ export const query = {
       }
     }
   `,
+  getAccountSubForPubKey: (pubKey: string) => `
+    query AccountSub {
+      allFullAccountSubscriptionsList(first:10, offset:0, condition: { publickey: "${pubKey}" }) {
+        publickey
+      }
+    }
+  `,
   getAccountBalances: (
     pubKey: string,
     ledgerKey: string,

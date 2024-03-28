@@ -131,8 +131,8 @@ const transformAccountBalances = async (
           key: curr.assetByAsset.issuer,
         },
       },
-      total: new BigNumber(curr.balance),
-      available: new BigNumber(curr.balance),
+      total: formatTokenAmount(new BigNumber(curr.balance), 7),
+      available: formatTokenAmount(new BigNumber(curr.balance), 7),
     };
     return prev;
   }, {} as NonNullable<AccountBalancesInterface["balances"]>);
