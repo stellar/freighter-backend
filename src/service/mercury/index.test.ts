@@ -64,7 +64,7 @@ describe("Mercury Service", () => {
       tokenDetails as any
     );
     const expected = {
-      data: transformedData,
+      ...transformedData,
       error: {
         horizon: null,
         soroban: null,
