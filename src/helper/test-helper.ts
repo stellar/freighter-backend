@@ -90,6 +90,14 @@ function backendClientMaker(network: NetworkNames) {
           error: null,
         });
       }
+      case query.getAccountSubForPubKey(pubKey): {
+        return Promise.resolve({
+          data: {
+            allFullAccountSubscriptionsList: [{ publickey: pubKey }],
+          },
+          error: null,
+        });
+      }
       default:
         throw new Error("unknown query in mock");
     }
