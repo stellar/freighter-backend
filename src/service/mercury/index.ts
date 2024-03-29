@@ -32,6 +32,7 @@ import { ERROR } from "../../helper/error";
 import {
   MercurySupportedNetworks,
   hasIndexerSupport,
+  hasSubForPublicKey,
 } from "../../helper/mercury";
 
 const ERROR_MESSAGES = {
@@ -438,10 +439,8 @@ export class MercuryClient {
         throw new Error(`network not currently supported: ${network}`);
       }
       const subs = await this.getAccountSubForPubKey(pubKey, network);
-      const hasSubForPublicKey = subs.some(
-        (sub: { publickey: string }) => sub.publickey === pubKey
-      );
-      if (!hasSubForPublicKey) {
+      const hasSubs = hasSubForPublicKey(subs, pubKey);
+      if (!hasSubs) {
         throw new Error(ERROR.MISSING_SUB_FOR_PUBKEY);
       }
 
@@ -596,10 +595,8 @@ export class MercuryClient {
         throw new Error(`network not currently supported: ${network}`);
       }
       const subs = await this.getAccountSubForPubKey(pubKey, network);
-      const hasSubForPublicKey = subs.some(
-        (sub: { publickey: string }) => sub.publickey === pubKey
-      );
-      if (!hasSubForPublicKey) {
+      const hasSubs = hasSubForPublicKey(subs, pubKey);
+      if (!hasSubs) {
         throw new Error(ERROR.MISSING_SUB_FOR_PUBKEY);
       }
 
