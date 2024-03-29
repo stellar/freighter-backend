@@ -84,4 +84,29 @@ describe("Mercury Service", () => {
       queryMockResponse[mutation.authenticate].authenticate?.jwtToken
     );
   });
+
+  it("getAccountBalancesMercury throws when there is no sub for public key", async () => {
+    jest
+      .spyOn(mockMercuryClient, "getAccountSubForPubKey")
+      .mockImplementation(
+        (
+          ..._args: Parameters<typeof mockMercuryClient.getAccountSubForPubKey>
+        ): ReturnType<typeof mockMercuryClient.getAccountSubForPubKey> => {
+          return Promise.resolve([{ publickey: "nope" }]);
+        }
+      );
+
+    const response = await mockMercuryClient.getAccountBalancesMercury(
+      pubKey,
+      [],
+      "TESTNET"
+    );
+    expect(response).toHaveProperty("error");
+    expect(response.error).toBeInstanceOf(Error);
+    if (response.error instanceof Error) {
+      expect(response.error.message).toContain(
+        "Tried to query for data without a subscription setup for a public key"
+      );
+    }
+  });
 });
