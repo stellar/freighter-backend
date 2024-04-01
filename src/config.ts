@@ -13,11 +13,19 @@ const ENV_KEYS = [
 ];
 
 export function buildConfig(config: Record<string, string>) {
-  Object.keys(config).forEach((key) => {
-    if (!ENV_KEYS.includes(key)) {
-      throw new Error(ERROR.INVALID_ENV(key));
+  const configKeys = Object.keys(config);
+  const missingKeys = [] as string[];
+
+  const isMissingKeys = ENV_KEYS.every((key) => {
+    if (configKeys.includes(key)) {
+      return true;
     }
+    missingKeys.push(key);
+    return false;
   });
+  if (!isMissingKeys) {
+    throw new Error(ERROR.INVALID_ENV(missingKeys.join()));
+  }
 
   return {
     hostname: config.HOSTNAME || process.env.HOSTNAME!,
