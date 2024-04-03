@@ -35,7 +35,7 @@ import {
   hasSubForPublicKey,
 } from "../../helper/mercury";
 
-const ERROR_MESSAGES = {
+export const ERROR_MESSAGES = {
   JWT_EXPIRED: "1_kJdMBB7ytvgRIqF1clh2iz2iI",
 };
 
@@ -154,33 +154,29 @@ export class MercuryClient {
 
   renewAndRetry = async <T>(
     method: () => Promise<T>,
-    network: NetworkNames
-  ) => {
+    network: NetworkNames,
+    retryCount?: number
+  ): Promise<T> => {
     try {
       return await method();
     } catch (error: any) {
       // renew and retry 0n 401, otherwise throw the error back up to the caller
-      if (error instanceof Error) {
-        if (error.message.includes(ERROR_MESSAGES.JWT_EXPIRED)) {
-          await this.renewMercuryToken(network);
-          this.logger.info("renewed expired jwt");
-          return await method();
-        }
-
-        this.logger.error(error.message);
-        throw new Error(error.message);
-      }
-
-      // In the case of subscription posts or non graphQL queries, the 401 response is different
-      if (error.response?.status === 401) {
+      if (
+        error.message?.includes(ERROR_MESSAGES.JWT_EXPIRED) ||
+        error.response?.status === 401
+      ) {
         await this.renewMercuryToken(network);
         this.logger.info("renewed expired jwt");
         return await method();
       }
 
-      const _error = JSON.stringify(error);
-      this.logger.error(_error);
-      throw new Error(_error);
+      // Retry in non 401 cases
+      if (retryCount) {
+        return await this.renewAndRetry(method, network, retryCount - 1);
+      }
+
+      this.logger.error(error);
+      throw new Error(error);
     }
   };
 
@@ -245,7 +241,7 @@ export class MercuryClient {
       };
 
       const { transferFromRes, transferToRes, mintRes } =
-        await this.renewAndRetry(subscribe, network);
+        await this.renewAndRetry(subscribe, network, 5);
 
       if (!transferFromRes || !transferToRes || !mintRes) {
         throw new Error(ERROR.TOKEN_SUB_FAILED);
@@ -277,7 +273,9 @@ export class MercuryClient {
           headers: {
             Authorization: `Bearer ${this.mercurySession.token}`,
           },
+          validateStatus: (status: number) => status < 400,
         };
+
         const { data } = await axios.post(
           `${
             this.mercurySession.backends[network as MercurySupportedNetworks]
@@ -288,7 +286,7 @@ export class MercuryClient {
         return data;
       };
 
-      const data = await this.renewAndRetry(subscribe, network);
+      const data = await this.renewAndRetry(subscribe, network, 5);
 
       return {
         data,
@@ -328,7 +326,7 @@ export class MercuryClient {
         const { data } = await axios.post(entryUrl, entrySub, config);
         return data;
       };
-      const data = await this.renewAndRetry(getData, network);
+      const data = await this.renewAndRetry(getData, network, 5);
 
       if (this.redisClient) {
         await this.tokenDetails(pubKey, contractId, network);

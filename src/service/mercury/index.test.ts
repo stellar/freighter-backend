@@ -7,8 +7,13 @@ import {
   pubKey,
 } from "../../helper/test-helper";
 import { transformAccountBalances } from "./helpers/transformers";
+import { ERROR_MESSAGES } from ".";
 
-describe("Mercury Service", () => {
+describe.only("Mercury Service", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it("can fetch account history with a payment-to in history", async () => {
     const { data } = await mockMercuryClient.getAccountHistory(
       pubKey,
@@ -83,6 +88,71 @@ describe("Mercury Service", () => {
     expect(mockMercuryClient.mercurySession.token).toEqual(
       queryMockResponse[mutation.authenticate].authenticate?.jwtToken
     );
+  });
+
+  it("can retry on Mercury GraphQL 401s", async () => {
+    const spyRenewToken = jest.spyOn(mockMercuryClient, "renewMercuryToken");
+
+    const expectedResponse = { data: "success!" };
+    const mockRetryable = jest.fn();
+    mockRetryable.mockRejectedValueOnce(new Error(ERROR_MESSAGES.JWT_EXPIRED));
+    mockRetryable.mockReturnValue(expectedResponse);
+    const response = await mockMercuryClient.renewAndRetry<
+      typeof expectedResponse
+    >(mockRetryable, "TESTNET");
+
+    expect(response).toEqual(expectedResponse);
+    expect(mockRetryable).toHaveBeenCalledTimes(2);
+    expect(spyRenewToken).toHaveBeenCalled();
+  });
+
+  it("can retry on Mercury subscription 401s", async () => {
+    const spyRenewToken = jest.spyOn(mockMercuryClient, "renewMercuryToken");
+
+    const expectedResponse = { data: "success!" };
+    const mockRetryable = jest.fn();
+    mockRetryable.mockRejectedValueOnce({ response: { status: 401 } });
+    mockRetryable.mockReturnValue(expectedResponse);
+    const response = await mockMercuryClient.renewAndRetry<
+      typeof expectedResponse
+    >(mockRetryable, "TESTNET");
+
+    expect(response).toEqual(expectedResponse);
+    expect(mockRetryable).toHaveBeenCalledTimes(2);
+    expect(spyRenewToken).toHaveBeenCalled();
+  });
+
+  it("will rethrow non 401 errors when !retryCount", async () => {
+    const err = "Unexpected";
+    const spyRenewToken = jest.spyOn(mockMercuryClient, "renewMercuryToken");
+
+    const mockRetryable = jest.fn();
+    mockRetryable.mockRejectedValue(new Error(err));
+
+    await expect(
+      mockMercuryClient.renewAndRetry(mockRetryable, "TESTNET")
+    ).rejects.toThrowError(err);
+    expect(mockRetryable).toHaveBeenCalledTimes(1);
+    expect(spyRenewToken).not.toHaveBeenCalled();
+  });
+
+  it("will retry non 401s when retryCount is passed", async () => {
+    const err = "Unexpected";
+    const RETRY_COUNT = 5;
+    const spyRenewToken = jest.spyOn(mockMercuryClient, "renewMercuryToken");
+
+    const expectedResponse = { data: "success!" };
+    const mockRetryable = jest.fn();
+    mockRetryable.mockRejectedValueOnce(new Error(err));
+    mockRetryable.mockReturnValue(expectedResponse);
+    const response = await mockMercuryClient.renewAndRetry<
+      typeof expectedResponse
+    >(mockRetryable, "TESTNET", RETRY_COUNT);
+
+    expect(response).toEqual(expectedResponse);
+    // It would retry 5 times, but we can only mock reject once or all so it rejects once, then succeeds.
+    expect(mockRetryable).toHaveBeenCalledTimes(2);
+    expect(spyRenewToken).not.toHaveBeenCalled();
   });
 
   it("getAccountBalancesMercury throws when there is no sub for public key", async () => {
