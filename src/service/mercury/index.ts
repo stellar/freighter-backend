@@ -35,6 +35,8 @@ import {
   hasSubForPublicKey,
 } from "../../helper/mercury";
 
+const DEFAULT_RETRY_AMOUNT = 5;
+
 export const ERROR_MESSAGES = {
   JWT_EXPIRED: "1_kJdMBB7ytvgRIqF1clh2iz2iI",
 };
@@ -241,7 +243,7 @@ export class MercuryClient {
       };
 
       const { transferFromRes, transferToRes, mintRes } =
-        await this.renewAndRetry(subscribe, network, 5);
+        await this.renewAndRetry(subscribe, network, DEFAULT_RETRY_AMOUNT);
 
       if (!transferFromRes || !transferToRes || !mintRes) {
         throw new Error(ERROR.TOKEN_SUB_FAILED);
@@ -286,7 +288,11 @@ export class MercuryClient {
         return data;
       };
 
-      const data = await this.renewAndRetry(subscribe, network, 5);
+      const data = await this.renewAndRetry(
+        subscribe,
+        network,
+        DEFAULT_RETRY_AMOUNT
+      );
 
       return {
         data,
@@ -326,7 +332,11 @@ export class MercuryClient {
         const { data } = await axios.post(entryUrl, entrySub, config);
         return data;
       };
-      const data = await this.renewAndRetry(getData, network, 5);
+      const data = await this.renewAndRetry(
+        getData,
+        network,
+        DEFAULT_RETRY_AMOUNT
+      );
 
       if (this.redisClient) {
         await this.tokenDetails(pubKey, contractId, network);

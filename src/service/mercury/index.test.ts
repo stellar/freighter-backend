@@ -9,7 +9,7 @@ import {
 import { transformAccountBalances } from "./helpers/transformers";
 import { ERROR_MESSAGES } from ".";
 
-describe.only("Mercury Service", () => {
+describe("Mercury Service", () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
