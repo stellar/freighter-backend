@@ -98,6 +98,42 @@ function backendClientMaker(network: NetworkNames) {
           error: null,
         });
       }
+      case query.getTokenBalanceSub(
+        "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+        tokenBalanceLedgerKey
+      ): {
+        return Promise.resolve({
+          data: {
+            allEntryUpdates: {
+              nodes: [
+                {
+                  contractId:
+                    "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+                },
+              ],
+            },
+          },
+          error: null,
+        });
+      }
+      case query.getTokenBalanceSub(
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+        tokenBalanceLedgerKey
+      ): {
+        return Promise.resolve({
+          data: {
+            allEntryUpdates: {
+              nodes: [
+                {
+                  contractId:
+                    "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+                },
+              ],
+            },
+          },
+          error: null,
+        });
+      }
       default:
         throw new Error("unknown query in mock");
     }

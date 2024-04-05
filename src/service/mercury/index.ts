@@ -843,7 +843,7 @@ export class MercuryClient {
           throw new Error(errorMessage);
         }
 
-        return response.data.allEntryUpdates;
+        return response.data.allEntryUpdates.nodes;
       };
       const response = await this.renewAndRetry(getData, network);
       return response;
