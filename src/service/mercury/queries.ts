@@ -112,6 +112,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -133,6 +134,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -154,6 +156,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -183,6 +186,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -212,6 +216,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -272,6 +277,7 @@ export const query = {
             opCount
             txHash
             ledger
+            resultXdr
             ledgerByLedger {
               closeTime
               sequence
@@ -331,6 +337,7 @@ export const query = {
             opCount
             txHash
             ledger
+            resultXdr
             ledgerByLedger {
               closeTime
               sequence
@@ -390,6 +397,7 @@ export const query = {
             opCount
             txHash
             ledger
+            resultXdr
             ledgerByLedger {
               closeTime
               sequence
@@ -449,6 +457,7 @@ export const query = {
             opCount
             txHash
             ledger
+            resultXdr
             ledgerByLedger {
               closeTime
               sequence
@@ -488,6 +497,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -528,6 +538,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -565,6 +576,7 @@ export const query = {
             opCount
             txHash
             ledger
+            resultXdr
             ledgerByLedger {
               closeTime
               sequence
@@ -599,6 +611,7 @@ export const query = {
             opCount
             txHash
             ledger
+            resultXdr
             ledgerByLedger {
               closeTime
               sequence
@@ -620,6 +633,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -641,6 +655,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -662,6 +677,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -685,6 +701,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -708,6 +725,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -730,6 +748,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -750,6 +769,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -770,6 +790,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -791,6 +812,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -816,6 +838,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -841,6 +864,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -866,6 +890,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -889,6 +914,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
@@ -913,6 +939,7 @@ export const query = {
               opCount
               txHash
               ledger
+              resultXdr
               ledgerByLedger {
                 closeTime
                 sequence
