@@ -25,7 +25,7 @@ interface AccountBalancesInterface {
   subentryCount: number;
 }
 
-interface MercuryAccountBalancesData {
+type MercuryAccountBalancesData = {
   accountObjectByPublicKey: {
     nodes: {
       accountByAccount: {
@@ -50,14 +50,16 @@ interface MercuryAccountBalancesData {
       balance: string;
     }[];
   };
-  entryUpdateByContractIdAndKey?: {
+} & {
+  // each entryUpdateByContractIdAndKey query is aliased as the contract ID, to support querying for multiple balance entries
+  [key: string]: {
     nodes: {
       contractId: string;
       keyXdr: string;
       valueXdr: string;
     }[];
   };
-}
+};
 
 interface TokenDetails {
   [k: string]: {
@@ -69,10 +71,9 @@ interface TokenDetails {
 
 const transformAccountBalances = async (
   rawResponse: OperationResult<MercuryAccountBalancesData>,
-  tokenDetails: TokenDetails
+  tokenDetails: TokenDetails,
+  contractIds: string[]
 ) => {
-  const tokenBalanceData =
-    rawResponse?.data?.entryUpdateByContractIdAndKey?.nodes || [];
   const accountObjectData =
     rawResponse?.data?.accountObjectByPublicKey.nodes || [];
   const classicBalanceData = rawResponse?.data?.balanceByPublicKey.nodes || [];
@@ -97,7 +98,14 @@ const transformAccountBalances = async (
     },
   };
 
-  const formattedBalances = tokenBalanceData.map((entry) => {
+  const tokenBalanceData = contractIds.map((id) => {
+    const resData =
+      rawResponse?.data || ({} as { [index: string]: { nodes: [] } });
+    const tokenRecord = resData[id] || { nodes: [] };
+    return tokenRecord.nodes;
+  });
+
+  const formattedBalances = tokenBalanceData.map(([entry]) => {
     const details = tokenDetails[entry.contractId];
     const totalScVal = xdr.ScVal.fromXDR(Buffer.from(entry.valueXdr, "base64"));
     return {
@@ -1059,7 +1067,7 @@ const transformAccountHistory = async (
         from: edge.accountBySource.publickey,
         to: edge.accountByDestination.publickey,
         destination_min: edge.destMin,
-        amount: edge.sendAmount,
+        amount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
       } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
     });
 
@@ -1087,7 +1095,7 @@ const transformAccountHistory = async (
         from: edge.accountBySource.publickey,
         to: edge.accountByDestination.publickey,
         destination_min: edge.destMin,
-        amount: edge.sendAmount,
+        amount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
       } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
     });
 
@@ -1115,7 +1123,7 @@ const transformAccountHistory = async (
         from: edge.accountBySource.publickey,
         to: edge.accountByDestination.publickey,
         destination_min: edge.destMin,
-        amount: edge.destAmount,
+        amount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
       } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>;
     });
 
@@ -1143,7 +1151,7 @@ const transformAccountHistory = async (
         from: edge.accountBySource.publickey,
         to: edge.accountByDestination.publickey,
         destination_min: edge.destMin,
-        amount: edge.destAmount,
+        amount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
       } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>;
     });
 
