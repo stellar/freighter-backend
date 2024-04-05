@@ -13,3 +13,8 @@ export const hasSubForPublicKey = (
   subs: { publickey: string }[],
   publicKey: string
 ) => subs.some((sub: { publickey: string }) => sub.publickey === publicKey);
+
+export const hasSubForTokenBalance = (
+  subs: { contractId: string }[],
+  contractId: string
+) => subs.some((sub: { contractId: string }) => sub.contractId === contractId);
