@@ -156,26 +156,62 @@ const transformAccountBalances = async (
   };
 };
 
-interface MercuryAccountHistory {
+const transformBaseOperation = (operation: BaseOperation) => {
+  let isTxSuccessful = true;
+  if (operation.txInfoByTx.resultXdr) {
+    const { name } = xdr.TransactionResult.fromXDR(
+      operation.txInfoByTx.resultXdr,
+      "base64"
+    )
+      .result()
+      .switch();
+    if (name === xdr.TransactionResultCode.txFailed().name) {
+      isTxSuccessful = false;
+    }
+  }
+  return {
+    created_at: new Date(
+      operation.txInfoByTx.ledgerByLedger.closeTime * 1000
+    ).toISOString(),
+    source_account: operation.accountBySource.publickey,
+    transaction_hash: operation.tx,
+    id: operation.opId,
+    transaction_successful: isTxSuccessful,
+    transaction_attr: {
+      operation_count: operation.txInfoByTx.opCount,
+      fee_charged: operation.txInfoByTx.fee,
+    },
+  } as Partial<
+    Horizon.ServerApi.BaseOperationRecord & { transaction_attr: object }
+  >;
+};
+
+interface BaseOperation {
+  accountBySource: {
+    publickey: string;
+  };
+  tx: string;
+  opId: string;
+  txInfoByTx: TxInfo;
+}
+
+interface TxInfo {
+  fee: string;
+  opCount: number;
+  resultXdr: string;
+  ledgerByLedger: {
+    closeTime: number;
+  };
+}
+
+type MercuryAccountHistory = {
   invokeHostFnByPublicKey: {
     edges: {
       node: {
         auth: string;
         hostFunction: string;
         sorobanMeta: string;
-        accountBySource: {
-          publickey: string;
-        };
-        tx: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   createAccountByPublicKey: {
@@ -185,15 +221,7 @@ interface MercuryAccountHistory {
           publickey: string;
         };
         startingBalance: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   createAccountToPublicKey: {
@@ -203,15 +231,7 @@ interface MercuryAccountHistory {
           publickey: string;
         };
         startingBalance: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   paymentsByPublicKey: {
@@ -223,21 +243,10 @@ interface MercuryAccountHistory {
           code: string;
           issuer: string;
         } | null;
-        accountBySource: {
-          publickey: string;
-        };
         accountByDestination: {
           publickey: string;
         };
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   paymentsToPublicKey: {
@@ -249,28 +258,14 @@ interface MercuryAccountHistory {
           code: string;
           issuer: string;
         } | null;
-        accountBySource: {
-          publickey: string;
-        };
         accountByDestination: {
           publickey: string;
         };
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   pathPaymentsStrictSendByPublicKey: {
-    nodes: {
-      accountBySource: {
-        publickey: string;
-      };
+    nodes: ({
       accountByDestination: {
         publickey: string;
       };
@@ -311,21 +306,10 @@ interface MercuryAccountHistory {
       path5Native: string;
       sendAmount: string;
       sendAssetNative: string;
-      opId: string;
-      txInfoByTx: {
-        fee: string;
-        opCount: number;
-        ledgerByLedger: {
-          closeTime: number;
-        };
-      };
-    }[];
+    } & BaseOperation)[];
   };
   pathPaymentsStrictSendToPublicKey: {
-    nodes: {
-      accountBySource: {
-        publickey: string;
-      };
+    nodes: ({
       accountByDestination: {
         publickey: string;
       };
@@ -366,21 +350,10 @@ interface MercuryAccountHistory {
       path5Native: string;
       sendAmount: string;
       sendAssetNative: string;
-      opId: string;
-      txInfoByTx: {
-        fee: string;
-        opCount: number;
-        ledgerByLedger: {
-          closeTime: number;
-        };
-      };
-    }[];
+    } & BaseOperation)[];
   };
   pathPaymentsStrictReceiveByPublicKey: {
-    nodes: {
-      accountBySource: {
-        publickey: string;
-      };
+    nodes: ({
       accountByDestination: {
         publickey: string;
       };
@@ -421,21 +394,10 @@ interface MercuryAccountHistory {
       path5Native: string;
       destAmount: string;
       sendAssetNative: string;
-      opId: string;
-      txInfoByTx: {
-        fee: string;
-        opCount: number;
-        ledgerByLedger: {
-          closeTime: number;
-        };
-      };
-    }[];
+    } & BaseOperation)[];
   };
   pathPaymentsStrictReceiveToPublicKey: {
-    nodes: {
-      accountBySource: {
-        publickey: string;
-      };
+    nodes: ({
       accountByDestination: {
         publickey: string;
       };
@@ -476,23 +438,12 @@ interface MercuryAccountHistory {
       path5Native: string;
       destAmount: string;
       sendAssetNative: string;
-      opId: string;
-      txInfoByTx: {
-        fee: string;
-        opCount: number;
-        ledgerByLedger: {
-          closeTime: number;
-        };
-      };
-    }[];
+    } & BaseOperation)[];
   };
   manageBuyOfferByPublicKey: {
     edges: {
       node: {
         buyingNative: boolean;
-        accountBySource: {
-          publickey: string;
-        };
         assetByBuying: {
           issuer: string;
           code: string;
@@ -513,24 +464,13 @@ interface MercuryAccountHistory {
         priceD: string;
         priceN: string;
         sellingNative: boolean;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   manageSellOfferByPublicKey: {
     edges: {
       node: {
         buyingNative: boolean;
-        accountBySource: {
-          publickey: string;
-        };
         assetByBuying: {
           issuer: string;
           code: string;
@@ -551,22 +491,11 @@ interface MercuryAccountHistory {
         priceD: string;
         priceN: string;
         sellingNative: boolean;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   createPassiveSellOfferByPublicKey: {
-    nodes: {
-      accountBySource: {
-        publickey: string;
-      };
+    nodes: ({
       amount: string;
       assetByBuying: {
         code: string;
@@ -588,21 +517,10 @@ interface MercuryAccountHistory {
       priceD: string;
       priceN: string;
       sellingNative: boolean;
-      opId: string;
-      txInfoByTx: {
-        fee: string;
-        opCount: number;
-        ledgerByLedger: {
-          closeTime: number;
-        };
-      };
-    }[];
+    } & BaseOperation)[];
   };
   changeTrustByPublicKey: {
-    nodes: {
-      accountBySource: {
-        publickey: string;
-      };
+    nodes: ({
       assetByLineAsset: {
         issuer: string;
         code: string;
@@ -618,16 +536,7 @@ interface MercuryAccountHistory {
         };
         fee: string;
       };
-      opId: string;
-      txInfoByTx: {
-        fee: string;
-        opCount: number;
-        ledgerByLedger: {
-          closeTime: number;
-          sequence: string;
-        };
-      };
-    }[];
+    } & BaseOperation)[];
   };
   accountMergeByPublicKey: {
     edges: {
@@ -636,15 +545,7 @@ interface MercuryAccountHistory {
         destinationMuxed: string;
         source: string;
         sourceMuxed: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   bumpSequenceByPublicKey: {
@@ -653,15 +554,7 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         bumpTo: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   claimClaimableBalanceByPublicKey: {
@@ -670,15 +563,7 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         balanceId: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   createClaimableBalanceByPublicKey: {
@@ -689,15 +574,7 @@ interface MercuryAccountHistory {
         assetNative: boolean;
         source: string;
         sourceMuxed: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   allowTrustByPublicKey: {
@@ -708,15 +585,7 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         trustor: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   manageDataByPublicKey: {
@@ -726,15 +595,7 @@ interface MercuryAccountHistory {
         dataValue: string;
         source: string;
         sourceMuxed: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   beginSponsoringFutureReservesByPublicKey: {
@@ -742,15 +603,7 @@ interface MercuryAccountHistory {
       node: {
         source: string;
         sourceMuxed: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   endSponsoringFutureReservesByPublicKey: {
@@ -758,15 +611,7 @@ interface MercuryAccountHistory {
       node: {
         source: string;
         sourceMuxed: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   revokeSponsorshipByPublicKey: {
@@ -775,15 +620,7 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         sponsorship: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   clawbackByPublicKey: {
@@ -796,15 +633,7 @@ interface MercuryAccountHistory {
         fromMuxed: string;
         source: string;
         sourceMuxed: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   setTrustLineFlagsByPublicKey: {
@@ -817,15 +646,7 @@ interface MercuryAccountHistory {
         source: string;
         sourceMuxed: string;
         trustor: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   liquidityPoolDepositByPublicKey: {
@@ -838,15 +659,7 @@ interface MercuryAccountHistory {
         minPriceD: string;
         source: string;
         sourceMuxed: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   liquidityPoolWithdrawByPublicKey: {
@@ -857,15 +670,7 @@ interface MercuryAccountHistory {
         minAmountB: string;
         source: string;
         sourceMuxed: string;
-        opId: string;
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
   createClaimableBalanceToPublicKey: {
@@ -876,19 +681,11 @@ interface MercuryAccountHistory {
         assetNative: boolean;
         source: string;
         claimants: string;
-        opId: string;
         destinationsPublic: string[];
-        txInfoByTx: {
-          fee: string;
-          opCount: number;
-          ledgerByLedger: {
-            closeTime: number;
-          };
-        };
-      };
+      } & BaseOperation;
     }[];
   };
-}
+};
 
 const transformAccountHistory = async (
   rawResponse: OperationResult<MercuryAccountHistory>
@@ -910,94 +707,75 @@ const transformAccountHistory = async (
       }
     })
     .map((edge) => {
+      const baseFields = transformBaseOperation(edge.node);
       const hostFn = xdr.HostFunction.fromXDR(
         Buffer.from(edge.node.hostFunction, "base64")
       );
 
       const invocation = hostFn.invokeContract();
       const fnName = invocation.functionName().toString();
+
       return {
-        auth: edge.node.auth,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        sorobanMeta: edge.node.sorobanMeta,
-        source_account: edge.node.accountBySource.publickey,
-        tx: edge.node.tx,
+        ...baseFields,
         type: "invoke_host_function",
         type_i: 24,
-        id: edge.node.opId,
         transaction_attr: {
+          ...baseFields.transaction_attr,
           contractId: StrKey.encodeContract(
             invocation.contractAddress().contractId()
           ),
           fnName,
           args: getOpArgs(fnName, invocation.args()),
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
+          result_meta_xdr: edge.node.sorobanMeta,
         },
       } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
     });
 
   const createAccountEdges =
     rawResponse.data?.createAccountByPublicKey.edges || [];
-  const createAccount = createAccountEdges.map(
-    (edge) =>
-      ({
-        account: edge.node.accountByDestination.publickey,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        starting_balance: formatTokenAmount(
-          new BigNumber(edge.node.startingBalance),
-          7
-        ),
-        type: "create_account",
-        type_i: 0,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>)
-  );
+  const createAccount = createAccountEdges.map((edge) => {
+    const baseFields = transformBaseOperation(edge.node);
+    return {
+      ...baseFields,
+      account: edge.node.accountByDestination.publickey,
+      starting_balance: formatTokenAmount(
+        new BigNumber(edge.node.startingBalance),
+        7
+      ),
+      type: "create_account",
+      type_i: 0,
+    } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>;
+  });
 
   const createAccountToEdges =
     rawResponse.data?.createAccountToPublicKey.edges || [];
-  const createAccountTo = createAccountToEdges.map(
-    (edge) =>
-      ({
-        account: edge.node.accountByDestination.publickey,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        starting_balance: formatTokenAmount(
-          new BigNumber(edge.node.startingBalance),
-          7
-        ),
-        type: "create_account",
-        type_i: 0,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>)
-  );
+  const createAccountTo = createAccountToEdges.map((edge) => {
+    const baseFields = transformBaseOperation(edge.node);
+    return {
+      ...baseFields,
+      account: edge.node.accountByDestination.publickey,
+      starting_balance: formatTokenAmount(
+        new BigNumber(edge.node.startingBalance),
+        7
+      ),
+      type: "create_account",
+      type_i: 0,
+    } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>;
+  });
 
   const paymentsByPublicKeyEdges =
     rawResponse.data?.paymentsByPublicKey.edges || [];
   const paymentsByPublicKey = paymentsByPublicKeyEdges.map((edge) => {
+    const baseFields = transformBaseOperation(edge.node);
     const code = edge.node.assetByAsset
       ? getAssetType(atob(edge.node.assetByAsset?.code!))
       : null;
     const issuer = edge.node.assetByAsset
       ? edge.node.assetByAsset.issuer
       : null;
+
     return {
-      created_at: new Date(
-        edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-      ).toISOString(),
+      ...baseFields,
       from: edge.node.accountBySource.publickey,
       to: edge.node.accountByDestination.publickey,
       asset_type: code,
@@ -1006,27 +784,22 @@ const transformAccountHistory = async (
       amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
       type: "payment",
       type_i: 1,
-      id: edge.node.opId,
-      transaction_attr: {
-        operation_count: edge.node.txInfoByTx.opCount,
-        fee_charged: edge.node.txInfoByTx.fee,
-      },
     } as Partial<Horizon.ServerApi.PaymentOperationRecord>;
   });
 
   const paymentsToPublicKeyEdges =
     rawResponse.data?.paymentsToPublicKey.edges || [];
   const paymentsToPublicKey = paymentsToPublicKeyEdges.map((edge) => {
+    const baseFields = transformBaseOperation(edge.node);
     const code = edge.node.assetByAsset
       ? atob(edge.node.assetByAsset?.code!)
       : null;
     const issuer = edge.node.assetByAsset
       ? edge.node.assetByAsset.issuer
       : null;
+
     return {
-      created_at: new Date(
-        edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-      ).toISOString(),
+      ...baseFields,
       from: edge.node.accountBySource.publickey,
       to: edge.node.accountByDestination.publickey,
       asset_type: code,
@@ -1035,11 +808,6 @@ const transformAccountHistory = async (
       amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
       type: "payment",
       type_i: 1,
-      id: edge.node.opId,
-      transaction_attr: {
-        operation_count: edge.node.txInfoByTx.opCount,
-        fee_charged: edge.node.txInfoByTx.fee,
-      },
     } as Partial<Horizon.ServerApi.PaymentOperationRecord>;
   });
 
@@ -1047,19 +815,12 @@ const transformAccountHistory = async (
     rawResponse.data?.pathPaymentsStrictSendByPublicKey.nodes || [];
   const pathPaymentsStrictSendByPublicKey =
     pathPaymentsStrictSendByPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge);
       const code = atob(edge.assetByDestAsset.code);
       return {
-        ...edge,
-        created_at: new Date(
-          edge.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
+        ...baseFields,
         type: "path_payment_strict_send",
         type_i: 13,
-        id: edge.opId,
-        transaction_attr: {
-          operation_count: edge.txInfoByTx.opCount,
-          fee_charged: edge.txInfoByTx.fee,
-        },
         asset_code: code,
         asset_issuer: edge.assetByDestAsset.issuer,
         asset_type: getAssetType(code),
@@ -1075,19 +836,12 @@ const transformAccountHistory = async (
     rawResponse.data?.pathPaymentsStrictSendToPublicKey.nodes || [];
   const pathPaymentsStrictSendToPublicKey =
     pathPaymentsStrictSendToPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge);
       const code = atob(edge.assetByDestAsset.code);
       return {
-        ...edge,
-        created_at: new Date(
-          edge.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
+        ...baseFields,
         type: "path_payment_strict_send",
         type_i: 13,
-        id: edge.opId,
-        transaction_attr: {
-          operation_count: edge.txInfoByTx.opCount,
-          fee_charged: edge.txInfoByTx.fee,
-        },
         asset_code: code,
         asset_issuer: edge.assetByDestAsset.issuer,
         asset_type: getAssetType(code),
@@ -1103,19 +857,15 @@ const transformAccountHistory = async (
     rawResponse.data?.pathPaymentsStrictReceiveByPublicKey.nodes || [];
   const pathPaymentsStrictReceiveByPublicKey =
     pathPaymentsStrictReceiveByPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge);
       const code = edge.assetByDestAsset.code;
       return {
-        ...edge,
+        ...baseFields,
         created_at: new Date(
           edge.txInfoByTx.ledgerByLedger.closeTime * 1000
         ).toISOString(),
         type: "path_payment_strict_receive",
         type_i: 2,
-        id: edge.opId,
-        transaction_attr: {
-          operation_count: edge.txInfoByTx.opCount,
-          fee_charged: edge.txInfoByTx.fee,
-        },
         asset_code: code,
         asset_issuer: edge.assetByDestAsset.issuer,
         asset_type: getAssetType(code),
@@ -1131,19 +881,13 @@ const transformAccountHistory = async (
     rawResponse.data?.pathPaymentsStrictReceiveToPublicKey.nodes || [];
   const pathPaymentsStrictReceiveToPublicKey =
     pathPaymentsStrictReceiveToPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge);
       const code = edge.assetByDestAsset.code;
+
       return {
-        ...edge,
-        created_at: new Date(
-          edge.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
+        ...baseFields,
         type: "path_payment_strict_receive",
         type_i: 2,
-        id: edge.opId,
-        transaction_attr: {
-          operation_count: edge.txInfoByTx.opCount,
-          fee_charged: edge.txInfoByTx.fee,
-        },
         asset_code: code,
         asset_issuer: edge.assetByDestAsset.issuer,
         asset_type: getAssetType(code),
@@ -1158,348 +902,214 @@ const transformAccountHistory = async (
   const manageBuyOfferByPublicKeyEdges =
     rawResponse.data?.manageBuyOfferByPublicKey.edges || [];
   const manageBuyOfferByPublicKey = manageBuyOfferByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        ...edge.node,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
+    (edge) => {
+      const baseFields = transformBaseOperation(edge.node);
+      return {
+        ...baseFields,
         type: "manage_sell_offer",
         type_i: 4,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>)
+      } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>;
+    }
   );
 
   const manageSellOfferByPublicKeyEdges =
     rawResponse.data?.manageSellOfferByPublicKey.edges || [];
   const manageSellOfferByPublicKey = manageSellOfferByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        ...edge.node,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
+    (edge) => {
+      const baseFields = transformBaseOperation(edge.node);
+      return {
+        ...baseFields,
         type: "manage_sell_offer",
         type_i: 4,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>)
+      } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>;
+    }
   );
 
   const createPassiveSellOfferByPublicKeyEdges =
     rawResponse.data?.createPassiveSellOfferByPublicKey.nodes || [];
   const createPassiveSellOfferByPublicKey =
-    createPassiveSellOfferByPublicKeyEdges.map(
-      (edge) =>
-        ({
-          ...edge,
-          created_at: new Date(
-            edge.txInfoByTx.ledgerByLedger.closeTime * 1000
-          ).toISOString(),
-          type: "create_passive_sell_offer",
-          type_i: 3,
-          id: edge.opId,
-          transaction_attr: {
-            operation_count: edge.txInfoByTx.opCount,
-            fee_charged: edge.txInfoByTx.fee,
-          },
-        } as Partial<Horizon.ServerApi.PassiveOfferOperationRecord>)
-    );
+    createPassiveSellOfferByPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge);
+      return {
+        ...baseFields,
+        type: "create_passive_sell_offer",
+        type_i: 3,
+      } as Partial<Horizon.ServerApi.PassiveOfferOperationRecord>;
+    });
 
   const changeTrustByPublicKeyEdges =
     rawResponse.data?.changeTrustByPublicKey.nodes || [];
-  const changeTrustByPublicKey = changeTrustByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        ...edge,
-        created_at: new Date(
-          edge.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        type: "change_trust",
-        type_i: 6,
-        id: edge.opId,
-        transaction_attr: {
-          operation_count: edge.txInfoByTx.opCount,
-          fee_charged: edge.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.ChangeTrustOperationRecord>)
-  );
+  const changeTrustByPublicKey = changeTrustByPublicKeyEdges.map((edge) => {
+    const baseFields = transformBaseOperation(edge);
+    return {
+      ...baseFields,
+      type: "change_trust",
+      type_i: 6,
+    } as Partial<Horizon.ServerApi.ChangeTrustOperationRecord>;
+  });
 
   const accountMergeByPublicKeyEdges =
     rawResponse.data?.accountMergeByPublicKey.edges || [];
-  const accountMergeByPublicKey = accountMergeByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        ...edge.node,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        type: "account_merge",
-        type_i: 8,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.AccountMergeOperationRecord>)
-  );
+  const accountMergeByPublicKey = accountMergeByPublicKeyEdges.map((edge) => {
+    const baseFields = transformBaseOperation(edge.node);
+    return {
+      ...baseFields,
+      type: "account_merge",
+      type_i: 8,
+    } as Partial<Horizon.ServerApi.AccountMergeOperationRecord>;
+  });
 
   const bumpSequenceByPublicKeyEdges =
     rawResponse.data?.bumpSequenceByPublicKey.edges || [];
-  const bumpSequenceByPublicKey = bumpSequenceByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        ...edge.node,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        type: "bump_sequence",
-        type_i: 11,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.BumpSequenceOperationRecord>)
-  );
+  const bumpSequenceByPublicKey = bumpSequenceByPublicKeyEdges.map((edge) => {
+    const baseFields = transformBaseOperation(edge.node);
+    return {
+      ...baseFields,
+      type: "bump_sequence",
+      type_i: 11,
+    } as Partial<Horizon.ServerApi.BumpSequenceOperationRecord>;
+  });
 
   const claimClaimableBalanceByPublicKeyEdges =
     rawResponse.data?.claimClaimableBalanceByPublicKey.edges || [];
   const claimClaimableBalanceByPublicKey =
-    claimClaimableBalanceByPublicKeyEdges.map(
-      (edge) =>
-        ({
-          ...edge.node,
-          created_at: new Date(
-            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-          ).toISOString(),
-          type: "claim_claimable_balance",
-          type_i: 15,
-          id: edge.node.opId,
-          transaction_attr: {
-            operation_count: edge.node.txInfoByTx.opCount,
-            fee_charged: edge.node.txInfoByTx.fee,
-          },
-        } as Partial<Horizon.ServerApi.ClaimClaimableBalanceOperationRecord>)
-    );
+    claimClaimableBalanceByPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge.node);
+      return {
+        ...baseFields,
+        type: "claim_claimable_balance",
+        type_i: 15,
+      } as Partial<Horizon.ServerApi.ClaimClaimableBalanceOperationRecord>;
+    });
 
   const createClaimableBalanceByPublicKeyEdges =
     rawResponse.data?.createClaimableBalanceByPublicKey.edges || [];
   const createClaimableBalanceByPublicKey =
-    createClaimableBalanceByPublicKeyEdges.map(
-      (edge) =>
-        ({
-          ...edge.node,
-          created_at: new Date(
-            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-          ).toISOString(),
-          type: "create_claimable_balance",
-          type_i: 14,
-          id: edge.node.opId,
-          transaction_attr: {
-            operation_count: edge.node.txInfoByTx.opCount,
-            fee_charged: edge.node.txInfoByTx.fee,
-          },
-        } as Partial<Horizon.ServerApi.CreateClaimableBalanceOperationRecord>)
-    );
+    createClaimableBalanceByPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge.node);
+      return {
+        ...baseFields,
+        type: "create_claimable_balance",
+        type_i: 14,
+      } as Partial<Horizon.ServerApi.CreateClaimableBalanceOperationRecord>;
+    });
 
   const allowTrustByPublicKeyEdges =
     rawResponse.data?.allowTrustByPublicKey.edges || [];
-  const allowTrustByPublicKey = allowTrustByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        ...edge.node,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        type: "allow_trust",
-        type_i: 7,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.AllowTrustOperationRecord>)
-  );
+  const allowTrustByPublicKey = allowTrustByPublicKeyEdges.map((edge) => {
+    const baseFields = transformBaseOperation(edge.node);
+    return {
+      ...baseFields,
+      type: "allow_trust",
+      type_i: 7,
+    } as Partial<Horizon.ServerApi.AllowTrustOperationRecord>;
+  });
 
   const manageDataByPublicKeyEdges =
     rawResponse.data?.manageDataByPublicKey.edges || [];
-  const manageDataByPublicKey = manageDataByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        ...edge.node,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        type: "manage_data",
-        type_i: 10,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.ManageDataOperationRecord>)
-  );
+  const manageDataByPublicKey = manageDataByPublicKeyEdges.map((edge) => {
+    const baseFields = transformBaseOperation(edge.node);
+    return {
+      ...baseFields,
+      type: "manage_data",
+      type_i: 10,
+    } as Partial<Horizon.ServerApi.ManageDataOperationRecord>;
+  });
 
   const beginSponsoringFutureReservesByPublicKeyEdges =
     rawResponse.data?.beginSponsoringFutureReservesByPublicKey.edges || [];
   const beginSponsoringFutureReservesByPublicKey =
-    beginSponsoringFutureReservesByPublicKeyEdges.map(
-      (edge) =>
-        ({
-          ...edge.node,
-          created_at: new Date(
-            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-          ).toISOString(),
-          type: "begin_sponsoring_future_reserves",
-          type_i: 16,
-          id: edge.node.opId,
-          transaction_attr: {
-            operation_count: edge.node.txInfoByTx.opCount,
-            fee_charged: edge.node.txInfoByTx.fee,
-          },
-        } as Partial<Horizon.ServerApi.BeginSponsoringFutureReservesOperationRecord>)
-    );
+    beginSponsoringFutureReservesByPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge.node);
+      return {
+        ...baseFields,
+        type: "begin_sponsoring_future_reserves",
+        type_i: 16,
+      } as Partial<Horizon.ServerApi.BeginSponsoringFutureReservesOperationRecord>;
+    });
 
   const endSponsoringFutureReservesByPublicKeyEdges =
     rawResponse.data?.endSponsoringFutureReservesByPublicKey.edges || [];
   const endSponsoringFutureReservesByPublicKey =
-    endSponsoringFutureReservesByPublicKeyEdges.map(
-      (edge) =>
-        ({
-          ...edge.node,
-          created_at: new Date(
-            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-          ).toISOString(),
-          type: "end_sponsoring_future_reserves",
-          type_i: 17,
-          id: edge.node.opId,
-          transaction_attr: {
-            operation_count: edge.node.txInfoByTx.opCount,
-            fee_charged: edge.node.txInfoByTx.fee,
-          },
-        } as Partial<Horizon.ServerApi.EndSponsoringFutureReservesOperationRecord>)
-    );
+    endSponsoringFutureReservesByPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge.node);
+      return {
+        ...baseFields,
+        type: "end_sponsoring_future_reserves",
+        type_i: 17,
+      } as Partial<Horizon.ServerApi.EndSponsoringFutureReservesOperationRecord>;
+    });
 
   const revokeSponsorshipByPublicKeyEdges =
     rawResponse.data?.revokeSponsorshipByPublicKey.edges || [];
   const revokeSponsorshipByPublicKey = revokeSponsorshipByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        ...edge.node,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
+    (edge) => {
+      const baseFields = transformBaseOperation(edge.node);
+      return {
+        ...baseFields,
         type: "revoke_sponsorship",
         type_i: 18,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.RevokeSponsorshipOperationRecord>)
+      } as Partial<Horizon.ServerApi.RevokeSponsorshipOperationRecord>;
+    }
   );
 
   const clawbackByPublicKeyEdges =
     rawResponse.data?.clawbackByPublicKey.edges || [];
-  const clawbackByPublicKey = clawbackByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        ...edge.node,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
-        type: "clawback",
-        type_i: 19,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.ClawbackOperationRecord>)
-  );
+  const clawbackByPublicKey = clawbackByPublicKeyEdges.map((edge) => {
+    const baseFields = transformBaseOperation(edge.node);
+    return {
+      ...baseFields,
+      type: "clawback",
+      type_i: 19,
+    } as Partial<Horizon.ServerApi.ClawbackOperationRecord>;
+  });
 
   const setTrustLineFlagsByPublicKeyEdges =
     rawResponse.data?.setTrustLineFlagsByPublicKey.edges || [];
   const setTrustLineFlagsByPublicKey = setTrustLineFlagsByPublicKeyEdges.map(
-    (edge) =>
-      ({
-        ...edge.node,
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
+    (edge) => {
+      const baseFields = transformBaseOperation(edge.node);
+      return {
+        ...baseFields,
         type: "set_trust_line_flags",
         type_i: 21,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
-      } as Partial<Horizon.ServerApi.SetTrustLineFlagsOperationRecord>)
+      } as Partial<Horizon.ServerApi.SetTrustLineFlagsOperationRecord>;
+    }
   );
 
   const liquidityPoolDepositByPublicKeyEdges =
     rawResponse.data?.liquidityPoolDepositByPublicKey.edges || [];
   const liquidityPoolDepositByPublicKey =
-    liquidityPoolDepositByPublicKeyEdges.map(
-      (edge) =>
-        ({
-          ...edge.node,
-          created_at: new Date(
-            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-          ).toISOString(),
-          type: "liquidity_pool_deposit",
-          type_i: 22,
-          id: edge.node.opId,
-          transaction_attr: {
-            operation_count: edge.node.txInfoByTx.opCount,
-            fee_charged: edge.node.txInfoByTx.fee,
-          },
-        } as Partial<Horizon.ServerApi.DepositLiquidityOperationRecord>)
-    );
+    liquidityPoolDepositByPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge.node);
+      return {
+        ...baseFields,
+        type: "liquidity_pool_deposit",
+        type_i: 22,
+      } as Partial<Horizon.ServerApi.DepositLiquidityOperationRecord>;
+    });
 
   const liquidityPoolWithdrawByPublicKeyEdges =
     rawResponse.data?.liquidityPoolWithdrawByPublicKey.edges || [];
   const liquidityPoolWithdrawByPublicKey =
-    liquidityPoolWithdrawByPublicKeyEdges.map(
-      (edge) =>
-        ({
-          ...edge.node,
-          created_at: new Date(
-            edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-          ).toISOString(),
-          type: "liquidity_pool_withdraw",
-          type_i: 23,
-          id: edge.node.opId,
-          transaction_attr: {
-            operation_count: edge.node.txInfoByTx.opCount,
-            fee_charged: edge.node.txInfoByTx.fee,
-          },
-        } as Partial<Horizon.ServerApi.WithdrawLiquidityOperationRecord>)
-    );
+    liquidityPoolWithdrawByPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge.node);
+      return {
+        ...baseFields,
+        type: "liquidity_pool_withdraw",
+        type_i: 23,
+      } as Partial<Horizon.ServerApi.WithdrawLiquidityOperationRecord>;
+    });
 
   const createClaimableBalanceToPublicKeyEdges =
     rawResponse.data?.createClaimableBalanceToPublicKey.edges || [];
   const createClaimableBalanceToPublicKey =
     createClaimableBalanceToPublicKeyEdges.map((edge) => {
+      const baseFields = transformBaseOperation(edge.node);
       return {
-        created_at: new Date(
-          edge.node.txInfoByTx.ledgerByLedger.closeTime * 1000
-        ).toISOString(),
+        ...baseFields,
         type: "create_claimable_balance",
         type_i: 14,
-        id: edge.node.opId,
-        transaction_attr: {
-          operation_count: edge.node.txInfoByTx.opCount,
-          fee_charged: edge.node.txInfoByTx.fee,
-        },
         amount: edge.node.amount,
         // This is an VecM<Claimant> from the rust sdk which doesnt seem to have a JS counter part, but we dont use this field yet
         // claimants: edge.node.claimants,
@@ -1535,11 +1145,13 @@ const transformAccountHistory = async (
     ...clawbackByPublicKey,
     ...setTrustLineFlagsByPublicKey,
     ...invokeHostFn,
-  ].sort((a, b) => {
-    const createdA = a.created_at!;
-    const createdB = b.created_at!;
-    return new Date(createdB).getTime() - new Date(createdA).getTime();
-  }); // Mercury indexes first to last and sort is TODO
+  ]
+    .filter((tx) => tx.transaction_successful)
+    .sort((a, b) => {
+      const createdA = a.created_at!;
+      const createdB = b.created_at!;
+      return new Date(createdB).getTime() - new Date(createdA).getTime();
+    }); // Mercury indexes first to last and sort is TODO
 };
 
 export { transformAccountBalances, transformAccountHistory };
