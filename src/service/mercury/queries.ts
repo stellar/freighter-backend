@@ -72,7 +72,7 @@ export const query = {
       ${contractIds.map(
         (id) =>
           `
-        entryUpdateByContractIdAndKey(ledgerKey: "${ledgerKey}", contract: "${id}") {
+        ${id}: entryUpdateByContractIdAndKey(first: 1, ledgerKey: "${ledgerKey}", contract: "${id}") {
           nodes {
             contractId
             keyXdr

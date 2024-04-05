@@ -679,7 +679,11 @@ export class MercuryClient {
         return response;
       };
       const response = await this.renewAndRetry(getData, network);
-      const data = await transformAccountBalances(response, tokenDetails);
+      const data = await transformAccountBalances(
+        response,
+        tokenDetails,
+        contractIds
+      );
 
       return {
         data,

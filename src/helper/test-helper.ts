@@ -176,7 +176,7 @@ const queryMockResponse = {
     },
   },
   "query.getAccountBalances": {
-    entryUpdateByContractIdAndKey: {
+    CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP: {
       nodes: [
         {
           contractId:
@@ -187,6 +187,10 @@ const queryMockResponse = {
           ledger: "1",
           entryDurability: "persistent",
         },
+      ],
+    },
+    CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG: {
+      nodes: [
         {
           contractId:
             "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
