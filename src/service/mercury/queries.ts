@@ -35,15 +35,6 @@ export const query = {
       }
     }
   `,
-  getContractEventSub: (contractId: string, keyXdr: string) => `
-    query TokenBalanceSub {
-      allEntryUpdates(first:10, offset:0, condition: { contractId: "${contractId}", keyXdr: "${keyXdr}" }) {
-        nodes {
-          contractId
-        }
-      }
-    }
-  `,
   getAccountBalances: (
     pubKey: string,
     ledgerKey: string,
