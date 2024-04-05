@@ -12,4 +12,6 @@ export const ERROR = {
   SERVER_ERROR: "Unexpected server error",
   MISSING_SUB_FOR_PUBKEY:
     "Tried to query for data without a subscription setup for a public key",
+  MISSING_SUB_FOR_TOKEN_BALANCE:
+    "Tried to query for data without a subscription setup for a token balance",
 };
