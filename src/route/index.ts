@@ -331,7 +331,6 @@ export async function initApiServer(
           request: FastifyRequest<{
             Params: { ["contractId"]: string };
             Querystring: {
-              ["contract_ids"]: string;
               ["pub_key"]: string;
               ["network"]: NetworkNames;
             };
@@ -340,6 +339,53 @@ export async function initApiServer(
         ) => {
           const contractId = request.params["contractId"];
           const { network, pub_key } = request.query;
+
+          const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
+          if (skipSorobanPubnet) {
+            return reply.code(400).send("Soroban has been disabled on pubnet");
+          }
+
+          try {
+            const data = await mercuryClient.tokenDetails(
+              pub_key,
+              contractId,
+              network
+            );
+            reply.code(200).send(data);
+          } catch (error) {
+            reply.code(400).send(error);
+          }
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/token-spec/:contractId",
+        schema: {
+          params: {
+            ["contractId"]: {
+              type: "string",
+              validator: (qStr: string) => isContractId(qStr),
+            },
+          },
+          querystring: {
+            ["network"]: {
+              type: "string",
+              validator: (qStr: string) => isNetwork(qStr),
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Params: { ["contractId"]: string };
+            Querystring: {
+              ["network"]: NetworkNames;
+            };
+          }>,
+          reply
+        ) => {
+          const contractId = request.params["contractId"];
+          const { network } = request.query;
 
           const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
           if (skipSorobanPubnet) {

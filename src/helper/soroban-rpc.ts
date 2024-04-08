@@ -12,7 +12,10 @@ import {
   xdr,
   SorobanRpc,
   StrKey,
+  Address,
+  ContractSpec,
 } from "stellar-sdk";
+import { XdrReader } from "@stellar/js-xdr";
 import { NetworkNames } from "./validate";
 import { ERROR } from "./error";
 
@@ -180,13 +183,129 @@ const getOpArgs = (fnName: string, args: xdr.ScVal[]) => {
   return { from, to, amount };
 };
 
+const getLedegerKeyContractCode = (contractId: string) => {
+  const ledgerKey = xdr.LedgerKey.contractData(
+    new xdr.LedgerKeyContractData({
+      contract: new Address(contractId).toScAddress(),
+      key: xdr.ScVal.scvLedgerKeyContractInstance(),
+      durability: xdr.ContractDataDurability.persistent(),
+    })
+  );
+  return ledgerKey.toXDR("base64");
+};
+
+const getLedgerKeyWasmId = (contractCodeLedgerEntryData: string) => {
+  const contractCodeWasmHash = xdr.LedgerEntryData.fromXDR(
+    contractCodeLedgerEntryData,
+    "base64"
+  )
+    .contractData()
+    .val()
+    .instance()
+    .executable()
+    .wasmHash();
+  const ledgerKey = xdr.LedgerKey.contractCode(
+    new xdr.LedgerKeyContractCode({
+      hash: contractCodeWasmHash,
+    })
+  );
+  return ledgerKey.toXDR("base64");
+};
+
+async function parseWasmXdr(xdrContents: string) {
+  const wasmBuffer = xdr.LedgerEntryData.fromXDR(xdrContents, "base64")
+    .contractCode()
+    .code();
+  const wasmModule = await WebAssembly.compile(wasmBuffer);
+  const reader = new XdrReader(
+    Buffer.from(
+      WebAssembly.Module.customSections(wasmModule, "contractspecv0")[0]
+    )
+  );
+
+  const specs = [];
+  do {
+    specs.push(xdr.ScSpecEntry.read(reader));
+  } while (!reader.eof);
+  const contractSpec = new ContractSpec(specs);
+  return contractSpec.jsonSchema();
+}
+
+const getLedgerEntries = async (
+  entryKey: string,
+  rpcUrl: string,
+  id: number = new Date().getDate()
+): Promise<{
+  error: Error;
+  result: SorobanRpc.Api.RawGetLedgerEntriesResponse;
+}> => {
+  let requestBody = {
+    jsonrpc: "2.0",
+    id: id,
+    method: "getLedgerEntries",
+    params: {
+      keys: [entryKey],
+    },
+  };
+
+  let res = await fetch(rpcUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  });
+  let json = await res.json();
+  if (!res.ok) {
+    throw new Error(json);
+  }
+  return json;
+};
+
+const getTokenSpec = async (contractId: string, network: NetworkNames) => {
+  try {
+    const serverUrl = SOROBAN_RPC_URLS[network];
+    if (!serverUrl) {
+      throw new Error(ERROR.UNSUPPORTED_NETWORK);
+    }
+
+    const contractDataKey = getLedegerKeyContractCode(contractId);
+    const { error, result } = await getLedgerEntries(
+      contractDataKey,
+      serverUrl
+    );
+    const entries = result.entries || [];
+    if (error || !entries.length) {
+      return { error: "Unable to fetch token spec", result: null };
+    }
+
+    const contractCodeLedgerEntryData = entries[0].xdr;
+    const wasmId = getLedgerKeyWasmId(contractCodeLedgerEntryData);
+    const { error: wasmError, result: wasmResult } = await getLedgerEntries(
+      wasmId,
+      serverUrl
+    );
+    const wasmEntries = wasmResult.entries || [];
+    if (wasmError || !wasmEntries.length) {
+      return { error: "Unable to fetch token spec", result: null };
+    }
+
+    const wasm = await parseWasmXdr(wasmEntries[0].xdr);
+    return { error, result: wasm };
+  } catch (error) {
+    return { error, result: null };
+  }
+};
+
 export {
   buildTransfer,
+  getLedgerEntries,
   getOpArgs,
   getServer,
   getTokenBalance,
   getTokenDecimals,
   getTokenName,
+  getTokenSpec,
   getTokenSymbol,
   getTxBuilder,
   simulateTx,
