@@ -480,6 +480,12 @@ export class MercuryClient {
       const subs = await this.getAccountSubForPubKey(pubKey, network);
       const hasSubs = hasSubForPublicKey(subs, pubKey);
       if (!hasSubs) {
+        const { error } = await this.accountSubscription(pubKey, network);
+        if (!error) {
+          this.logger.info(
+            `Subscribed to missing account sub - ${pubKey} - ${network}`
+          );
+        }
         throw new Error(ERROR.MISSING_SUB_FOR_PUBKEY);
       }
 
@@ -637,6 +643,12 @@ export class MercuryClient {
       const subs = await this.getAccountSubForPubKey(pubKey, network);
       const hasSubs = hasSubForPublicKey(subs, pubKey);
       if (!hasSubs) {
+        const { error } = await this.accountSubscription(pubKey, network);
+        if (!error) {
+          this.logger.info(
+            `Subscribed to missing account sub - ${pubKey} - ${network}`
+          );
+        }
         throw new Error(ERROR.MISSING_SUB_FOR_PUBKEY);
       }
 
@@ -651,6 +663,16 @@ export class MercuryClient {
         );
         const hasTokenSubs = hasSubForTokenBalance(tokenSubs, contractId);
         if (!hasTokenSubs) {
+          const { error } = await this.tokenBalanceSubscription(
+            contractId,
+            pubKey,
+            network
+          );
+          if (!error) {
+            this.logger.info(
+              `Subscribed to missing token balance sub - ${contractId} - ${pubKey} - ${network}`
+            );
+          }
           throw new Error(ERROR.MISSING_SUB_FOR_TOKEN_BALANCE);
         }
         const details = await this.tokenDetails(pubKey, contractId, network);
