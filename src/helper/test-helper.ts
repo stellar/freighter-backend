@@ -9,7 +9,10 @@ import { initApiServer } from "../route";
 import { NetworkNames } from "./validate";
 import { hasIndexerSupport } from "./mercury";
 
-const testLogger = pino({
+export const base64regex =
+  /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+
+export const testLogger = pino({
   name: "test-logger",
   serializers: {
     req: pino.stdSerializers.req,
