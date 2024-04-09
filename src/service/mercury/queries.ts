@@ -124,6 +124,9 @@ export const query = {
       createAccountByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             accountByDestination {
               publickey
             }
@@ -146,6 +149,9 @@ export const query = {
       createAccountToPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             accountByDestination {
               publickey
             }
