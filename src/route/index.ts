@@ -30,6 +30,7 @@ import {
 import {
   SOROBAN_RPC_URLS,
   buildTransfer,
+  getTokenSpec,
   simulateTx,
 } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
@@ -393,14 +394,19 @@ export async function initApiServer(
           }
 
           try {
-            const data = await mercuryClient.tokenDetails(
-              pub_key,
+            const { result, error } = await getTokenSpec(
               contractId,
-              network
+              network,
+              logger
             );
-            reply.code(200).send(data);
+
+            if (error) {
+              reply.code(400).send({ error, result: null });
+            } else {
+              reply.code(200).send({ isSep41Compliant: result, error: null });
+            }
           } catch (error) {
-            reply.code(400).send(error);
+            reply.code(500).send("Unexpected Server Error");
           }
         },
       });

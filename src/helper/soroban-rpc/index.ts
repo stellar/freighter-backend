@@ -16,8 +16,9 @@ import {
   ContractSpec,
 } from "stellar-sdk";
 import { XdrReader } from "@stellar/js-xdr";
-import { NetworkNames } from "./validate";
-import { ERROR } from "./error";
+import { NetworkNames } from "../validate";
+import { ERROR } from "../error";
+import { Logger } from "pino";
 
 const SOROBAN_RPC_URLS: { [key in keyof typeof Networks]?: string } = {
   PUBLIC:
@@ -183,7 +184,7 @@ const getOpArgs = (fnName: string, args: xdr.ScVal[]) => {
   return { from, to, amount };
 };
 
-const getLedegerKeyContractCode = (contractId: string) => {
+const getLedgerKeyContractCode = (contractId: string) => {
   const ledgerKey = xdr.LedgerKey.contractData(
     new xdr.LedgerKeyContractData({
       contract: new Address(contractId).toScAddress(),
@@ -194,9 +195,9 @@ const getLedegerKeyContractCode = (contractId: string) => {
   return ledgerKey.toXDR("base64");
 };
 
-const getLedgerKeyWasmId = (contractCodeLedgerEntryData: string) => {
+const getLedgerKeyWasmId = (contractLedgerEntryData: string) => {
   const contractCodeWasmHash = xdr.LedgerEntryData.fromXDR(
-    contractCodeLedgerEntryData,
+    contractLedgerEntryData,
     "base64"
   )
     .contractData()
@@ -262,20 +263,25 @@ const getLedgerEntries = async (
   return json;
 };
 
-const getTokenSpec = async (contractId: string, network: NetworkNames) => {
+const getTokenSpec = async (
+  contractId: string,
+  network: NetworkNames,
+  logger: Logger
+) => {
   try {
     const serverUrl = SOROBAN_RPC_URLS[network];
     if (!serverUrl) {
       throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
 
-    const contractDataKey = getLedegerKeyContractCode(contractId);
+    const contractDataKey = getLedgerKeyContractCode(contractId);
     const { error, result } = await getLedgerEntries(
       contractDataKey,
       serverUrl
     );
     const entries = result.entries || [];
     if (error || !entries.length) {
+      logger.error(error);
       return { error: "Unable to fetch token spec", result: null };
     }
 
@@ -287,18 +293,103 @@ const getTokenSpec = async (contractId: string, network: NetworkNames) => {
     );
     const wasmEntries = wasmResult.entries || [];
     if (wasmError || !wasmEntries.length) {
+      logger.error(wasmError);
       return { error: "Unable to fetch token spec", result: null };
     }
 
     const wasm = await parseWasmXdr(wasmEntries[0].xdr);
-    return { error, result: wasm };
+    return { error: null, result: isTokenSpec(wasm) };
   } catch (error) {
-    return { error, result: null };
+    logger.error(error);
+    return { error: "Unable to fetch token spec", result: null };
   }
+};
+
+const TOKEN_SPEC: { [index: string]: { args: { name: string }[] } } = {
+  allowance: {
+    args: [{ name: "from" }, { name: "spender" }],
+  },
+  approve: {
+    args: [
+      { name: "amount" },
+      { name: "expiration_ledger" },
+      { name: "from" },
+      { name: "spender" },
+    ],
+  },
+  balance: {
+    args: [{ name: "id" }],
+  },
+  burn: {
+    args: [{ name: "amount" }, { name: "from" }],
+  },
+  burn_from: {
+    args: [{ name: "amount" }, { name: "from" }, { name: "spender" }],
+  },
+  decimals: {
+    args: [],
+  },
+  initialize: {
+    args: [
+      { name: "admin" },
+      { name: "decimal" },
+      { name: "name" },
+      { name: "symbol" },
+    ],
+  },
+  mint: {
+    args: [{ name: "amount" }, { name: "to" }],
+  },
+  name: {
+    args: [],
+  },
+  set_admin: {
+    args: [{ name: "new_admin" }],
+  },
+  symbol: {
+    args: [],
+  },
+  transfer: {
+    args: [{ name: "amount" }, { name: "from" }, { name: "to" }],
+  },
+  transfer_from: {
+    args: [
+      { name: "amount" },
+      { name: "from" },
+      { name: "spender" },
+      { name: "to" },
+    ],
+  },
+};
+
+const isTokenSpec = (spec: Record<string, any>) => {
+  const definitions = spec.definitions || [];
+  const tokenInterfaceMethods = Object.keys(TOKEN_SPEC);
+
+  for (const method of tokenInterfaceMethods) {
+    const methodDef = definitions[method];
+    if (!methodDef) {
+      return false;
+    }
+
+    const tokenSpecMethod = TOKEN_SPEC[method].args.map((arg) => arg.name);
+    const args = methodDef.properties?.args?.properties;
+    const contractMethods = Object.keys(args || {});
+    const doesMatchSpec = tokenSpecMethod.every((specMethod) =>
+      contractMethods.includes(specMethod)
+    );
+
+    if (!doesMatchSpec) {
+      return false;
+    }
+  }
+  return true;
 };
 
 export {
   buildTransfer,
+  getLedgerKeyContractCode,
+  getLedgerKeyWasmId,
   getLedgerEntries,
   getOpArgs,
   getServer,
@@ -308,6 +399,9 @@ export {
   getTokenSpec,
   getTokenSymbol,
   getTxBuilder,
+  isTokenSpec,
+  parseWasmXdr,
   simulateTx,
   SOROBAN_RPC_URLS,
+  TOKEN_SPEC,
 };
