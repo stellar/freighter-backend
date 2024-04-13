@@ -264,7 +264,7 @@ export const submitTransaction = async (
     }
     return {
       data: null,
-      error: e.response.data,
+      error: e?.response?.data,
     };
   }
 };
