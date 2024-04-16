@@ -33,6 +33,12 @@ export function buildConfig(config: Record<string, string>) {
     mercuryGraphQLTestnet: "https://api.mercurydata.app:2083/graphql",
     mercuryBackendPubnet: "https://mainnet.mercurydata.app:8443",
     mercuryGraphQLPubnet: "https://mainnet.mercurydata.app:2083/graphql",
+
+    mercuryGraphQLCurrentDataTestnet:
+      "https://api.mercurydata.app:2096/graphql",
+    mercuryGraphQLCurrentDataPubnet:
+      "https://mainnet.mercurydata.app:2096/graphql",
+
     mercuryEmail: config.AUTH_EMAIL || process.env.AUTH_EMAIL!,
     mercuryKey: config.MERCURY_KEY || process.env.MERCURY_KEY!,
     mercuryPassword: config.AUTH_PASS || process.env.AUTH_PASS!,

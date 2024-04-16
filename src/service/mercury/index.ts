@@ -1,4 +1,4 @@
-import { Client, CombinedError } from "@urql/core";
+import { Client, CombinedError, OperationResult } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
 import { Address, Horizon, xdr } from "stellar-sdk";
@@ -18,6 +18,7 @@ import {
 } from "../../helper/soroban-rpc";
 import {
   transformAccountBalances,
+  transformAccountBalancesCurrentData,
   transformAccountHistory,
 } from "./helpers/transformers";
 import {
@@ -72,6 +73,7 @@ export interface NewEntrySubscriptionPayload {
 interface MercurySession {
   renewClientMaker(network: NetworkNames): Client;
   backendClientMaker(network: NetworkNames, key: string): Client;
+  currentDataClientMaker(network: NetworkNames, key: string): Client;
   backends: {
     TESTNET: string;
     PUBLIC: string;
@@ -655,37 +657,20 @@ export class MercuryClient {
       const tokenDetails = {} as {
         [index: string]: Awaited<ReturnType<MercuryClient["tokenDetails"]>>;
       };
-      for (const contractId of contractIds) {
-        const tokenSubs = await this.getTokenBalanceSub(
-          pubKey,
-          contractId,
-          network
-        );
-        const hasTokenSubs = hasSubForTokenBalance(tokenSubs, contractId);
-        if (!hasTokenSubs) {
-          const { error } = await this.tokenBalanceSubscription(
-            contractId,
-            pubKey,
-            network
-          );
-          if (!error) {
-            this.logger.info(
-              `Subscribed to missing token balance sub - ${contractId} - ${pubKey} - ${network}`
-            );
-          }
-          throw new Error(ERROR.MISSING_SUB_FOR_TOKEN_BALANCE);
-        }
-        const details = await this.tokenDetails(pubKey, contractId, network);
-        tokenDetails[contractId] = details;
-      }
 
-      const urqlClient = this.mercurySession.backendClientMaker(
-        network,
-        this.mercurySession.token
-      );
       const getData = async () => {
-        const response = await urqlClient.query(
-          query.getAccountBalances(
+        const urqlClientCurrentData =
+          this.mercurySession.currentDataClientMaker(
+            network,
+            this.mercurySession.token
+          );
+        const urqlClient = this.mercurySession.backendClientMaker(
+          network,
+          this.mercurySession.token
+        );
+
+        const responseCurrentData = await urqlClientCurrentData.query(
+          query.getCurrentDataAccountBalances(
             pubKey,
             this.tokenBalanceKey(pubKey),
             contractIds
@@ -693,16 +678,35 @@ export class MercuryClient {
           {}
         );
 
-        const errorMessage = getGraphQlError(response.error);
-        if (errorMessage) {
-          throw new Error(errorMessage);
+        const responseAccountObject = await urqlClient.query(
+          query.getAccountObject(pubKey),
+          {}
+        );
+
+        const errorMessageCurrentData = getGraphQlError(
+          responseCurrentData.error
+        );
+        if (errorMessageCurrentData) {
+          throw new Error(errorMessageCurrentData);
         }
 
-        return response;
+        const errorMessageAccountObject = getGraphQlError(
+          responseAccountObject.error
+        );
+        if (errorMessageAccountObject) {
+          throw new Error(errorMessageAccountObject);
+        }
+
+        return {
+          responseCurrentData,
+          responseAccountObject,
+        };
       };
-      const response = await this.renewAndRetry(getData, network);
-      const data = await transformAccountBalances(
-        response,
+      const { responseAccountObject, responseCurrentData } =
+        await this.renewAndRetry(getData, network);
+      const data = await transformAccountBalancesCurrentData(
+        responseCurrentData,
+        responseAccountObject,
         tokenDetails,
         contractIds
       );
