@@ -177,8 +177,7 @@ const transformAccountBalancesCurrentData = async (
       }
 
       case "assetTypePoolShare": {
-        console.log(`pool share: ${trustline.value()}`);
-        // TODO
+        // Should pool shares be decoded here?
         return prev;
       }
 

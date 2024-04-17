@@ -175,7 +175,6 @@ function backendClientMaker(network: NetworkNames) {
         });
       }
       default:
-        console.log(_query);
         throw new Error("unknown query in mock");
     }
   });
