@@ -137,7 +137,45 @@ function backendClientMaker(network: NetworkNames) {
           error: null,
         });
       }
+      case query.getCurrentDataAccountBalances(
+        pubKey,
+        tokenBalanceLedgerKey,
+        []
+      ): {
+        return Promise.resolve({
+          data: queryMockResponse["query.getAccountBalancesCurrentData"],
+          error: null,
+        });
+      }
+      case query.getCurrentDataAccountBalances(pubKey, tokenBalanceLedgerKey, [
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+      ]): {
+        return Promise.resolve({
+          data: queryMockResponse[
+            "query.getAccountBalancesCurrentDataWithFirstContracts"
+          ],
+          error: null,
+        });
+      }
+      case query.getCurrentDataAccountBalances(pubKey, tokenBalanceLedgerKey, [
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+        "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+      ]): {
+        return Promise.resolve({
+          data: queryMockResponse[
+            "query.getAccountBalancesCurrentDataWithBothContracts"
+          ],
+          error: null,
+        });
+      }
+      case query.getAccountObject(pubKey): {
+        return Promise.resolve({
+          data: queryMockResponse["query.getAccountObject"],
+          error: null,
+        });
+      }
       default:
+        console.log(_query);
         throw new Error("unknown query in mock");
     }
   });
@@ -161,6 +199,7 @@ const mercurySession = {
   token: "mercury-token",
   renewClientMaker,
   backendClientMaker,
+  currentDataClientMaker: backendClientMaker,
   backends,
   email: "user-email",
   password: "user-password",
@@ -169,6 +208,8 @@ const mercurySession = {
 
 const valueXdr = nativeToScVal(1).toXDR();
 const pubKey = "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
+const contractDataEntryValXdr =
+  "AAA5zAAAAAYAAAAAAAAAAY6oGxM6ldCYnaiGZ39Qfe7OU9/hMzrwkVF8OBHpqKMTAAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtysAAAAAQAAAAoAAAAAAAAAAAAAAAAAAAAKAAAAAA==";
 const tokenBalanceLedgerKey =
   "AAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys";
 
@@ -176,6 +217,79 @@ const queryMockResponse = {
   [mutation.authenticate]: {
     authenticate: {
       jwtToken: "mercury-token",
+    },
+  },
+  "query.getAccountBalancesCurrentData": {
+    trustlinesByPublicKey: [
+      {
+        balance: 100019646386,
+        asset: "AAAAAUJMTkQAAAAAJgXM07IdPwaDCLLNw46HAu0Jy3Az9GJKesWnsk57zF4=",
+        limit: 1,
+        accountId: pubKey,
+      },
+    ],
+  },
+  "query.getAccountBalancesCurrentDataWithFirstContracts": {
+    trustlinesByPublicKey: [
+      {
+        balance: 100019646386,
+        asset: "AAAAAUJMTkQAAAAAJgXM07IdPwaDCLLNw46HAu0Jy3Az9GJKesWnsk57zF4=",
+        limit: 1,
+        accountId: pubKey,
+      },
+    ],
+    CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP: [
+      {
+        contractId: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+        keyXdr:
+          "AAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys",
+        valXdr: contractDataEntryValXdr,
+        durability: 1,
+      },
+    ],
+  },
+  "query.getAccountBalancesCurrentDataWithBothContracts": {
+    trustlinesByPublicKey: [
+      {
+        balance: 100019646386,
+        asset: "AAAAAUJMTkQAAAAAJgXM07IdPwaDCLLNw46HAu0Jy3Az9GJKesWnsk57zF4=",
+        limit: 1,
+        accountId: pubKey,
+      },
+    ],
+    CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP: [
+      {
+        contractId: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+        keyXdr:
+          "AAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys",
+        valXdr: contractDataEntryValXdr,
+        durability: 1,
+      },
+    ],
+    CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG: [
+      {
+        contractId: "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+        keyXdr:
+          "AAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys",
+        valXdr: contractDataEntryValXdr,
+        durability: 1,
+      },
+    ],
+  },
+  "query.getAccountObject": {
+    accountObjectByPublicKey: {
+      nodes: [
+        {
+          accountByAccount: {
+            publickey: pubKey,
+          },
+          nativeBalance: "10",
+          numSubEntries: "1",
+          numSponsored: "1",
+          numSponsoring: "1",
+          sellingLiabilities: "1",
+        },
+      ],
     },
   },
   "query.getAccountBalances": {

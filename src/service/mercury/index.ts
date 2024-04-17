@@ -1,4 +1,4 @@
-import { Client, CombinedError, OperationResult } from "@urql/core";
+import { Client, CombinedError } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
 import { Address, Horizon, xdr } from "stellar-sdk";
@@ -17,7 +17,6 @@ import {
   getTxBuilder,
 } from "../../helper/soroban-rpc";
 import {
-  transformAccountBalances,
   transformAccountBalancesCurrentData,
   transformAccountHistory,
 } from "./helpers/transformers";
@@ -34,7 +33,6 @@ import {
   MercurySupportedNetworks,
   hasIndexerSupport,
   hasSubForPublicKey,
-  hasSubForTokenBalance,
 } from "../../helper/mercury";
 
 const DEFAULT_RETRY_AMOUNT = 5;
@@ -657,6 +655,10 @@ export class MercuryClient {
       const tokenDetails = {} as {
         [index: string]: Awaited<ReturnType<MercuryClient["tokenDetails"]>>;
       };
+      for (const contractId of contractIds) {
+        const details = await this.tokenDetails(pubKey, contractId, network);
+        tokenDetails[contractId] = details;
+      }
 
       const getData = async () => {
         const urqlClientCurrentData =

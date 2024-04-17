@@ -160,7 +160,9 @@ const transformAccountBalancesCurrentData = async (
 
       case "assetTypeCreditAlphanum12": {
         const code = trustline.alphaNum12().assetCode().toString();
-        const issuer = trustline.alphaNum12().issuer().toString();
+        const issuer = StrKey.encodeEd25519PublicKey(
+          trustline.alphaNum12().issuer().ed25519()
+        );
         prev[`${code}:${issuer}`] = {
           token: {
             code,
@@ -193,11 +195,12 @@ const transformAccountBalancesCurrentData = async (
 
   const formattedBalances = tokenBalanceData.map(([entry]) => {
     const details = tokenDetails[entry.contractId];
-    const totalScVal = xdr.ScVal.fromXDR(Buffer.from(entry.valXdr, "base64"));
+    const valEntry = xdr.LedgerEntry.fromXDR(entry.valXdr, "base64");
+    const val = valEntry.data().contractData().val();
     return {
       ...entry,
       ...details,
-      total: scValToNative(totalScVal),
+      total: scValToNative(val),
     };
   });
 
