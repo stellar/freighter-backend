@@ -27,7 +27,7 @@ import {
   NativeBalance,
   NETWORK_URLS,
 } from "../../helper/horizon-rpc";
-import { NetworkNames } from "../../helper/validate";
+import { NetworkNames, isPubKey } from "../../helper/validate";
 import { ERROR } from "../../helper/error";
 import {
   MercurySupportedNetworks,
@@ -80,6 +80,10 @@ interface MercurySession {
   password: string;
   token: string;
   userId: string;
+}
+
+interface Balances {
+  [key: string]: {};
 }
 
 export class MercuryClient {
@@ -577,7 +581,14 @@ export class MercuryClient {
     }
 
     for (const balance of balances) {
-      balanceMap[`${balance.symbol}:${balance.id}`] = {
+      // if this is a SAC, we can get the issuer key from the `name` key. Otherwise, just use the contract ID
+      const issuerKey =
+        balance.name.split(":").length > 1 &&
+        isPubKey(balance.name.split(":")[1])
+          ? balance.name.split(":")[1]
+          : balance.id;
+
+      balanceMap[`${balance.symbol}:${issuerKey}`] = {
         token: {
           code: balance.symbol,
           issuer: {
@@ -754,8 +765,11 @@ export class MercuryClient {
       }
     }
 
-    let tokenBalances = {};
-    let classicBalances = {
+    let tokenBalances: Balances = {};
+    let classicBalances: {
+      balances: Balances;
+      subentryCount: number;
+    } = {
       balances: {},
       subentryCount: 0,
     };
@@ -801,10 +815,19 @@ export class MercuryClient {
         .inc();
     }
 
+    const deDupedTokenBalances = { ...tokenBalances };
+
+    Object.keys(tokenBalances).forEach((key) => {
+      if (classicBalances.balances[key]) {
+        // we have a classic balance for this asset, no need to include the token balance
+        delete deDupedTokenBalances[key];
+      }
+    });
+
     return {
       balances: {
         ...classicBalances.balances,
-        ...tokenBalances,
+        ...deDupedTokenBalances,
       },
       // Horizon 400s when an account is unfunded, so if we have anything in balances we are funded
       isFunded: horizonError

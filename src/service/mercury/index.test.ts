@@ -1,4 +1,5 @@
 import { Horizon, scValToNative, xdr } from "stellar-sdk";
+import BigNumber from "bignumber.js";
 
 import { mutation } from "./queries";
 import {
@@ -9,6 +10,7 @@ import {
 import { transformAccountBalances } from "./helpers/transformers";
 import { ERROR_MESSAGES } from ".";
 import { ERROR } from "../../helper/error";
+import * as SorobanRpcHelper from "../../helper/soroban-rpc";
 
 describe("Mercury Service", () => {
   afterEach(() => {
@@ -306,5 +308,184 @@ describe("Mercury Service", () => {
       );
     }
     expect(mockMercuryClient.tokenBalanceSubscription).toHaveBeenCalled();
+  });
+
+  it("can properly key SAC balances by asset issuer", async () => {
+    const contracts = [
+      "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+      "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+    ];
+    jest
+      .spyOn(SorobanRpcHelper, "getTokenBalance")
+      .mockReturnValue(Promise.resolve(100));
+    jest
+      .spyOn(SorobanRpcHelper, "getTokenBalance")
+      .mockReturnValue(Promise.resolve(100));
+    // first contract
+    jest.spyOn(mockMercuryClient, "tokenDetails").mockReturnValueOnce(
+      Promise.resolve({
+        name: "FOO:GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL",
+        symbol: "FOO",
+        decimals: "5",
+      })
+    );
+    //second contract
+    jest.spyOn(mockMercuryClient, "tokenDetails").mockReturnValueOnce(
+      Promise.resolve({
+        name: "baz",
+        symbol: "BAZ",
+        decimals: "5",
+      })
+    );
+
+    const data = await mockMercuryClient.getTokenBalancesSorobanRPC(
+      pubKey,
+      contracts,
+      "TESTNET"
+    );
+
+    const expected = {
+      "FOO:GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL": {
+        token: {
+          code: "FOO",
+          issuer: {
+            key: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+          },
+        },
+        contractId: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+        symbol: "FOO",
+        decimals: "5",
+        total: new BigNumber(100),
+        available: new BigNumber(100),
+      },
+      "BAZ:CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG": {
+        token: {
+          code: "BAZ",
+          issuer: {
+            key: "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+          },
+        },
+        contractId: "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+        symbol: "BAZ",
+        decimals: "5",
+        total: new BigNumber(100),
+        available: new BigNumber(100),
+      },
+    };
+
+    expect(data).toEqual(expected);
+  });
+
+  it("can remove duplicate balances for SACs", async () => {
+    const contracts = [
+      "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+      "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+    ];
+    jest
+      .spyOn(mockMercuryClient, "getAccountBalancesHorizon")
+      .mockImplementation(
+        (
+          ..._args: Parameters<
+            typeof mockMercuryClient.getAccountBalancesHorizon
+          >
+        ): any => {
+          return Promise.resolve({
+            balances: {
+              "yXLM:GARDNV3Q7YGT4AKSDF25LT32YSCCW4EV22Y2TV3I2PU2MMXJTEDL5T55": {
+                available: "1.0023247",
+                buyingLiabilities: "0",
+                limit: "922337203685.4775807",
+                sellingLiabilities: "0",
+                token: {
+                  type: "credit_alphanum4",
+                  code: "yXLM",
+                  issuer: {
+                    key: "GARDNV3Q7YGT4AKSDF25LT32YSCCW4EV22Y2TV3I2PU2MMXJTEDL5T55",
+                  },
+                  total: "1.0023247",
+                },
+              },
+            },
+            id: "",
+            network: "TESTNET",
+            subentryCount: 1,
+            sponsoredCount: 0,
+            sponsoringCount: 0,
+            sponsor: "",
+          });
+        }
+      );
+    jest
+      .spyOn(mockMercuryClient, "getTokenBalancesSorobanRPC")
+      .mockImplementation(
+        (
+          ..._args: Parameters<
+            typeof mockMercuryClient.getTokenBalancesSorobanRPC
+          >
+        ): any => {
+          return Promise.resolve({
+            "FOO:CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP": {
+              token: {
+                code: "FOO",
+                issuer: {
+                  key: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+                },
+                total: "1",
+              },
+            },
+            "yXLM:GARDNV3Q7YGT4AKSDF25LT32YSCCW4EV22Y2TV3I2PU2MMXJTEDL5T55": {
+              token: {
+                code: "yXLM",
+                issuer: {
+                  key: "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+                },
+                total: "1",
+              },
+            },
+          });
+        }
+      );
+
+    const data = await mockMercuryClient.getAccountBalances(
+      pubKey,
+      contracts,
+      "TESTNET",
+      false
+    );
+
+    const expected = {
+      error: {
+        horizon: null,
+        soroban: null,
+      },
+      isFunded: true,
+      subentryCount: 1,
+      balances: {
+        "FOO:CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP": {
+          token: {
+            code: "FOO",
+            issuer: {
+              key: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+            },
+            total: "1",
+          },
+        },
+        "yXLM:GARDNV3Q7YGT4AKSDF25LT32YSCCW4EV22Y2TV3I2PU2MMXJTEDL5T55": {
+          available: "1.0023247",
+          buyingLiabilities: "0",
+          limit: "922337203685.4775807",
+          sellingLiabilities: "0",
+          token: {
+            type: "credit_alphanum4",
+            code: "yXLM",
+            issuer: {
+              key: "GARDNV3Q7YGT4AKSDF25LT32YSCCW4EV22Y2TV3I2PU2MMXJTEDL5T55",
+            },
+            total: "1.0023247",
+          },
+        },
+      },
+    };
+    expect(data).toEqual(expected);
   });
 });
