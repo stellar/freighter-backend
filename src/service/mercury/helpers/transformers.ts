@@ -8,7 +8,7 @@ import {
   getAssetType,
 } from "../../../helper/horizon-rpc";
 import { formatTokenAmount } from "../../../helper/format";
-import { getOpArgs } from "../../../helper/soroban-rpc";
+import { getOpArgs, isSacIssuer } from "../../../helper/soroban-rpc";
 
 // Transformers take an API response, and transform it/augment it for frontend consumption
 
@@ -24,6 +24,37 @@ interface AccountBalancesInterface {
   isFunded: boolean | null;
   subentryCount: number;
 }
+
+interface MercuryAccountObject {
+  accountObjectByPublicKey: {
+    nodes: {
+      accountByAccount: {
+        publickey: string;
+      };
+      nativeBalance: string;
+      numSubEntries: string;
+      numSponsored: string;
+      numSponsoring: string;
+      sellingLiabilities: string;
+    }[];
+  };
+}
+
+type MercuryAccountBalancesCurrentData = {
+  trustlinesByPublicKey: {
+    balance: string;
+    asset: string;
+    limit: number;
+    accountId: string;
+  }[];
+} & {
+  [key: string]: {
+    contractId: string;
+    keyXdr: string;
+    valXdr: string;
+    durability: string;
+  };
+};
 
 type MercuryAccountBalancesData = {
   accountObjectByPublicKey: {
@@ -68,6 +99,137 @@ interface TokenDetails {
     decimals: string;
   };
 }
+
+const transformAccountBalancesCurrentData = async (
+  rawResponseCurrentData: OperationResult<MercuryAccountBalancesCurrentData>,
+  rawResponseAccountObject: OperationResult<MercuryAccountObject>,
+  tokenDetails: TokenDetails,
+  contractIds: string[]
+) => {
+  const accountObjectData =
+    rawResponseAccountObject?.data?.accountObjectByPublicKey.nodes || [];
+  const accountCurrentTrustlines =
+    rawResponseCurrentData?.data?.trustlinesByPublicKey || [];
+
+  const accountObject = accountObjectData[0];
+  const numSubEntries = accountObject?.numSubEntries || "0";
+  const numSponsoring = accountObject?.numSponsoring || "0";
+  const numSponsored = accountObject?.numSponsored || "0";
+  const sellingLiabilities = accountObject?.sellingLiabilities || "0";
+  const nativeBalance = accountObject?.nativeBalance || "0";
+
+  const accountBalance = {
+    native: {
+      token: { type: "native", code: "XLM" },
+      total: formatTokenAmount(new BigNumber(nativeBalance), 7),
+      available: new BigNumber(BASE_RESERVE_MIN_COUNT)
+        .plus(new BigNumber(numSubEntries))
+        .plus(new BigNumber(numSponsoring))
+        .minus(new BigNumber(numSponsored))
+        .times(new BigNumber(BASE_RESERVE))
+        .plus(new BigNumber(sellingLiabilities)),
+    },
+  };
+
+  const classicBalances = accountCurrentTrustlines.reduce((prev, curr) => {
+    const tl = curr;
+    const trustline = xdr.Asset.fromXDR(tl.asset, "base64");
+    switch (trustline.switch().name) {
+      case "assetTypeNative": {
+        // not in this query, in account object query
+        return prev;
+      }
+
+      case "assetTypeCreditAlphanum4": {
+        const code = trustline.alphaNum4().assetCode().toString();
+        const issuer = StrKey.encodeEd25519PublicKey(
+          trustline.alphaNum4().issuer().ed25519()
+        );
+        prev[`${code}:${issuer}`] = {
+          token: {
+            code,
+            issuer: {
+              key: issuer,
+            },
+          },
+          total: formatTokenAmount(new BigNumber(tl.balance), 7),
+          available: formatTokenAmount(new BigNumber(tl.balance), 7),
+        };
+        return prev;
+      }
+
+      case "assetTypeCreditAlphanum12": {
+        const code = trustline.alphaNum12().assetCode().toString();
+        const issuer = StrKey.encodeEd25519PublicKey(
+          trustline.alphaNum12().issuer().ed25519()
+        );
+        prev[`${code}:${issuer}`] = {
+          token: {
+            code,
+            issuer: {
+              key: issuer,
+            },
+          },
+          total: formatTokenAmount(new BigNumber(tl.balance), 7),
+          available: formatTokenAmount(new BigNumber(tl.balance), 7),
+        };
+        return prev;
+      }
+
+      case "assetTypePoolShare": {
+        // Should pool shares be decoded here?
+        return prev;
+      }
+
+      default:
+        throw new Error("Asset type not suppported");
+    }
+  }, {} as NonNullable<AccountBalancesInterface["balances"]>);
+
+  const tokenBalanceData = contractIds.map((id) => {
+    const resData = rawResponseCurrentData?.data || ({} as any);
+    const tokenRecord = resData[id] || [];
+    return tokenRecord;
+  });
+
+  const formattedBalances = tokenBalanceData.map(([entry]) => {
+    const details = tokenDetails[entry.contractId];
+    const valEntry = xdr.LedgerEntry.fromXDR(entry.valXdr, "base64");
+    const val = valEntry.data().contractData().val();
+    return {
+      ...entry,
+      ...details,
+      total: scValToNative(val),
+    };
+  });
+
+  const balances = formattedBalances
+    .filter((bal) => !isSacIssuer(bal.name))
+    .reduce((prev, curr) => {
+      prev[`${curr.symbol}:${curr.contractId}`] = {
+        token: {
+          code: curr.symbol,
+          issuer: {
+            key: curr.contractId,
+          },
+        },
+        decimals: curr.decimals,
+        total: new BigNumber(curr.total),
+        available: new BigNumber(curr.total),
+      };
+      return prev;
+    }, {} as NonNullable<AccountBalancesInterface["balances"]>);
+
+  return {
+    balances: {
+      ...accountBalance,
+      ...classicBalances,
+      ...balances,
+    },
+    isFunded: true,
+    subentryCount: 0,
+  };
+};
 
 const transformAccountBalances = async (
   rawResponse: OperationResult<MercuryAccountBalancesData>,
@@ -1154,4 +1316,8 @@ const transformAccountHistory = async (
     }); // Mercury indexes first to last and sort is TODO
 };
 
-export { transformAccountBalances, transformAccountHistory };
+export {
+  transformAccountBalances,
+  transformAccountHistory,
+  transformAccountBalancesCurrentData,
+};
