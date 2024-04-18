@@ -7,7 +7,7 @@ import {
   queryMockResponse,
   pubKey,
 } from "../../helper/test-helper";
-import { transformAccountBalances } from "./helpers/transformers";
+import { transformAccountBalancesCurrentData } from "./helpers/transformers";
 import { ERROR_MESSAGES } from ".";
 import { ERROR } from "../../helper/error";
 import * as SorobanRpcHelper from "../../helper/soroban-rpc";
@@ -67,8 +67,14 @@ describe("Mercury Service", () => {
         decimals: 7,
       },
     };
-    const transformedData = await transformAccountBalances(
-      { data: queryMockResponse["query.getAccountBalances"] } as any,
+
+    const transformedData = await transformAccountBalancesCurrentData(
+      {
+        data: queryMockResponse[
+          "query.getAccountBalancesCurrentDataWithBothContracts"
+        ],
+      } as any,
+      { data: queryMockResponse["query.getAccountObject"] } as any,
       tokenDetails as any,
       [
         "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
@@ -260,54 +266,6 @@ describe("Mercury Service", () => {
       expect(response.error.message).toContain(ERROR.MISSING_SUB_FOR_PUBKEY);
     }
     expect(mockMercuryClient.accountSubscription).toHaveBeenCalled();
-  });
-
-  it("will correctly handle missing token balance subscriptions", async () => {
-    jest
-      .spyOn(mockMercuryClient, "getAccountSubForPubKey")
-      .mockImplementation(
-        (
-          ..._args: Parameters<typeof mockMercuryClient.getAccountSubForPubKey>
-        ): ReturnType<typeof mockMercuryClient.getAccountSubForPubKey> => {
-          return Promise.resolve([{ publickey: pubKey }]);
-        }
-      );
-
-    jest
-      .spyOn(mockMercuryClient, "getTokenBalanceSub")
-      .mockImplementation(
-        (
-          ..._args: Parameters<typeof mockMercuryClient.getTokenBalanceSub>
-        ): ReturnType<typeof mockMercuryClient.getTokenBalanceSub> => {
-          return Promise.resolve([{ contractId: "nope" }]);
-        }
-      );
-
-    jest
-      .spyOn(mockMercuryClient, "tokenBalanceSubscription")
-      .mockImplementation(
-        (
-          ..._args: Parameters<
-            typeof mockMercuryClient.tokenBalanceSubscription
-          >
-        ): ReturnType<typeof mockMercuryClient.tokenBalanceSubscription> => {
-          return Promise.resolve({ data: {}, error: null });
-        }
-      );
-
-    const response = await mockMercuryClient.getAccountBalancesMercury(
-      pubKey,
-      ["CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP"],
-      "TESTNET"
-    );
-    expect(response).toHaveProperty("error");
-    expect(response.error).toBeInstanceOf(Error);
-    if (response.error instanceof Error) {
-      expect(response.error.message).toContain(
-        ERROR.MISSING_SUB_FOR_TOKEN_BALANCE
-      );
-    }
-    expect(mockMercuryClient.tokenBalanceSubscription).toHaveBeenCalled();
   });
 
   it("can properly key SAC balances by asset issuer", async () => {

@@ -35,6 +35,49 @@ export const query = {
       }
     }
   `,
+  getCurrentDataAccountBalances: (
+    pubKey: string,
+    ledgerKey: string,
+    contractIds: string[]
+  ) => `
+    query AccountBalancesCurrentData {
+      trustlinesByPublicKey(public: "${pubKey}") {
+        balance
+        asset
+        limit
+        accountId
+      }
+
+      ${contractIds.map(
+        (id) => `
+        ${id}: contractDataEntriesByContractAndKeys(contract: "${id}", keys: ["${ledgerKey}"]) {
+          contractId,
+          keyXdr,
+          valXdr,
+          durability
+        }
+        `
+      )}
+    }
+  `,
+  getAccountObject: (pubKey: string) => `
+    query AccountObject {
+      accountObjectByPublicKey(
+        publicKeyText: "${pubKey}"
+      ) {
+        nodes {
+          accountByAccount {
+            publickey
+          }
+          nativeBalance
+          numSubEntries
+          numSponsored
+          numSponsoring
+          sellingLiabilities
+        }
+      }
+    }
+  `,
   getAccountBalances: (
     pubKey: string,
     ledgerKey: string,

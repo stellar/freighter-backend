@@ -52,6 +52,11 @@ async function main() {
     PUBLIC: conf.mercuryGraphQLPubnet,
   };
 
+  const graphQlCurrentDataEndpoints = {
+    TESTNET: conf.mercuryGraphQLCurrentDataTestnet,
+    PUBLIC: conf.mercuryGraphQLCurrentDataPubnet,
+  };
+
   const backends = {
     TESTNET: conf.mercuryBackendTestnet,
     PUBLIC: conf.mercuryBackendPubnet,
@@ -87,10 +92,32 @@ async function main() {
     });
   };
 
+  const currentDataClientMaker = (
+    network: NetworkNames,
+    key: string = conf.mercuryKey
+  ) => {
+    if (!hasIndexerSupport(network)) {
+      throw new Error(`network not currently supported: ${network}`);
+    }
+
+    return new Client({
+      url: `${
+        graphQlCurrentDataEndpoints[network as MercurySupportedNetworks]
+      }`,
+      exchanges: [fetchExchange],
+      fetchOptions: () => {
+        return {
+          headers: { authorization: `Bearer ${key}` },
+        };
+      },
+    });
+  };
+
   const mercurySession = {
     token: conf.mercuryKey,
     renewClientMaker,
     backendClientMaker,
+    currentDataClientMaker,
     backends,
     email: conf.mercuryEmail,
     password: conf.mercuryPassword,
