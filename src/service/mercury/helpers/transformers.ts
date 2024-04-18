@@ -8,7 +8,7 @@ import {
   getAssetType,
 } from "../../../helper/horizon-rpc";
 import { formatTokenAmount } from "../../../helper/format";
-import { getOpArgs } from "../../../helper/soroban-rpc";
+import { getOpArgs, isSacIssuer } from "../../../helper/soroban-rpc";
 
 // Transformers take an API response, and transform it/augment it for frontend consumption
 
@@ -203,20 +203,22 @@ const transformAccountBalancesCurrentData = async (
     };
   });
 
-  const balances = formattedBalances.reduce((prev, curr) => {
-    prev[`${curr.symbol}:${curr.contractId}`] = {
-      token: {
-        code: curr.symbol,
-        issuer: {
-          key: curr.contractId,
+  const balances = formattedBalances
+    .filter((bal) => !isSacIssuer(bal.name))
+    .reduce((prev, curr) => {
+      prev[`${curr.symbol}:${curr.contractId}`] = {
+        token: {
+          code: curr.symbol,
+          issuer: {
+            key: curr.contractId,
+          },
         },
-      },
-      decimals: curr.decimals,
-      total: new BigNumber(curr.total),
-      available: new BigNumber(curr.total),
-    };
-    return prev;
-  }, {} as NonNullable<AccountBalancesInterface["balances"]>);
+        decimals: curr.decimals,
+        total: new BigNumber(curr.total),
+        available: new BigNumber(curr.total),
+      };
+      return prev;
+    }, {} as NonNullable<AccountBalancesInterface["balances"]>);
 
   return {
     balances: {

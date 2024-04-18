@@ -16,7 +16,7 @@ import {
   ContractSpec,
 } from "stellar-sdk";
 import { XdrReader } from "@stellar/js-xdr";
-import { NetworkNames } from "../validate";
+import { isPubKey, NetworkNames } from "../validate";
 import { ERROR } from "../error";
 import { Logger } from "pino";
 
@@ -386,6 +386,17 @@ const isTokenSpec = (spec: Record<string, any>) => {
   return true;
 };
 
+// We can know when a token contract is a SAC instance by getting the name field, and checking for
+// the name to follow the pattern "assetId:issuer".
+const isSacIssuer = (name: string) => {
+  const issuerParts = name.split(":");
+  const [_, issuer] = issuerParts;
+  if (issuerParts.length > 1 && isPubKey(issuer)) {
+    return true;
+  }
+  return false;
+};
+
 export {
   buildTransfer,
   getLedgerKeyContractCode,
@@ -399,6 +410,7 @@ export {
   getTokenSpec,
   getTokenSymbol,
   getTxBuilder,
+  isSacIssuer,
   isTokenSpec,
   parseWasmXdr,
   simulateTx,
