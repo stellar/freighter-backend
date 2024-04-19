@@ -651,18 +651,6 @@ export class MercuryClient {
         throw new Error(`network not currently supported: ${network}`);
       }
 
-      const subs = await this.getAccountSubForPubKey(pubKey, network);
-      const hasSubs = hasSubForPublicKey(subs, pubKey);
-      if (!hasSubs) {
-        const { error } = await this.accountSubscription(pubKey, network);
-        if (!error) {
-          this.logger.info(
-            `Subscribed to missing account sub - ${pubKey} - ${network}`
-          );
-        }
-        throw new Error(ERROR.MISSING_SUB_FOR_PUBKEY);
-      }
-
       const tokenDetails = {} as {
         [index: string]: Awaited<ReturnType<MercuryClient["tokenDetails"]>>;
       };
@@ -677,10 +665,6 @@ export class MercuryClient {
             network,
             this.mercurySession.token
           );
-        const urqlClient = this.mercurySession.backendClientMaker(
-          network,
-          this.mercurySession.token
-        );
 
         const responseCurrentData = await urqlClientCurrentData.query(
           query.getCurrentDataAccountBalances(
@@ -691,11 +675,6 @@ export class MercuryClient {
           {}
         );
 
-        const responseAccountObject = await urqlClient.query(
-          query.getAccountObject(pubKey),
-          {}
-        );
-
         const errorMessageCurrentData = getGraphQlError(
           responseCurrentData.error
         );
@@ -703,23 +682,11 @@ export class MercuryClient {
           throw new Error(errorMessageCurrentData);
         }
 
-        const errorMessageAccountObject = getGraphQlError(
-          responseAccountObject.error
-        );
-        if (errorMessageAccountObject) {
-          throw new Error(errorMessageAccountObject);
-        }
-
-        return {
-          responseCurrentData,
-          responseAccountObject,
-        };
+        return responseCurrentData;
       };
-      const { responseAccountObject, responseCurrentData } =
-        await this.renewAndRetry(getData, network);
+      const responseCurrentData = await this.renewAndRetry(getData, network);
       const data = await transformAccountBalancesCurrentData(
         responseCurrentData,
-        responseAccountObject,
         tokenDetails,
         contractIds
       );
