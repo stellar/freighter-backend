@@ -48,6 +48,17 @@ export const query = {
         accountId
       }
 
+      accountByPublicKey(public: "${pubKey}") {
+        accountId
+        nativeBalance
+        buyingLiabilities
+        sellingLiabilities
+        seqNum
+        numSubentries
+        numSponsored
+        numSponsoring
+      }
+
       ${contractIds.map(
         (id) => `
         ${id}: contractDataEntriesByContractAndKeys(contract: "${id}", keys: ["${ledgerKey}"]) {

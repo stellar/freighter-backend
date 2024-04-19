@@ -25,21 +25,6 @@ interface AccountBalancesInterface {
   subentryCount: number;
 }
 
-interface MercuryAccountObject {
-  accountObjectByPublicKey: {
-    nodes: {
-      accountByAccount: {
-        publickey: string;
-      };
-      nativeBalance: string;
-      numSubEntries: string;
-      numSponsored: string;
-      numSponsoring: string;
-      sellingLiabilities: string;
-    }[];
-  };
-}
-
 type MercuryAccountBalancesCurrentData = {
   trustlinesByPublicKey: {
     balance: string;
@@ -47,6 +32,16 @@ type MercuryAccountBalancesCurrentData = {
     limit: number;
     accountId: string;
   }[];
+  accountByPublicKey: {
+    accountId: string;
+    nativeBalance: string;
+    buyingLiabilities: string;
+    sellingLiabilities: string;
+    seqNum: string;
+    numSubentries: string;
+    numSponsored: string;
+    numSponsoring: string;
+  };
 } & {
   [key: string]: {
     contractId: string;
@@ -102,27 +97,39 @@ interface TokenDetails {
 
 const transformAccountBalancesCurrentData = async (
   rawResponseCurrentData: OperationResult<MercuryAccountBalancesCurrentData>,
-  rawResponseAccountObject: OperationResult<MercuryAccountObject>,
   tokenDetails: TokenDetails,
   contractIds: string[]
 ) => {
-  const accountObjectData =
-    rawResponseAccountObject?.data?.accountObjectByPublicKey.nodes || [];
+  const accountObject = rawResponseCurrentData?.data?.accountByPublicKey;
   const accountCurrentTrustlines =
     rawResponseCurrentData?.data?.trustlinesByPublicKey || [];
 
-  const accountObject = accountObjectData[0];
-  const numSubEntries = accountObject?.numSubEntries || "0";
+  const numSubEntries = accountObject?.numSubentries || "0";
   const numSponsoring = accountObject?.numSponsoring || "0";
   const numSponsored = accountObject?.numSponsored || "0";
-  const sellingLiabilities = accountObject?.sellingLiabilities || "0";
+  const sellingLiabilities = formatTokenAmount(
+    new BigNumber(accountObject?.sellingLiabilities || "0"),
+    7
+  );
+  const buyingLiabilities = formatTokenAmount(
+    new BigNumber(accountObject?.buyingLiabilities || "0"),
+    7
+  );
   const nativeBalance = accountObject?.nativeBalance || "0";
 
   const accountBalance = {
     native: {
       token: { type: "native", code: "XLM" },
       total: formatTokenAmount(new BigNumber(nativeBalance), 7),
-      available: new BigNumber(BASE_RESERVE_MIN_COUNT)
+      available: formatTokenAmount(
+        new BigNumber(nativeBalance).minus(
+          new BigNumber(accountObject?.sellingLiabilities || "0")
+        ),
+        7
+      ),
+      buyingLiabilities,
+      sellingLiabilities,
+      minimumBalance: new BigNumber(BASE_RESERVE_MIN_COUNT)
         .plus(new BigNumber(numSubEntries))
         .plus(new BigNumber(numSponsoring))
         .minus(new BigNumber(numSponsored))
