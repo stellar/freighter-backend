@@ -122,12 +122,18 @@ const transformAccountBalancesCurrentData = async (
     native: {
       token: { type: "native", code: "XLM" },
       total: formatTokenAmount(new BigNumber(nativeBalance), 7),
-      available: new BigNumber(BASE_RESERVE_MIN_COUNT)
+      available: formatTokenAmount(
+        new BigNumber(nativeBalance).minus(new BigNumber(sellingLiabilities)),
+        7
+      ),
+      minimumBalance: new BigNumber(BASE_RESERVE_MIN_COUNT)
         .plus(new BigNumber(numSubEntries))
         .plus(new BigNumber(numSponsoring))
         .minus(new BigNumber(numSponsored))
         .times(new BigNumber(BASE_RESERVE))
-        .plus(new BigNumber(sellingLiabilities)),
+        .plus(
+          new BigNumber(formatTokenAmount(new BigNumber(sellingLiabilities), 7))
+        ),
     },
   };
 
