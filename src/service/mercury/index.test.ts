@@ -74,7 +74,6 @@ describe("Mercury Service", () => {
           "query.getAccountBalancesCurrentDataWithBothContracts"
         ],
       } as any,
-      { data: queryMockResponse["query.getAccountObject"] } as any,
       tokenDetails as any,
       [
         "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
@@ -166,73 +165,6 @@ describe("Mercury Service", () => {
     // It would retry 5 times, but we can only mock reject once or all so it rejects once, then succeeds.
     expect(mockRetryable).toHaveBeenCalledTimes(2);
     expect(spyRenewToken).not.toHaveBeenCalled();
-  });
-
-  it("getAccountBalancesMercury throws when there is no sub for public key", async () => {
-    jest
-      .spyOn(mockMercuryClient, "getAccountSubForPubKey")
-      .mockImplementation(
-        (
-          ..._args: Parameters<typeof mockMercuryClient.getAccountSubForPubKey>
-        ): ReturnType<typeof mockMercuryClient.getAccountSubForPubKey> => {
-          return Promise.resolve([{ publickey: "nope" }]);
-        }
-      );
-
-    jest
-      .spyOn(mockMercuryClient, "accountSubscription")
-      .mockImplementation(
-        (
-          ..._args: Parameters<typeof mockMercuryClient.accountSubscription>
-        ): ReturnType<typeof mockMercuryClient.accountSubscription> => {
-          return Promise.resolve({ data: {}, error: null });
-        }
-      );
-
-    const response = await mockMercuryClient.getAccountBalancesMercury(
-      pubKey,
-      [],
-      "TESTNET"
-    );
-    expect(response).toHaveProperty("error");
-    expect(response.error).toBeInstanceOf(Error);
-    if (response.error instanceof Error) {
-      expect(response.error.message).toContain(ERROR.MISSING_SUB_FOR_PUBKEY);
-    }
-  });
-
-  it("will correctly handle missing account subscriptions when fetching balances", async () => {
-    jest
-      .spyOn(mockMercuryClient, "getAccountSubForPubKey")
-      .mockImplementation(
-        (
-          ..._args: Parameters<typeof mockMercuryClient.getAccountSubForPubKey>
-        ): ReturnType<typeof mockMercuryClient.getAccountSubForPubKey> => {
-          return Promise.resolve([{ publickey: "nope" }]);
-        }
-      );
-
-    jest
-      .spyOn(mockMercuryClient, "accountSubscription")
-      .mockImplementation(
-        (
-          ..._args: Parameters<typeof mockMercuryClient.accountSubscription>
-        ): ReturnType<typeof mockMercuryClient.accountSubscription> => {
-          return Promise.resolve({ data: {}, error: null });
-        }
-      );
-
-    const response = await mockMercuryClient.getAccountBalancesMercury(
-      pubKey,
-      [],
-      "TESTNET"
-    );
-    expect(response).toHaveProperty("error");
-    expect(response.error).toBeInstanceOf(Error);
-    if (response.error instanceof Error) {
-      expect(response.error.message).toContain(ERROR.MISSING_SUB_FOR_PUBKEY);
-    }
-    expect(mockMercuryClient.accountSubscription).toHaveBeenCalled();
   });
 
   it("will correctly handle missing account subscriptions when fetching history", async () => {

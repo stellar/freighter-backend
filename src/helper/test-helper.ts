@@ -227,6 +227,14 @@ const queryMockResponse = {
         accountId: pubKey,
       },
     ],
+    accountByPublicKey: {
+      accountId: pubKey,
+      nativeBalance: "10",
+      numSubEntries: "1",
+      numSponsored: "1",
+      numSponsoring: "1",
+      sellingLiabilities: "1000000",
+    },
   },
   "query.getAccountBalancesCurrentDataWithFirstContracts": {
     trustlinesByPublicKey: [
@@ -237,6 +245,14 @@ const queryMockResponse = {
         accountId: pubKey,
       },
     ],
+    accountByPublicKey: {
+      accountId: pubKey,
+      nativeBalance: "10",
+      numSubEntries: "1",
+      numSponsored: "1",
+      numSponsoring: "1",
+      sellingLiabilities: "1000000",
+    },
     CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP: [
       {
         contractId: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
@@ -256,6 +272,14 @@ const queryMockResponse = {
         accountId: pubKey,
       },
     ],
+    accountByPublicKey: {
+      accountId: pubKey,
+      nativeBalance: "10",
+      numSubEntries: "1",
+      numSponsored: "1",
+      numSponsoring: "1",
+      sellingLiabilities: "1000000",
+    },
     CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP: [
       {
         contractId: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
