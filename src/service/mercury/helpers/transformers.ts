@@ -134,7 +134,9 @@ const transformAccountBalancesCurrentData = async (
         .plus(new BigNumber(numSponsoring))
         .minus(new BigNumber(numSponsored))
         .times(new BigNumber(BASE_RESERVE))
-        .plus(new BigNumber(sellingLiabilities)),
+        .plus(
+          new BigNumber(formatTokenAmount(new BigNumber(sellingLiabilities), 7))
+        ),
     },
   };
 
