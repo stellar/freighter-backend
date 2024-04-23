@@ -24,7 +24,8 @@ export function buildConfig(config: Record<string, string>) {
     return false;
   });
   if (!isMissingKeys) {
-    throw new Error(ERROR.INVALID_ENV(missingKeys.join()));
+    console.log(ERROR.INVALID_ENV(missingKeys.join()));
+    // throw new Error(ERROR.INVALID_ENV(missingKeys.join()));
   }
 
   return {
