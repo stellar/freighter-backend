@@ -22,7 +22,7 @@ import { Logger } from "pino";
 
 const SOROBAN_RPC_URLS: { [key in keyof typeof Networks]?: string } = {
   PUBLIC:
-    "http://soroban-rpc-pubnet-prd.soroban-rpc-pubnet-prd.svc.cluster.local:8000",
+    "http://soroban-rpc-pubnet-dev.soroban-rpc-pubnet-dev.svc.cluster.local:8000",
   TESTNET: "https://soroban-testnet.stellar.org/",
   FUTURENET: "https://rpc-futurenet.stellar.org/",
 };
