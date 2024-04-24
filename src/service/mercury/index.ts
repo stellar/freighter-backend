@@ -1,7 +1,7 @@
 import { Client, CombinedError } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { Address, Horizon, xdr } from "stellar-sdk";
+import { Address, Asset, Horizon, Networks, xdr } from "stellar-sdk";
 import { Redis } from "ioredis";
 import BigNumber from "bignumber.js";
 import Prometheus from "prom-client";
@@ -27,7 +27,7 @@ import {
   NativeBalance,
   NETWORK_URLS,
 } from "../../helper/horizon-rpc";
-import { NetworkNames, isPubKey } from "../../helper/validate";
+import { NetworkNames } from "../../helper/validate";
 import { ERROR } from "../../helper/error";
 import {
   MercurySupportedNetworks,
@@ -580,13 +580,26 @@ export class MercuryClient {
       }
     }
 
+    console.log(balances);
+
     for (const balance of balances) {
       // if this is a SAC, we can get the issuer key from the `name` key. Otherwise, just use the contract ID
-      const issuerKey =
-        balance.name.split(":").length > 1 &&
-        isPubKey(balance.name.split(":")[1])
-          ? balance.name.split(":")[1]
-          : balance.id;
+      if (balance.name.includes(":")) {
+        console.log(balance);
+        console.log(balance.name.split(":"));
+        console.log(
+          new Asset(
+            ...(balance.name.split(":") as [string, string])
+          ).contractId(Networks[network]),
+          balance.id
+        );
+      }
+      const isSac =
+        balance.name.includes(":") &&
+        new Asset(...(balance.name.split(":") as [string, string])).contractId(
+          Networks[network]
+        ) === balance.id;
+      const issuerKey = isSac ? balance.name.split(":")[1] : balance.id;
 
       balanceMap[`${balance.symbol}:${issuerKey}`] = {
         token: {
@@ -688,7 +701,8 @@ export class MercuryClient {
       const data = await transformAccountBalancesCurrentData(
         responseCurrentData,
         tokenDetails,
-        contractIds
+        contractIds,
+        Networks[network]
       );
 
       return {
