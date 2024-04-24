@@ -1,4 +1,5 @@
 export const ERROR = {
+  ASSET_TYPE_NOT_SUPPORTED: "unknown asset type",
   ACCOUNT_NOT_SOURCE:
     "Transfer contains authorization entry for a different account",
   AUTH_SUB_INVOCATIONS:

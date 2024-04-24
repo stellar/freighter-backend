@@ -1,4 +1,4 @@
-import { Horizon, scValToNative, xdr } from "stellar-sdk";
+import { Horizon, Networks, scValToNative, xdr } from "stellar-sdk";
 import BigNumber from "bignumber.js";
 
 import { mutation } from "./queries";
@@ -78,7 +78,8 @@ describe("Mercury Service", () => {
       [
         "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
         "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
-      ]
+      ],
+      Networks.TESTNET
     );
     const expected = {
       ...transformedData,
@@ -212,6 +213,7 @@ describe("Mercury Service", () => {
       .spyOn(SorobanRpcHelper, "getTokenBalance")
       .mockReturnValue(Promise.resolve(100));
     // first contract
+    // const asset = new Asset("FOO", "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL").contractId(Networks.TESTNET)
     jest.spyOn(mockMercuryClient, "tokenDetails").mockReturnValueOnce(
       Promise.resolve({
         name: "FOO:GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL",
