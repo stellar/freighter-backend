@@ -1,5 +1,12 @@
 import { OperationResult } from "@urql/core";
-import { Horizon, StrKey, scValToNative, xdr } from "stellar-sdk";
+import {
+  Asset,
+  Horizon,
+  Networks,
+  StrKey,
+  scValToNative,
+  xdr,
+} from "stellar-sdk";
 import BigNumber from "bignumber.js";
 import {
   BASE_RESERVE,
@@ -8,7 +15,7 @@ import {
   getAssetType,
 } from "../../../helper/horizon-rpc";
 import { formatTokenAmount } from "../../../helper/format";
-import { getOpArgs, isSacIssuer } from "../../../helper/soroban-rpc";
+import { getOpArgs } from "../../../helper/soroban-rpc";
 
 // Transformers take an API response, and transform it/augment it for frontend consumption
 
@@ -98,7 +105,8 @@ interface TokenDetails {
 const transformAccountBalancesCurrentData = async (
   rawResponseCurrentData: OperationResult<MercuryAccountBalancesCurrentData>,
   tokenDetails: TokenDetails,
-  contractIds: string[]
+  contractIds: string[],
+  networkpassPhrase: Networks
 ) => {
   const accountObject = rawResponseCurrentData?.data?.accountByPublicKey;
   const accountCurrentTrustlines =
@@ -213,7 +221,16 @@ const transformAccountBalancesCurrentData = async (
   });
 
   const balances = formattedBalances
-    .filter((bal) => !isSacIssuer(bal.name))
+    .filter((bal) => {
+      if (bal.name.includes(":")) {
+        const [assetId, assetIssuer] = bal.name.split(":");
+        const contractId = new Asset(assetId, assetIssuer).contractId(
+          networkpassPhrase
+        );
+        return contractId !== bal.contractId;
+      }
+      return true;
+    })
     .reduce((prev, curr) => {
       prev[`${curr.symbol}:${curr.contractId}`] = {
         token: {
