@@ -397,6 +397,29 @@ const isSacIssuer = (name: string) => {
   return false;
 };
 
+const isSacContract = async (contractId: string, network: NetworkNames) => {
+  // verify the contract executable in the instance entry
+  // The SAC has a unique contract executable type
+  const server = await getServer(network);
+  const instance = new Contract(contractId).getFootprint();
+  const ledgerKeyContractCode = instance.toXDR("base64");
+
+  const { entries } = await server.getLedgerEntries(
+    xdr.LedgerKey.fromXDR(ledgerKeyContractCode, "base64")
+  );
+
+  if (entries && entries.length) {
+    const parsed = entries[0].val;
+    const executable = parsed.contractData().val().instance().executable();
+
+    return (
+      executable.switch().name ===
+      xdr.ContractExecutableType.contractExecutableStellarAsset().name
+    );
+  }
+  throw new Error(ERROR.ENTRY_NOT_FOUND.CONTRACT_CODE);
+};
+
 export {
   buildTransfer,
   getLedgerKeyContractCode,
@@ -411,6 +434,7 @@ export {
   getTokenSymbol,
   getTxBuilder,
   isSacIssuer,
+  isSacContract,
   isTokenSpec,
   parseWasmXdr,
   simulateTx,
