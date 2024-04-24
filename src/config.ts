@@ -17,7 +17,7 @@ export function buildConfig(config: Record<string, string>) {
   const missingKeys = [] as string[];
 
   const isMissingKeys = ENV_KEYS.every((key) => {
-    if (configKeys.includes(key)) {
+    if (configKeys.includes(key) || process.env[key]) {
       return true;
     }
     missingKeys.push(key);
