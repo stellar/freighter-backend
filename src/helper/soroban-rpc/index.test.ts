@@ -1,6 +1,5 @@
 import { xdr } from "stellar-sdk";
 
-// import { testLogger } from "../test-helper";
 import { base64regex } from "../test-helper";
 import {
   getLedgerKeyContractCode,
@@ -68,10 +67,5 @@ describe("Soroban RPC helpers", () => {
 
       expect(isSep41).toBeFalsy();
     });
-  });
-
-  describe("isSacContractExecutable", () => {
-    // const sac = { code: "wBTC", issuer: "GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56", contract: "CAP5AMC2OHNVREO66DFIN6DHJMPOBAJ2KCDDIMFBR7WWJH5RZBFM3UEI"}
-    // const notSac = { code: "TST", issuer: "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL", contract: "CCHKQGYTHKK5BGE5VCDGO72QPXXM4U674EZTV4ERKF6DQEPJVCRRHM4W"}
   });
 });

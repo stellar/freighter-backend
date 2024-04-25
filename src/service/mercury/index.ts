@@ -1,7 +1,7 @@
 import { Client, CombinedError } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { Address, Asset, Horizon, Networks, xdr } from "stellar-sdk";
+import { Address, Horizon, Networks, xdr } from "stellar-sdk";
 import { Redis } from "ioredis";
 import BigNumber from "bignumber.js";
 import Prometheus from "prom-client";
@@ -15,6 +15,7 @@ import {
   getTokenName,
   getTokenSymbol,
   getTxBuilder,
+  isSacContract,
 } from "../../helper/soroban-rpc";
 import {
   transformAccountBalancesCurrentData,
@@ -581,11 +582,7 @@ export class MercuryClient {
     }
 
     for (const balance of balances) {
-      const isSac =
-        balance.name.includes(":") &&
-        new Asset(...(balance.name.split(":") as [string, string])).contractId(
-          Networks[network]
-        ) === balance.id;
+      const isSac = isSacContract(balance.name, balance.id, Networks[network]);
       const issuerKey = isSac ? balance.name.split(":")[1] : balance.id;
 
       balanceMap[`${balance.symbol}:${issuerKey}`] = {
