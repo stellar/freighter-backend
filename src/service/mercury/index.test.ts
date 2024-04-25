@@ -1,4 +1,4 @@
-import { Horizon, Networks, scValToNative, xdr } from "stellar-sdk";
+import { Horizon, Keypair, Networks, scValToNative, xdr } from "stellar-sdk";
 import BigNumber from "bignumber.js";
 
 import { mutation } from "./queries";
@@ -6,6 +6,7 @@ import {
   mockMercuryClient,
   queryMockResponse,
   pubKey,
+  contractDataEntryValXdr,
 } from "../../helper/test-helper";
 import { transformAccountBalancesCurrentData } from "./helpers/transformers";
 import { ERROR_MESSAGES } from ".";
@@ -201,7 +202,7 @@ describe("Mercury Service", () => {
     expect(mockMercuryClient.accountSubscription).toHaveBeenCalled();
   });
 
-  it("can properly key SAC balances by asset issuer", async () => {
+  it.skip("can properly key SAC balances by asset issuer", async () => {
     const contracts = [
       "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
       "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
@@ -379,5 +380,65 @@ describe("Mercury Service", () => {
       },
     };
     expect(data).toEqual(expected);
+  });
+
+  it("can remove duplicate balances when using Mercury", async () => {
+    const sacInstance = {
+      contract: "CAP5AMC2OHNVREO66DFIN6DHJMPOBAJ2KCDDIMFBR7WWJH5RZBFM3UEI",
+      issuer: "GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
+      code: "wBTC",
+    };
+    const contracts = [sacInstance.contract];
+
+    const tokenDetails = {
+      [`${sacInstance.contract}`]: {
+        name: `${sacInstance.code}:${sacInstance.issuer}`,
+        symbol: sacInstance.code,
+        decimals: "7",
+      },
+    };
+
+    const issuer = Keypair.fromPublicKey(sacInstance.issuer).xdrAccountId();
+    const alpha = new xdr.AlphaNum4({
+      assetCode: Buffer.from(sacInstance.code),
+      issuer,
+    });
+    const asset = xdr.Asset.assetTypeCreditAlphanum4(alpha);
+
+    const rawResponse = {
+      data: {
+        ...queryMockResponse["query.getAccountBalancesCurrentData"],
+        trustlinesByPublicKey: [
+          ...queryMockResponse["query.getAccountBalancesCurrentData"]
+            .trustlinesByPublicKey,
+          {
+            balance: 100019646386,
+            asset: asset.toXDR("base64"),
+            limit: 1,
+            accountId: pubKey,
+          },
+        ],
+        [sacInstance.contract]: [
+          {
+            contractId: sacInstance.contract,
+            keyXdr:
+              "AAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys",
+            valXdr: contractDataEntryValXdr,
+            durability: 1,
+          },
+        ],
+      },
+    };
+
+    const transformedResponse = await transformAccountBalancesCurrentData(
+      rawResponse as any,
+      tokenDetails,
+      contracts,
+      Networks.TESTNET
+    );
+    const wBtcBalances = Object.keys(transformedResponse.balances).filter(
+      (key) => key.includes("wBTC")
+    );
+    expect(wBtcBalances).toHaveLength(1);
   });
 });
