@@ -580,20 +580,7 @@ export class MercuryClient {
       }
     }
 
-    console.log(balances);
-
     for (const balance of balances) {
-      // if this is a SAC, we can get the issuer key from the `name` key. Otherwise, just use the contract ID
-      if (balance.name.includes(":")) {
-        console.log(balance);
-        console.log(balance.name.split(":"));
-        console.log(
-          new Asset(
-            ...(balance.name.split(":") as [string, string])
-          ).contractId(Networks[network]),
-          balance.id
-        );
-      }
       const isSac =
         balance.name.includes(":") &&
         new Asset(...(balance.name.split(":") as [string, string])).contractId(
