@@ -214,7 +214,6 @@ describe("Mercury Service", () => {
       .spyOn(SorobanRpcHelper, "getTokenBalance")
       .mockReturnValue(Promise.resolve(100));
     // first contract
-    // const asset = new Asset("FOO", "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL").contractId(Networks.TESTNET)
     jest.spyOn(mockMercuryClient, "tokenDetails").mockReturnValueOnce(
       Promise.resolve({
         name: "FOO:GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL",

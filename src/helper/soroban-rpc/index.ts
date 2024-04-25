@@ -14,6 +14,7 @@ import {
   StrKey,
   Address,
   ContractSpec,
+  Asset,
 } from "stellar-sdk";
 import { XdrReader } from "@stellar/js-xdr";
 import { NetworkNames } from "../validate";
@@ -412,6 +413,20 @@ const isSacContractExecutable = async (
   throw new Error(ERROR.ENTRY_NOT_FOUND.CONTRACT_CODE);
 };
 
+const isSacContract = (name: string, contractId: string, network: Networks) => {
+  if (name.includes(":")) {
+    try {
+      new Asset(...(name.split(":") as [string, string])).contractId(
+        network
+      ) === contractId;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  return false;
+};
+
 export {
   buildTransfer,
   getLedgerKeyContractCode,
@@ -426,6 +441,7 @@ export {
   getTokenSymbol,
   getTxBuilder,
   isSacContractExecutable,
+  isSacContract,
   isTokenSpec,
   parseWasmXdr,
   simulateTx,
