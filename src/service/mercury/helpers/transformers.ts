@@ -1,12 +1,5 @@
 import { OperationResult } from "@urql/core";
-import {
-  Asset,
-  Horizon,
-  Networks,
-  StrKey,
-  scValToNative,
-  xdr,
-} from "stellar-sdk";
+import { Horizon, Networks, StrKey, scValToNative, xdr } from "stellar-sdk";
 import BigNumber from "bignumber.js";
 import {
   BASE_RESERVE,
@@ -15,7 +8,7 @@ import {
   getAssetType,
 } from "../../../helper/horizon-rpc";
 import { formatTokenAmount } from "../../../helper/format";
-import { getOpArgs } from "../../../helper/soroban-rpc";
+import { getOpArgs, isSacContract } from "../../../helper/soroban-rpc";
 
 // Transformers take an API response, and transform it/augment it for frontend consumption
 
@@ -221,16 +214,7 @@ const transformAccountBalancesCurrentData = async (
   });
 
   const balances = formattedBalances
-    .filter((bal) => {
-      if (bal.name.includes(":")) {
-        const [assetId, assetIssuer] = bal.name.split(":");
-        const contractId = new Asset(assetId, assetIssuer).contractId(
-          networkpassPhrase
-        );
-        return contractId !== bal.contractId;
-      }
-      return true;
-    })
+    .filter((bal) => isSacContract(bal.name, bal.contractId, networkpassPhrase))
     .reduce((prev, curr) => {
       prev[`${curr.symbol}:${curr.contractId}`] = {
         token: {
