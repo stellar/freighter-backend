@@ -202,9 +202,9 @@ describe("Mercury Service", () => {
     expect(mockMercuryClient.accountSubscription).toHaveBeenCalled();
   });
 
-  it.skip("can properly key SAC balances by asset issuer", async () => {
+  it("can properly key SAC balances by asset issuer", async () => {
     const contracts = [
-      "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+      "CAP5AMC2OHNVREO66DFIN6DHJMPOBAJ2KCDDIMFBR7WWJH5RZBFM3UEI",
       "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
     ];
     jest
@@ -216,8 +216,8 @@ describe("Mercury Service", () => {
     // first contract
     jest.spyOn(mockMercuryClient, "tokenDetails").mockReturnValueOnce(
       Promise.resolve({
-        name: "FOO:GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL",
-        symbol: "FOO",
+        name: "wBTC:GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
+        symbol: "wBTC",
         decimals: "5",
       })
     );
@@ -237,15 +237,15 @@ describe("Mercury Service", () => {
     );
 
     const expected = {
-      "FOO:GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL": {
+      "wBTC:GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56": {
         token: {
-          code: "FOO",
+          code: "wBTC",
           issuer: {
-            key: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+            key: "CAP5AMC2OHNVREO66DFIN6DHJMPOBAJ2KCDDIMFBR7WWJH5RZBFM3UEI",
           },
         },
-        contractId: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
-        symbol: "FOO",
+        contractId: "CAP5AMC2OHNVREO66DFIN6DHJMPOBAJ2KCDDIMFBR7WWJH5RZBFM3UEI",
+        symbol: "wBTC",
         decimals: "5",
         total: new BigNumber(100),
         available: new BigNumber(100),

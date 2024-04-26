@@ -416,9 +416,11 @@ const isSacContractExecutable = async (
 const isSacContract = (name: string, contractId: string, network: Networks) => {
   if (name.includes(":")) {
     try {
-      new Asset(...(name.split(":") as [string, string])).contractId(
-        network
-      ) === contractId;
+      return (
+        new Asset(...(name.split(":") as [string, string])).contractId(
+          network
+        ) === contractId
+      );
     } catch (error) {
       return false;
     }
