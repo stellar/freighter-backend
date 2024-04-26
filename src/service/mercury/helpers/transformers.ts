@@ -214,7 +214,9 @@ const transformAccountBalancesCurrentData = async (
   });
 
   const balances = formattedBalances
-    .filter((bal) => isSacContract(bal.name, bal.contractId, networkpassPhrase))
+    .filter(
+      (bal) => !isSacContract(bal.name, bal.contractId, networkpassPhrase)
+    )
     .reduce((prev, curr) => {
       prev[`${curr.symbol}:${curr.contractId}`] = {
         token: {
