@@ -264,7 +264,7 @@ const getLedgerEntries = async (
   return json;
 };
 
-const getTokenSpec = async (
+const getContractSpec = async (
   contractId: string,
   network: NetworkNames,
   logger: Logger
@@ -283,7 +283,7 @@ const getTokenSpec = async (
     const entries = result.entries || [];
     if (error || !entries.length) {
       logger.error(error);
-      return { error: "Unable to fetch token spec", result: null };
+      return { error: "Unable to fetch contract spec", result: null };
     }
 
     const contractCodeLedgerEntryData = entries[0].xdr;
@@ -295,11 +295,25 @@ const getTokenSpec = async (
     const wasmEntries = wasmResult.entries || [];
     if (wasmError || !wasmEntries.length) {
       logger.error(wasmError);
-      return { error: "Unable to fetch token spec", result: null };
+      return { error: "Unable to fetch contract spec", result: null };
     }
 
-    const wasm = await parseWasmXdr(wasmEntries[0].xdr);
-    return { error: null, result: isTokenSpec(wasm) };
+    const spec = await parseWasmXdr(wasmEntries[0].xdr);
+    return { result: spec, error: null };
+  } catch (error) {
+    logger.error(error);
+    return { error: "Unable to fetch contract spec", result: null };
+  }
+};
+
+const getIsTokenSpec = async (
+  contractId: string,
+  network: NetworkNames,
+  logger: Logger
+) => {
+  try {
+    const spec = await getContractSpec(contractId, network, logger);
+    return { error: null, result: isTokenSpec(spec) };
   } catch (error) {
     logger.error(error);
     return { error: "Unable to fetch token spec", result: null };
@@ -431,19 +445,20 @@ const isSacContract = (name: string, contractId: string, network: Networks) => {
 
 export {
   buildTransfer,
+  getContractSpec,
+  getIsTokenSpec,
+  getLedgerEntries,
   getLedgerKeyContractCode,
   getLedgerKeyWasmId,
-  getLedgerEntries,
   getOpArgs,
   getServer,
   getTokenBalance,
   getTokenDecimals,
   getTokenName,
-  getTokenSpec,
   getTokenSymbol,
   getTxBuilder,
-  isSacContractExecutable,
   isSacContract,
+  isSacContractExecutable,
   isTokenSpec,
   parseWasmXdr,
   simulateTx,
