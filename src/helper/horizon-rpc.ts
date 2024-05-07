@@ -1,5 +1,6 @@
 import BigNumber from "bignumber.js";
-import { AssetType, Horizon, TransactionBuilder } from "stellar-sdk";
+import * as StellarSdkNext from "stellar-sdk-next";
+import * as StellarSdk from "stellar-sdk";
 
 export const BASE_RESERVE = 0.5;
 export const BASE_RESERVE_MIN_COUNT = 2;
@@ -21,12 +22,12 @@ export interface Issuer {
 }
 
 export interface NativeToken {
-  type: AssetType;
+  type: StellarSdk.AssetType;
   code: string;
 }
 
 export interface AssetToken {
-  type: AssetType;
+  type: StellarSdk.AssetType;
   code: string;
   issuer: Issuer;
   anchorAsset?: string;
@@ -66,7 +67,7 @@ export interface BalanceMap {
 }
 
 export function getBalanceIdentifier(
-  balance: Horizon.HorizonApi.BalanceLine
+  balance: StellarSdk.Horizon.HorizonApi.BalanceLine
 ): string {
   if ("asset_issuer" in balance && !balance.asset_issuer) {
     return "native";
@@ -95,7 +96,7 @@ export function getAssetType(code?: string) {
 }
 
 export const makeDisplayableBalances = (
-  accountDetails: Horizon.ServerApi.AccountRecord
+  accountDetails: StellarSdk.Horizon.ServerApi.AccountRecord
 ) => {
   const { balances, subentry_count, num_sponsored, num_sponsoring } =
     accountDetails;
@@ -146,7 +147,7 @@ export const makeDisplayableBalances = (
       }
 
       const liquidityPoolBalance =
-        balance as Horizon.HorizonApi.BalanceLineLiquidityPool;
+        balance as StellarSdk.Horizon.HorizonApi.BalanceLineLiquidityPool;
 
       if (identifier.includes(":lp")) {
         return {
@@ -159,7 +160,8 @@ export const makeDisplayableBalances = (
         };
       }
 
-      const assetBalance = balance as Horizon.HorizonApi.BalanceLineAsset;
+      const assetBalance =
+        balance as StellarSdk.Horizon.HorizonApi.BalanceLineAsset;
       const assetSponsor = assetBalance.sponsor
         ? { sponsor: assetBalance.sponsor }
         : {};
@@ -191,7 +193,7 @@ export const makeDisplayableBalances = (
 
 export const fetchAccountDetails = async (
   pubKey: string,
-  server: Horizon.Server
+  server: StellarSdkNext.Horizon.Server | StellarSdk.Horizon.Server
 ) => {
   try {
     const accountSummary = await server.accounts().accountId(pubKey).call();
@@ -221,7 +223,7 @@ export const fetchAccountDetails = async (
 
 export const fetchAccountHistory = async (
   pubKey: string,
-  server: Horizon.Server
+  server: StellarSdkNext.Horizon.Server | StellarSdk.Horizon.Server
 ) => {
   try {
     const operationsData = await server
@@ -243,11 +245,19 @@ export const submitTransaction = async (
   networkUrl: string,
   networkPassphrase: string
 ): Promise<{
-  data: Horizon.HorizonApi.SubmitTransactionResponse | null;
+  data: StellarSdk.Horizon.HorizonApi.SubmitTransactionResponse | null;
   error: unknown;
 }> => {
-  const tx = TransactionBuilder.fromXDR(signedXDR, networkPassphrase);
-  const server = new Horizon.Server(networkUrl);
+  const TxBuilder =
+    networkPassphrase === StellarSdk.Networks.FUTURENET
+      ? StellarSdkNext.TransactionBuilder
+      : StellarSdk.TransactionBuilder;
+  const Server =
+    networkPassphrase === StellarSdk.Networks.FUTURENET
+      ? StellarSdkNext.Horizon.Server
+      : StellarSdk.Horizon.Server;
+  const tx = TxBuilder.fromXDR(signedXDR, networkPassphrase);
+  const server = new Server(networkUrl);
 
   try {
     const data = await server.submitTransaction(tx);

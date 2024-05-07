@@ -15,18 +15,8 @@ import {
   NetworkNames,
 } from "../helper/validate";
 import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
-import {
-  Address,
-  BASE_FEE,
-  Memo,
-  MemoType,
-  Operation,
-  SorobanRpc,
-  Transaction,
-  TransactionBuilder,
-  XdrLargeInt,
-  xdr,
-} from "stellar-sdk";
+import * as StellarSdkNext from "stellar-sdk-next";
+import * as StellarSdk from "stellar-sdk";
 import {
   SOROBAN_RPC_URLS,
   buildTransfer,
@@ -134,8 +124,13 @@ export async function initApiServer(
             return reply.code(400).send("Unknown network");
           }
 
+          const Server =
+            request.query.network === "FUTURENET"
+              ? StellarSdkNext.SorobanRpc.Server
+              : StellarSdk.SorobanRpc.Server;
+
           try {
-            const server = new SorobanRpc.Server(networkUrl, {
+            const server = new Server(networkUrl, {
               allowHttp: networkUrl.startsWith("http://"),
             });
 
@@ -618,14 +613,17 @@ export async function initApiServer(
           const { signed_xdr, network_url, network_passphrase } = request.body;
 
           try {
-            const tx = TransactionBuilder.fromXDR(
+            const tx = StellarSdk.TransactionBuilder.fromXDR(
               signed_xdr,
               network_passphrase
             );
-            const server = new SorobanRpc.Server(network_url);
+            const server = new StellarSdk.SorobanRpc.Server(network_url);
 
             const data = await simulateTx<unknown>(
-              tx as Transaction<Memo<MemoType>, Operation[]>,
+              tx as StellarSdk.Transaction<
+                StellarSdk.Memo<StellarSdk.MemoType>,
+                StellarSdk.Operation[]
+              >,
               server
             );
             reply.code(200).send(data);
@@ -677,41 +675,39 @@ export async function initApiServer(
           } = request.body;
 
           try {
-            const _fee = fee || BASE_FEE;
-            const server = new SorobanRpc.Server(network_url, {
+            const _fee = fee || StellarSdk.BASE_FEE;
+            const server = new StellarSdk.SorobanRpc.Server(network_url, {
               allowHttp: network_url.startsWith("http://"),
             });
             const sourceAccount = await server.getAccount(pub_key);
-            const builder = new TransactionBuilder(sourceAccount, {
+            const builder = new StellarSdk.TransactionBuilder(sourceAccount, {
               fee: _fee,
               networkPassphrase: network_passphrase,
             });
             const _params = [
-              new Address(params.publicKey).toScVal(), // from
-              new Address(params.destination).toScVal(), // to
-              new XdrLargeInt("i128", params.amount).toI128(), // amount
+              new StellarSdk.Address(params.publicKey).toScVal(), // from
+              new StellarSdk.Address(params.destination).toScVal(), // to
+              new StellarSdk.XdrLargeInt("i128", params.amount).toI128(), // amount
             ];
             const tx = buildTransfer(address, _params, memo, builder);
             const simulationResponse = (await server.simulateTransaction(
               tx
-            )) as SorobanRpc.Api.SimulateTransactionSuccessResponse;
+            )) as StellarSdk.SorobanRpc.Api.SimulateTransactionSuccessResponse;
 
-            const preparedTransaction = SorobanRpc.assembleTransaction(
-              tx,
-              simulationResponse
-            );
+            const preparedTransaction =
+              StellarSdk.SorobanRpc.assembleTransaction(tx, simulationResponse);
 
             const built = preparedTransaction.build();
             switch (built.operations[0].type) {
               case "invokeHostFunction": {
                 const sorobanOp = built
-                  .operations[0] as Operation.InvokeHostFunction;
+                  .operations[0] as StellarSdk.Operation.InvokeHostFunction;
                 const auths = sorobanOp.auth || [];
 
                 for (const auth of auths) {
                   if (
                     auth.credentials().switch() !==
-                    xdr.SorobanCredentialsType.sorobanCredentialsSourceAccount()
+                    StellarSdk.xdr.SorobanCredentialsType.sorobanCredentialsSourceAccount()
                   ) {
                     throw new Error(ERROR.ACCOUNT_NOT_SOURCE);
                   }
