@@ -20,7 +20,8 @@ import * as StellarSdk from "stellar-sdk";
 import {
   SOROBAN_RPC_URLS,
   buildTransfer,
-  getTokenSpec,
+  getContractSpec,
+  getIsTokenSpec,
   simulateTx,
 } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
@@ -389,7 +390,7 @@ export async function initApiServer(
           }
 
           try {
-            const { result, error } = await getTokenSpec(
+            const { result, error } = await getIsTokenSpec(
               contractId,
               network,
               logger
@@ -400,6 +401,54 @@ export async function initApiServer(
             } else {
               reply.code(200).send({ isSep41Compliant: result, error: null });
             }
+          } catch (error) {
+            reply.code(500).send("Unexpected Server Error");
+          }
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/contract-spec/:contractId",
+        schema: {
+          params: {
+            ["contractId"]: {
+              type: "string",
+              validator: (qStr: string) => isContractId(qStr),
+            },
+          },
+          querystring: {
+            ["network"]: {
+              type: "string",
+              validator: (qStr: string) => isNetwork(qStr),
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Params: { ["contractId"]: string };
+            Querystring: {
+              ["network"]: NetworkNames;
+            };
+          }>,
+          reply
+        ) => {
+          const contractId = request.params["contractId"];
+          const { network } = request.query;
+
+          const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
+          if (skipSorobanPubnet) {
+            return reply.code(400).send("Soroban has been disabled on pubnet");
+          }
+
+          try {
+            const { result, error } = await getContractSpec(
+              contractId,
+              network,
+              logger
+            );
+
+            reply.code(error ? 400 : 200).send({ data: result, error });
           } catch (error) {
             reply.code(500).send("Unexpected Server Error");
           }
