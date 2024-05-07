@@ -307,7 +307,7 @@ const getContractSpec = async (
       return { error: "Unable to fetch contract spec", result: null };
     }
 
-    const spec = await parseWasmXdr(wasmEntries[0].xdr);
+    const spec = await parseWasmXdr(wasmEntries[0].xdr, network);
     return { result: spec, error: null };
   } catch (error) {
     logger.error(error);
