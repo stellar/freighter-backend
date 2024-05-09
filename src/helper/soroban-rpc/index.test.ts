@@ -18,7 +18,7 @@ describe("Soroban RPC helpers", () => {
 
   describe("getLedgerKeyContractCode", () => {
     it("will return ledger key for contract code", () => {
-      const ledgerKeyXdr = getLedgerKeyContractCode(CONTRACT_ID);
+      const ledgerKeyXdr = getLedgerKeyContractCode(CONTRACT_ID, "TESTNET");
       const ledgerKeyFromXdr = xdr.LedgerKey.fromXDR(ledgerKeyXdr, "base64");
 
       expect(typeof ledgerKeyXdr).toEqual("string");
@@ -27,13 +27,18 @@ describe("Soroban RPC helpers", () => {
       expect(ledgerKeyFromXdr.switch().name).toEqual("contractData");
     });
     it("will throw when it fails to get ledger key", () => {
-      expect(() => getLedgerKeyContractCode("not contract ID")).toThrowError();
+      expect(() =>
+        getLedgerKeyContractCode("not contract ID", "TESTNET")
+      ).toThrowError();
     });
   });
 
   describe("getLedgerKeyWasmId", () => {
     it("will return the contract code ledger key for a contract ID", () => {
-      const ledgerKeyWasmId = getLedgerKeyWasmId(ledgerKeyContractData);
+      const ledgerKeyWasmId = getLedgerKeyWasmId(
+        ledgerKeyContractData,
+        "TESTNET"
+      );
       const ledgerKeyFromXdr = xdr.LedgerKey.fromXDR(ledgerKeyWasmId, "base64");
 
       expect(typeof ledgerKeyWasmId).toEqual("string");
@@ -43,20 +48,22 @@ describe("Soroban RPC helpers", () => {
     });
 
     it("will throw when it fails to get wasm ID xdr", () => {
-      expect(() => getLedgerKeyWasmId("not conract data xdr")).toThrowError();
+      expect(() =>
+        getLedgerKeyWasmId("not conract data xdr", "TESTNET")
+      ).toThrowError();
     });
   });
 
   describe("parseWasmXdr", () => {
     it("will return a json schema of a contract spec", async () => {
-      const spec = await parseWasmXdr(contractWasmXdr);
+      const spec = await parseWasmXdr(contractWasmXdr, "TESTNET");
       expect(spec).toHaveProperty("definitions");
     });
   });
 
   describe("isTokenSpec", () => {
     it("will return a boolean indicating if the spec matches sep41 spec", async () => {
-      const spec = await parseWasmXdr(contractWasmXdr);
+      const spec = await parseWasmXdr(contractWasmXdr, "TESTNET");
       const isSep41 = isTokenSpec(spec);
 
       expect(isSep41).toBeTruthy();

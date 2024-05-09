@@ -1,5 +1,6 @@
 import { OperationResult } from "@urql/core";
-import { Horizon, Networks, StrKey, scValToNative, xdr } from "stellar-sdk";
+import * as StellarSdkNext from "stellar-sdk-next";
+import * as StellarSdk from "stellar-sdk";
 import BigNumber from "bignumber.js";
 import {
   BASE_RESERVE,
@@ -99,8 +100,12 @@ const transformAccountBalancesCurrentData = async (
   rawResponseCurrentData: OperationResult<MercuryAccountBalancesCurrentData>,
   tokenDetails: TokenDetails,
   contractIds: string[],
-  networkpassPhrase: Networks
+  networkpassPhrase: StellarSdk.Networks
 ) => {
+  const xdr =
+    networkpassPhrase === StellarSdk.Networks.FUTURENET
+      ? StellarSdkNext.xdr
+      : StellarSdk.xdr;
   const accountObject = rawResponseCurrentData?.data?.accountByPublicKey;
   const accountCurrentTrustlines =
     rawResponseCurrentData?.data?.trustlinesByPublicKey || [];
@@ -152,7 +157,7 @@ const transformAccountBalancesCurrentData = async (
 
       case "assetTypeCreditAlphanum4": {
         const code = trustline.alphaNum4().assetCode().toString();
-        const issuer = StrKey.encodeEd25519PublicKey(
+        const issuer = StellarSdk.StrKey.encodeEd25519PublicKey(
           trustline.alphaNum4().issuer().ed25519()
         );
         prev[`${code}:${issuer}`] = {
@@ -170,7 +175,7 @@ const transformAccountBalancesCurrentData = async (
 
       case "assetTypeCreditAlphanum12": {
         const code = trustline.alphaNum12().assetCode().toString();
-        const issuer = StrKey.encodeEd25519PublicKey(
+        const issuer = StellarSdk.StrKey.encodeEd25519PublicKey(
           trustline.alphaNum12().issuer().ed25519()
         );
         prev[`${code}:${issuer}`] = {
@@ -209,7 +214,7 @@ const transformAccountBalancesCurrentData = async (
     return {
       ...entry,
       ...details,
-      total: scValToNative(val),
+      total: StellarSdk.scValToNative(val),
     };
   });
 
@@ -281,11 +286,13 @@ const transformAccountBalances = async (
 
   const formattedBalances = tokenBalanceData.map(([entry]) => {
     const details = tokenDetails[entry.contractId];
-    const totalScVal = xdr.ScVal.fromXDR(Buffer.from(entry.valueXdr, "base64"));
+    const totalScVal = StellarSdk.xdr.ScVal.fromXDR(
+      Buffer.from(entry.valueXdr, "base64")
+    );
     return {
       ...entry,
       ...details,
-      total: scValToNative(totalScVal),
+      total: StellarSdk.scValToNative(totalScVal),
     };
   });
 
@@ -333,13 +340,13 @@ const transformAccountBalances = async (
 const transformBaseOperation = (operation: BaseOperation) => {
   let isTxSuccessful = true;
   if (operation.txInfoByTx.resultXdr) {
-    const { name } = xdr.TransactionResult.fromXDR(
+    const { name } = StellarSdk.xdr.TransactionResult.fromXDR(
       operation.txInfoByTx.resultXdr,
       "base64"
     )
       .result()
       .switch();
-    if (name === xdr.TransactionResultCode.txFailed().name) {
+    if (name === StellarSdk.xdr.TransactionResultCode.txFailed().name) {
       isTxSuccessful = false;
     }
   }
@@ -356,7 +363,9 @@ const transformBaseOperation = (operation: BaseOperation) => {
       fee_charged: operation.txInfoByTx.fee,
     },
   } as Partial<
-    Horizon.ServerApi.BaseOperationRecord & { transaction_attr: object }
+    StellarSdk.Horizon.ServerApi.BaseOperationRecord & {
+      transaction_attr: object;
+    }
   >;
 };
 
@@ -863,7 +872,7 @@ type MercuryAccountHistory = {
 
 const transformAccountHistory = async (
   rawResponse: OperationResult<MercuryAccountHistory>
-): Promise<Partial<Horizon.ServerApi.OperationRecord>[]> => {
+): Promise<Partial<StellarSdk.Horizon.ServerApi.OperationRecord>[]> => {
   const invokeHostFnEdges =
     rawResponse.data?.invokeHostFnByPublicKey.edges || [];
   const invokeHostFn = invokeHostFnEdges
@@ -871,7 +880,7 @@ const transformAccountHistory = async (
       // we only want to keep these history entries if the Host Fn is
       // for invoking a contract, we dont show contract create or wasm upload in wallet history right now.
       try {
-        const hostFn = xdr.HostFunction.fromXDR(
+        const hostFn = StellarSdk.xdr.HostFunction.fromXDR(
           Buffer.from(edge.node.hostFunction, "base64")
         );
         hostFn.invokeContract();
@@ -882,7 +891,7 @@ const transformAccountHistory = async (
     })
     .map((edge) => {
       const baseFields = transformBaseOperation(edge.node);
-      const hostFn = xdr.HostFunction.fromXDR(
+      const hostFn = StellarSdk.xdr.HostFunction.fromXDR(
         Buffer.from(edge.node.hostFunction, "base64")
       );
 
@@ -895,14 +904,14 @@ const transformAccountHistory = async (
         type_i: 24,
         transaction_attr: {
           ...baseFields.transaction_attr,
-          contractId: StrKey.encodeContract(
+          contractId: StellarSdk.StrKey.encodeContract(
             invocation.contractAddress().contractId()
           ),
           fnName,
           args: getOpArgs(fnName, invocation.args()),
           result_meta_xdr: edge.node.sorobanMeta,
         },
-      } as Partial<Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
     });
 
   const createAccountEdges =
@@ -918,7 +927,7 @@ const transformAccountHistory = async (
       ),
       type: "create_account",
       type_i: 0,
-    } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>;
+    } as Partial<StellarSdk.Horizon.ServerApi.CreateAccountOperationRecord>;
   });
 
   const createAccountToEdges =
@@ -934,7 +943,7 @@ const transformAccountHistory = async (
       ),
       type: "create_account",
       type_i: 0,
-    } as Partial<Horizon.ServerApi.CreateAccountOperationRecord>;
+    } as Partial<StellarSdk.Horizon.ServerApi.CreateAccountOperationRecord>;
   });
 
   const paymentsByPublicKeyEdges =
@@ -958,7 +967,7 @@ const transformAccountHistory = async (
       amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
       type: "payment",
       type_i: 1,
-    } as Partial<Horizon.ServerApi.PaymentOperationRecord>;
+    } as Partial<StellarSdk.Horizon.ServerApi.PaymentOperationRecord>;
   });
 
   const paymentsToPublicKeyEdges =
@@ -982,7 +991,7 @@ const transformAccountHistory = async (
       amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
       type: "payment",
       type_i: 1,
-    } as Partial<Horizon.ServerApi.PaymentOperationRecord>;
+    } as Partial<StellarSdk.Horizon.ServerApi.PaymentOperationRecord>;
   });
 
   const pathPaymentsStrictSendByPublicKeyEdges =
@@ -1003,7 +1012,7 @@ const transformAccountHistory = async (
         to: edge.accountByDestination.publickey,
         destination_min: edge.destMin,
         amount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
-      } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
     });
 
   const pathPaymentsStrictSendToPublicKeyEdges =
@@ -1024,7 +1033,7 @@ const transformAccountHistory = async (
         to: edge.accountByDestination.publickey,
         destination_min: edge.destMin,
         amount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
-      } as Partial<Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
     });
 
   const pathPaymentsStrictReceiveByPublicKeyEdges =
@@ -1048,7 +1057,7 @@ const transformAccountHistory = async (
         to: edge.accountByDestination.publickey,
         destination_min: edge.destMin,
         amount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
-      } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentOperationRecord>;
     });
 
   const pathPaymentsStrictReceiveToPublicKeyEdges =
@@ -1070,7 +1079,7 @@ const transformAccountHistory = async (
         to: edge.accountByDestination.publickey,
         destination_min: edge.destMin,
         amount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
-      } as Partial<Horizon.ServerApi.PathPaymentOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentOperationRecord>;
     });
 
   const manageBuyOfferByPublicKeyEdges =
@@ -1082,7 +1091,7 @@ const transformAccountHistory = async (
         ...baseFields,
         type: "manage_sell_offer",
         type_i: 4,
-      } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.ManageOfferOperationRecord>;
     }
   );
 
@@ -1095,7 +1104,7 @@ const transformAccountHistory = async (
         ...baseFields,
         type: "manage_sell_offer",
         type_i: 4,
-      } as Partial<Horizon.ServerApi.ManageOfferOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.ManageOfferOperationRecord>;
     }
   );
 
@@ -1108,7 +1117,7 @@ const transformAccountHistory = async (
         ...baseFields,
         type: "create_passive_sell_offer",
         type_i: 3,
-      } as Partial<Horizon.ServerApi.PassiveOfferOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.PassiveOfferOperationRecord>;
     });
 
   const changeTrustByPublicKeyEdges =
@@ -1119,7 +1128,7 @@ const transformAccountHistory = async (
       ...baseFields,
       type: "change_trust",
       type_i: 6,
-    } as Partial<Horizon.ServerApi.ChangeTrustOperationRecord>;
+    } as Partial<StellarSdk.Horizon.ServerApi.ChangeTrustOperationRecord>;
   });
 
   const accountMergeByPublicKeyEdges =
@@ -1130,7 +1139,7 @@ const transformAccountHistory = async (
       ...baseFields,
       type: "account_merge",
       type_i: 8,
-    } as Partial<Horizon.ServerApi.AccountMergeOperationRecord>;
+    } as Partial<StellarSdk.Horizon.ServerApi.AccountMergeOperationRecord>;
   });
 
   const bumpSequenceByPublicKeyEdges =
@@ -1141,7 +1150,7 @@ const transformAccountHistory = async (
       ...baseFields,
       type: "bump_sequence",
       type_i: 11,
-    } as Partial<Horizon.ServerApi.BumpSequenceOperationRecord>;
+    } as Partial<StellarSdk.Horizon.ServerApi.BumpSequenceOperationRecord>;
   });
 
   const claimClaimableBalanceByPublicKeyEdges =
@@ -1153,7 +1162,7 @@ const transformAccountHistory = async (
         ...baseFields,
         type: "claim_claimable_balance",
         type_i: 15,
-      } as Partial<Horizon.ServerApi.ClaimClaimableBalanceOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.ClaimClaimableBalanceOperationRecord>;
     });
 
   const createClaimableBalanceByPublicKeyEdges =
@@ -1165,7 +1174,7 @@ const transformAccountHistory = async (
         ...baseFields,
         type: "create_claimable_balance",
         type_i: 14,
-      } as Partial<Horizon.ServerApi.CreateClaimableBalanceOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.CreateClaimableBalanceOperationRecord>;
     });
 
   const allowTrustByPublicKeyEdges =
@@ -1176,7 +1185,7 @@ const transformAccountHistory = async (
       ...baseFields,
       type: "allow_trust",
       type_i: 7,
-    } as Partial<Horizon.ServerApi.AllowTrustOperationRecord>;
+    } as Partial<StellarSdk.Horizon.ServerApi.AllowTrustOperationRecord>;
   });
 
   const manageDataByPublicKeyEdges =
@@ -1187,7 +1196,7 @@ const transformAccountHistory = async (
       ...baseFields,
       type: "manage_data",
       type_i: 10,
-    } as Partial<Horizon.ServerApi.ManageDataOperationRecord>;
+    } as Partial<StellarSdk.Horizon.ServerApi.ManageDataOperationRecord>;
   });
 
   const beginSponsoringFutureReservesByPublicKeyEdges =
@@ -1199,7 +1208,7 @@ const transformAccountHistory = async (
         ...baseFields,
         type: "begin_sponsoring_future_reserves",
         type_i: 16,
-      } as Partial<Horizon.ServerApi.BeginSponsoringFutureReservesOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.BeginSponsoringFutureReservesOperationRecord>;
     });
 
   const endSponsoringFutureReservesByPublicKeyEdges =
@@ -1211,7 +1220,7 @@ const transformAccountHistory = async (
         ...baseFields,
         type: "end_sponsoring_future_reserves",
         type_i: 17,
-      } as Partial<Horizon.ServerApi.EndSponsoringFutureReservesOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.EndSponsoringFutureReservesOperationRecord>;
     });
 
   const revokeSponsorshipByPublicKeyEdges =
@@ -1223,7 +1232,7 @@ const transformAccountHistory = async (
         ...baseFields,
         type: "revoke_sponsorship",
         type_i: 18,
-      } as Partial<Horizon.ServerApi.RevokeSponsorshipOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.RevokeSponsorshipOperationRecord>;
     }
   );
 
@@ -1235,7 +1244,7 @@ const transformAccountHistory = async (
       ...baseFields,
       type: "clawback",
       type_i: 19,
-    } as Partial<Horizon.ServerApi.ClawbackOperationRecord>;
+    } as Partial<StellarSdk.Horizon.ServerApi.ClawbackOperationRecord>;
   });
 
   const setTrustLineFlagsByPublicKeyEdges =
@@ -1247,7 +1256,7 @@ const transformAccountHistory = async (
         ...baseFields,
         type: "set_trust_line_flags",
         type_i: 21,
-      } as Partial<Horizon.ServerApi.SetTrustLineFlagsOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.SetTrustLineFlagsOperationRecord>;
     }
   );
 
@@ -1260,7 +1269,7 @@ const transformAccountHistory = async (
         ...baseFields,
         type: "liquidity_pool_deposit",
         type_i: 22,
-      } as Partial<Horizon.ServerApi.DepositLiquidityOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.DepositLiquidityOperationRecord>;
     });
 
   const liquidityPoolWithdrawByPublicKeyEdges =
@@ -1272,7 +1281,7 @@ const transformAccountHistory = async (
         ...baseFields,
         type: "liquidity_pool_withdraw",
         type_i: 23,
-      } as Partial<Horizon.ServerApi.WithdrawLiquidityOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.WithdrawLiquidityOperationRecord>;
     });
 
   const createClaimableBalanceToPublicKeyEdges =
@@ -1288,7 +1297,7 @@ const transformAccountHistory = async (
         // This is an VecM<Claimant> from the rust sdk which doesnt seem to have a JS counter part, but we dont use this field yet
         // claimants: edge.node.claimants,
         source_account: edge.node.source,
-      } as Partial<Horizon.ServerApi.CreateClaimableBalanceOperationRecord>;
+      } as Partial<StellarSdk.Horizon.ServerApi.CreateClaimableBalanceOperationRecord>;
     });
 
   return [
