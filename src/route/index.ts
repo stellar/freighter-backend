@@ -138,7 +138,7 @@ export async function initApiServer(
             const health = await server.getHealth();
             reply.code(200).send(health);
           } catch (error) {
-            reply.code(200).send({ status: "unhealthy" });
+            reply.code(200).send({ status: "unhealthy", error });
           }
         },
       });
