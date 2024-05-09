@@ -3464,7 +3464,20 @@ standard-as-callback@^2.1.0:
   resolved "https://registry.yarnpkg.com/standard-as-callback/-/standard-as-callback-2.1.0.tgz#8953fc05359868a77b5b9739a665c5977bb7df45"
   integrity sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==
 
-stellar-sdk@11.3.0:
+"stellar-sdk-next@yarn:stellar-sdk@12.0.0-rc.1":
+  version "12.0.0-rc.1"
+  resolved "https://registry.yarnpkg.com/stellar-sdk/-/stellar-sdk-12.0.0-rc.1.tgz#0ecf175373bff0f3467aeada6e91951504371f5f"
+  integrity sha512-K2DMBkW6rImpSXPmv3bex5iLKOglKUXScq2gIsELACeGLRDKLYdmAghkk/LalXXseFrQ9U0JV5DTCsBeFnnEVQ==
+  dependencies:
+    "@stellar/stellar-base" "^11.0.1"
+    axios "^1.6.8"
+    bignumber.js "^9.1.2"
+    eventsource "^2.0.2"
+    randombytes "^2.1.0"
+    toml "^3.0.0"
+    urijs "^1.19.1"
+
+"stellar-sdk@yarn:stellar-sdk@^11.3.0":
   version "11.3.0"
   resolved "https://registry.yarnpkg.com/stellar-sdk/-/stellar-sdk-11.3.0.tgz#385105eac694bb469ec3924e79e796d5766ba7cd"
   integrity sha512-xOp2zpQm5TIbgJi7wJhAmJh+Uy0ew5GbGtj1kZv6HEWHgSvW95xYMxGaw6MWM9r2YPUSQySboE6JwDc9jdx53A==

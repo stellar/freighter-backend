@@ -1,7 +1,8 @@
 import { Client, CombinedError } from "@urql/core";
 import axios from "axios";
 import { Logger } from "pino";
-import { Address, Horizon, Networks, xdr } from "stellar-sdk";
+import * as StellarSdkNext from "stellar-sdk-next";
+import * as StellarSdk from "stellar-sdk";
 import { Redis } from "ioredis";
 import BigNumber from "bignumber.js";
 import Prometheus from "prom-client";
@@ -133,10 +134,11 @@ export class MercuryClient {
 
   tokenBalanceKey = (pubKey: string) => {
     // { "vec": [{ "symbol": "Balance" }, { "Address": <...pubkey...> }] }
-    const addr = new Address(pubKey).toScVal();
-    return xdr.ScVal.scvVec([xdr.ScVal.scvSymbol("Balance"), addr]).toXDR(
-      "base64"
-    );
+    const addr = new StellarSdk.Address(pubKey).toScVal();
+    return StellarSdk.xdr.ScVal.scvVec([
+      StellarSdk.xdr.ScVal.scvSymbol("Balance"),
+      addr,
+    ]).toXDR("base64");
   };
 
   renewMercuryToken = async (network: NetworkNames) => {
@@ -214,19 +216,19 @@ export class MercuryClient {
     const transferToSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
-      topic2: xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
+      topic1: StellarSdk.xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
+      topic2: StellarSdk.xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
     };
     const transferFromSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
-      topic3: xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
+      topic1: StellarSdk.xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
+      topic3: StellarSdk.xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
     };
     const mintSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: xdr.ScVal.scvSymbol("mint").toXDR("base64"),
+      topic1: StellarSdk.xdr.ScVal.scvSymbol("mint").toXDR("base64"),
     };
 
     try {
@@ -448,7 +450,12 @@ export class MercuryClient {
         throw new Error(ERROR.UNSUPPORTED_NETWORK);
       }
 
-      const server = new Horizon.Server(networkUrl, {
+      const Server =
+        network === "FUTURENET"
+          ? StellarSdkNext.Horizon.Server
+          : StellarSdk.Horizon.Server;
+
+      const server = new Server(networkUrl, {
         allowHttp: !networkUrl.includes("https"),
       });
       const data = await fetchAccountHistory(pubKey, server);
@@ -567,7 +574,7 @@ export class MercuryClient {
     for (const id of contractIds) {
       try {
         const builder = await getTxBuilder(pubKey, network, server);
-        const params = [new Address(pubKey).toScVal()];
+        const params = [new StellarSdk.Address(pubKey).toScVal()];
         const balance = await getTokenBalance(id, params, server, builder);
         const tokenDetails = await this.tokenDetails(pubKey, id, network);
         balances.push({
@@ -582,7 +589,11 @@ export class MercuryClient {
     }
 
     for (const balance of balances) {
-      const isSac = isSacContract(balance.name, balance.id, Networks[network]);
+      const isSac = isSacContract(
+        balance.name,
+        balance.id,
+        StellarSdk.Networks[network]
+      );
       const issuerKey = isSac ? balance.name.split(":")[1] : balance.id;
 
       balanceMap[`${balance.symbol}:${issuerKey}`] = {
@@ -607,8 +618,12 @@ export class MercuryClient {
     if (!networkUrl) {
       throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
+    const Server =
+      network === "FUTURENET"
+        ? StellarSdkNext.Horizon.Server
+        : StellarSdk.Horizon.Server;
 
-    const server = new Horizon.Server(networkUrl, {
+    const server = new Server(networkUrl, {
       allowHttp: !networkUrl.includes("https"),
     });
     const resp = await fetchAccountDetails(pubKey, server);
@@ -617,7 +632,8 @@ export class MercuryClient {
       const k = Object.keys(resp.balances)[i];
       const v = resp.balances[k];
       if ("liquidity_pool_id" in v) {
-        const _v = v as any as Horizon.HorizonApi.BalanceLineLiquidityPool;
+        const _v =
+          v as any as StellarSdk.Horizon.HorizonApi.BalanceLineLiquidityPool;
         const lp = await server
           .liquidityPools()
           .liquidityPoolId(_v.liquidity_pool_id)
@@ -630,7 +646,7 @@ export class MercuryClient {
           | AssetBalance
           | (NativeBalance & {
               liquidityPoolId: string;
-              reserves: Horizon.HorizonApi.Reserve[];
+              reserves: StellarSdk.Horizon.HorizonApi.Reserve[];
             });
         delete (resp.balances[k] as any).liquidity_pool_id;
       }
@@ -686,7 +702,7 @@ export class MercuryClient {
         responseCurrentData,
         tokenDetails,
         contractIds,
-        Networks[network]
+        StellarSdk.Networks[network]
       );
 
       return {

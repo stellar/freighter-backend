@@ -1,32 +1,17 @@
-import {
-  Networks,
-  TransactionBuilder,
-  BASE_FEE,
-  Contract,
-  TimeoutInfinite,
-  Transaction,
-  Memo,
-  MemoType,
-  Operation,
-  scValToNative,
-  xdr,
-  SorobanRpc,
-  StrKey,
-  Address,
-  ContractSpec,
-  Asset,
-} from "stellar-sdk";
+import * as StellarSdkNext from "stellar-sdk-next";
+import * as StellarSdk from "stellar-sdk";
 import { XdrReader } from "@stellar/js-xdr";
 import { NetworkNames } from "../validate";
 import { ERROR } from "../error";
 import { Logger } from "pino";
 
-const SOROBAN_RPC_URLS: { [key in keyof typeof Networks]?: string } = {
-  PUBLIC:
-    "http://soroban-rpc-pubnet-prd.soroban-rpc-pubnet-prd.svc.cluster.local:8000",
-  TESTNET: "https://soroban-testnet.stellar.org/",
-  FUTURENET: "https://rpc-futurenet.stellar.org/",
-};
+const SOROBAN_RPC_URLS: { [key in keyof typeof StellarSdk.Networks]?: string } =
+  {
+    PUBLIC:
+      "http://soroban-rpc-pubnet-prd.soroban-rpc-pubnet-prd.svc.cluster.local:8000",
+    TESTNET: "https://soroban-testnet.stellar.org/",
+    FUTURENET: "https://rpc-futurenet.stellar.org/",
+  };
 
 const getServer = async (network: NetworkNames) => {
   const serverUrl = SOROBAN_RPC_URLS[network];
@@ -34,7 +19,12 @@ const getServer = async (network: NetworkNames) => {
     throw new Error(ERROR.UNSUPPORTED_NETWORK);
   }
 
-  return new SorobanRpc.Server(serverUrl, {
+  const Rpc =
+    network === "FUTURENET"
+      ? StellarSdkNext.SorobanRpc.Server
+      : StellarSdk.SorobanRpc.Server;
+
+  return new Rpc(serverUrl, {
     allowHttp: serverUrl.startsWith("http://"),
   });
 };
@@ -42,25 +32,35 @@ const getServer = async (network: NetworkNames) => {
 const getTxBuilder = async (
   pubKey: string,
   network: NetworkNames,
-  server: SorobanRpc.Server
+  server: StellarSdk.SorobanRpc.Server
 ) => {
+  const TxBuilder =
+    network === "FUTURENET"
+      ? StellarSdkNext.TransactionBuilder
+      : StellarSdk.TransactionBuilder;
   const sourceAccount = await server.getAccount(pubKey);
-  return new TransactionBuilder(sourceAccount, {
-    fee: BASE_FEE,
-    networkPassphrase: Networks[network],
+  return new TxBuilder(sourceAccount, {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: StellarSdk.Networks[network],
   });
 };
 
 const simulateTx = async <ArgType>(
-  tx: Transaction<Memo<MemoType>, Operation[]>,
-  server: SorobanRpc.Server
+  tx: StellarSdk.Transaction<
+    StellarSdk.Memo<StellarSdk.MemoType>,
+    StellarSdk.Operation[]
+  >,
+  server: StellarSdk.SorobanRpc.Server
 ): Promise<ArgType> => {
   const simulatedTX = await server.simulateTransaction(tx);
-  if (SorobanRpc.Api.isSimulationSuccess(simulatedTX) && simulatedTX.result) {
-    return scValToNative(simulatedTX.result.retval);
+  if (
+    StellarSdk.SorobanRpc.Api.isSimulationSuccess(simulatedTX) &&
+    simulatedTX.result
+  ) {
+    return StellarSdk.scValToNative(simulatedTX.result.retval);
   }
 
-  if (SorobanRpc.Api.isSimulationError(simulatedTX)) {
+  if (StellarSdk.SorobanRpc.Api.isSimulationError(simulatedTX)) {
     throw new Error(simulatedTX.error);
   }
 
@@ -69,14 +69,14 @@ const simulateTx = async <ArgType>(
 
 const getTokenDecimals = async (
   contractId: string,
-  server: SorobanRpc.Server,
-  builder: TransactionBuilder
+  server: StellarSdk.SorobanRpc.Server,
+  builder: StellarSdk.TransactionBuilder
 ) => {
-  const contract = new Contract(contractId);
+  const contract = new StellarSdk.Contract(contractId);
 
   const tx = builder
     .addOperation(contract.call("decimals"))
-    .setTimeout(TimeoutInfinite)
+    .setTimeout(StellarSdk.TimeoutInfinite)
     .build();
 
   const result = await simulateTx<string>(tx, server);
@@ -85,14 +85,14 @@ const getTokenDecimals = async (
 
 const getTokenName = async (
   contractId: string,
-  server: SorobanRpc.Server,
-  builder: TransactionBuilder
+  server: StellarSdk.SorobanRpc.Server,
+  builder: StellarSdk.TransactionBuilder
 ) => {
-  const contract = new Contract(contractId);
+  const contract = new StellarSdk.Contract(contractId);
 
   const tx = builder
     .addOperation(contract.call("name"))
-    .setTimeout(TimeoutInfinite)
+    .setTimeout(StellarSdk.TimeoutInfinite)
     .build();
 
   const result = await simulateTx<string>(tx, server);
@@ -101,14 +101,14 @@ const getTokenName = async (
 
 const getTokenSymbol = async (
   contractId: string,
-  server: SorobanRpc.Server,
-  builder: TransactionBuilder
+  server: StellarSdk.SorobanRpc.Server,
+  builder: StellarSdk.TransactionBuilder
 ) => {
-  const contract = new Contract(contractId);
+  const contract = new StellarSdk.Contract(contractId);
 
   const tx = builder
     .addOperation(contract.call("symbol"))
-    .setTimeout(TimeoutInfinite)
+    .setTimeout(StellarSdk.TimeoutInfinite)
     .build();
 
   const result = await simulateTx<string>(tx, server);
@@ -117,15 +117,15 @@ const getTokenSymbol = async (
 
 const getTokenBalance = async (
   contractId: string,
-  params: xdr.ScVal[],
-  server: SorobanRpc.Server,
-  builder: TransactionBuilder
+  params: StellarSdk.xdr.ScVal[],
+  server: StellarSdk.SorobanRpc.Server,
+  builder: StellarSdk.TransactionBuilder
 ) => {
-  const contract = new Contract(contractId);
+  const contract = new StellarSdk.Contract(contractId);
 
   const tx = builder
     .addOperation(contract.call("balance", ...params))
-    .setTimeout(TimeoutInfinite)
+    .setTimeout(StellarSdk.TimeoutInfinite)
     .build();
 
   const result = await simulateTx<number>(tx, server);
@@ -134,18 +134,18 @@ const getTokenBalance = async (
 
 const buildTransfer = (
   contractId: string,
-  params: xdr.ScVal[],
+  params: StellarSdk.xdr.ScVal[],
   memo: string | undefined,
-  builder: TransactionBuilder
+  builder: StellarSdk.TransactionBuilder
 ) => {
-  const contract = new Contract(contractId);
+  const contract = new StellarSdk.Contract(contractId);
 
   const tx = builder
     .addOperation(contract.call("transfer", ...params))
-    .setTimeout(TimeoutInfinite);
+    .setTimeout(StellarSdk.TimeoutInfinite);
 
   if (memo) {
-    tx.addMemo(Memo.text(memo));
+    tx.addMemo(StellarSdk.Memo.text(memo));
   }
 
   return tx.build();
@@ -157,26 +157,26 @@ enum SorobanTokenInterface {
   mint = "mint",
 }
 
-const getOpArgs = (fnName: string, args: xdr.ScVal[]) => {
+const getOpArgs = (fnName: string, args: StellarSdk.xdr.ScVal[]) => {
   let amount: number;
   let from;
   let to;
 
   switch (fnName) {
     case SorobanTokenInterface.transfer:
-      from = StrKey.encodeEd25519PublicKey(
+      from = StellarSdk.StrKey.encodeEd25519PublicKey(
         args[0].address().accountId().ed25519()
       );
-      to = StrKey.encodeEd25519PublicKey(
+      to = StellarSdk.StrKey.encodeEd25519PublicKey(
         args[1].address().accountId().ed25519()
       );
-      amount = scValToNative(args[2]).toString();
+      amount = StellarSdk.scValToNative(args[2]).toString();
       break;
     case SorobanTokenInterface.mint:
-      to = StrKey.encodeEd25519PublicKey(
+      to = StellarSdk.StrKey.encodeEd25519PublicKey(
         args[0].address().accountId().ed25519()
       );
-      amount = scValToNative(args[1]).toString();
+      amount = StellarSdk.scValToNative(args[1]).toString();
       break;
     default:
       amount = 0;
@@ -185,10 +185,14 @@ const getOpArgs = (fnName: string, args: xdr.ScVal[]) => {
   return { from, to, amount };
 };
 
-const getLedgerKeyContractCode = (contractId: string) => {
+const getLedgerKeyContractCode = (
+  contractId: string,
+  network: NetworkNames
+) => {
+  const xdr = network === "FUTURENET" ? StellarSdkNext.xdr : StellarSdk.xdr;
   const ledgerKey = xdr.LedgerKey.contractData(
     new xdr.LedgerKeyContractData({
-      contract: new Address(contractId).toScAddress(),
+      contract: new StellarSdk.Address(contractId).toScAddress(),
       key: xdr.ScVal.scvLedgerKeyContractInstance(),
       durability: xdr.ContractDataDurability.persistent(),
     })
@@ -196,7 +200,11 @@ const getLedgerKeyContractCode = (contractId: string) => {
   return ledgerKey.toXDR("base64");
 };
 
-const getLedgerKeyWasmId = (contractLedgerEntryData: string) => {
+const getLedgerKeyWasmId = (
+  contractLedgerEntryData: string,
+  network: NetworkNames
+) => {
+  const xdr = network === "FUTURENET" ? StellarSdkNext.xdr : StellarSdk.xdr;
   const contractCodeWasmHash = xdr.LedgerEntryData.fromXDR(
     contractLedgerEntryData,
     "base64"
@@ -214,7 +222,8 @@ const getLedgerKeyWasmId = (contractLedgerEntryData: string) => {
   return ledgerKey.toXDR("base64");
 };
 
-async function parseWasmXdr(xdrContents: string) {
+async function parseWasmXdr(xdrContents: string, network: NetworkNames) {
+  const xdr = network === "FUTURENET" ? StellarSdkNext.xdr : StellarSdk.xdr;
   const wasmBuffer = xdr.LedgerEntryData.fromXDR(xdrContents, "base64")
     .contractCode()
     .code();
@@ -229,7 +238,7 @@ async function parseWasmXdr(xdrContents: string) {
   do {
     specs.push(xdr.ScSpecEntry.read(reader));
   } while (!reader.eof);
-  const contractSpec = new ContractSpec(specs);
+  const contractSpec = new StellarSdk.ContractSpec(specs);
   return contractSpec.jsonSchema();
 }
 
@@ -239,7 +248,7 @@ const getLedgerEntries = async (
   id: number = new Date().getDate()
 ): Promise<{
   error: Error;
-  result: SorobanRpc.Api.RawGetLedgerEntriesResponse;
+  result: StellarSdk.SorobanRpc.Api.RawGetLedgerEntriesResponse;
 }> => {
   let requestBody = {
     jsonrpc: "2.0",
@@ -275,7 +284,7 @@ const getContractSpec = async (
       throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
 
-    const contractDataKey = getLedgerKeyContractCode(contractId);
+    const contractDataKey = getLedgerKeyContractCode(contractId, network);
     const { error, result } = await getLedgerEntries(
       contractDataKey,
       serverUrl
@@ -287,7 +296,7 @@ const getContractSpec = async (
     }
 
     const contractCodeLedgerEntryData = entries[0].xdr;
-    const wasmId = getLedgerKeyWasmId(contractCodeLedgerEntryData);
+    const wasmId = getLedgerKeyWasmId(contractCodeLedgerEntryData, network);
     const { error: wasmError, result: wasmResult } = await getLedgerEntries(
       wasmId,
       serverUrl
@@ -298,7 +307,7 @@ const getContractSpec = async (
       return { error: "Unable to fetch contract spec", result: null };
     }
 
-    const spec = await parseWasmXdr(wasmEntries[0].xdr);
+    const spec = await parseWasmXdr(wasmEntries[0].xdr, network);
     return { result: spec, error: null };
   } catch (error) {
     logger.error(error);
@@ -407,8 +416,9 @@ const isSacContractExecutable = async (
 ) => {
   // verify the contract executable in the instance entry
   // The SAC has a unique contract executable type
+  const xdr = network === "FUTURENET" ? StellarSdkNext.xdr : StellarSdk.xdr;
   const server = await getServer(network);
-  const instance = new Contract(contractId).getFootprint();
+  const instance = new StellarSdk.Contract(contractId).getFootprint();
   const ledgerKeyContractCode = instance.toXDR("base64");
 
   const { entries } = await server.getLedgerEntries(
@@ -427,13 +437,17 @@ const isSacContractExecutable = async (
   throw new Error(ERROR.ENTRY_NOT_FOUND.CONTRACT_CODE);
 };
 
-const isSacContract = (name: string, contractId: string, network: Networks) => {
+const isSacContract = (
+  name: string,
+  contractId: string,
+  network: StellarSdk.Networks
+) => {
   if (name.includes(":")) {
     try {
       return (
-        new Asset(...(name.split(":") as [string, string])).contractId(
-          network
-        ) === contractId
+        new StellarSdk.Asset(
+          ...(name.split(":") as [string, string])
+        ).contractId(network) === contractId
       );
     } catch (error) {
       return false;
