@@ -722,6 +722,20 @@
   resolved "https://registry.yarnpkg.com/@stellar/js-xdr/-/js-xdr-3.1.1.tgz#be0ff90c8a861d6e1101bca130fa20e74d5599bb"
   integrity sha512-3gnPjAz78htgqsNEDkEsKHKosV2BF2iZkoHCNxpmZwUxiPsw+2VaXMed8RRMe0rGk3d5GZe7RrSba8zV80J3Ag==
 
+"@stellar/stellar-base@11.1.0":
+  version "11.1.0"
+  resolved "https://registry.yarnpkg.com/@stellar/stellar-base/-/stellar-base-11.1.0.tgz#4b561776cb102a87828379cd1ac5d3ce96db4fb3"
+  integrity sha512-nMg7QSpFqCZFq3Je/lG12+DY18y01QHRNyCxvjM8i4myS9tPRMDq7zqGcd215BGbCJxenckiOW45YJjQjzdcMQ==
+  dependencies:
+    "@stellar/js-xdr" "^3.1.1"
+    base32.js "^0.1.0"
+    bignumber.js "^9.1.2"
+    buffer "^6.0.3"
+    sha.js "^2.3.6"
+    tweetnacl "^1.0.3"
+  optionalDependencies:
+    sodium-native "^4.1.1"
+
 "@stellar/stellar-base@^11.0.1":
   version "11.0.1"
   resolved "https://registry.yarnpkg.com/@stellar/stellar-base/-/stellar-base-11.0.1.tgz#f6eba54e62aa3e827e55d8338b92cdbf5535cfd9"
@@ -3402,7 +3416,7 @@ slice-ansi@^5.0.0:
     ansi-styles "^6.0.0"
     is-fullwidth-code-point "^4.0.0"
 
-sodium-native@^4.0.10:
+sodium-native@^4.0.10, sodium-native@^4.1.1:
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/sodium-native/-/sodium-native-4.1.1.tgz#109bc924dd55c13db87c6dd30da047487595723c"
   integrity sha512-LXkAfRd4FHtkQS4X6g+nRcVaN7mWVNepV06phIsC6+IZFvGh1voW5TNQiQp2twVaMf05gZqQjuS+uWLM6gHhNQ==
@@ -3464,12 +3478,12 @@ standard-as-callback@^2.1.0:
   resolved "https://registry.yarnpkg.com/standard-as-callback/-/standard-as-callback-2.1.0.tgz#8953fc05359868a77b5b9739a665c5977bb7df45"
   integrity sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==
 
-"stellar-sdk-next@yarn:stellar-sdk@12.0.0-rc.1":
-  version "12.0.0-rc.1"
-  resolved "https://registry.yarnpkg.com/stellar-sdk/-/stellar-sdk-12.0.0-rc.1.tgz#0ecf175373bff0f3467aeada6e91951504371f5f"
-  integrity sha512-K2DMBkW6rImpSXPmv3bex5iLKOglKUXScq2gIsELACeGLRDKLYdmAghkk/LalXXseFrQ9U0JV5DTCsBeFnnEVQ==
+"stellar-sdk-next@yarn:stellar-sdk@12.0.0-rc.2":
+  version "12.0.0-rc.2"
+  resolved "https://registry.yarnpkg.com/stellar-sdk/-/stellar-sdk-12.0.0-rc.2.tgz#a6e2608fcb52acf87dbfc50ddb33a6fb8bcacbac"
+  integrity sha512-agda7+I8CRTArhxID4FgEz5c85/Vpqn40P9Xq8D88zSyu4mj0g+dR5j8TVQGBfeKhap2zqLKiQQb/U73ocIJNg==
   dependencies:
-    "@stellar/stellar-base" "^11.0.1"
+    "@stellar/stellar-base" "11.1.0"
     axios "^1.6.8"
     bignumber.js "^9.1.2"
     eventsource "^2.0.2"
