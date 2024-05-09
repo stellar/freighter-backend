@@ -32,7 +32,7 @@ const getServer = async (network: NetworkNames) => {
 const getTxBuilder = async (
   pubKey: string,
   network: NetworkNames,
-  server: StellarSdk.SorobanRpc.Server
+  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server
 ) => {
   const TxBuilder =
     network === "FUTURENET"
@@ -50,7 +50,7 @@ const simulateTx = async <ArgType>(
     StellarSdk.Memo<StellarSdk.MemoType>,
     StellarSdk.Operation[]
   >,
-  server: StellarSdk.SorobanRpc.Server
+  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server
 ): Promise<ArgType> => {
   const simulatedTX = await server.simulateTransaction(tx);
   if (
@@ -69,7 +69,7 @@ const simulateTx = async <ArgType>(
 
 const getTokenDecimals = async (
   contractId: string,
-  server: StellarSdk.SorobanRpc.Server,
+  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server,
   builder: StellarSdk.TransactionBuilder
 ) => {
   const contract = new StellarSdk.Contract(contractId);
@@ -85,7 +85,7 @@ const getTokenDecimals = async (
 
 const getTokenName = async (
   contractId: string,
-  server: StellarSdk.SorobanRpc.Server,
+  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server,
   builder: StellarSdk.TransactionBuilder
 ) => {
   const contract = new StellarSdk.Contract(contractId);
@@ -101,7 +101,7 @@ const getTokenName = async (
 
 const getTokenSymbol = async (
   contractId: string,
-  server: StellarSdk.SorobanRpc.Server,
+  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server,
   builder: StellarSdk.TransactionBuilder
 ) => {
   const contract = new StellarSdk.Contract(contractId);
@@ -118,7 +118,7 @@ const getTokenSymbol = async (
 const getTokenBalance = async (
   contractId: string,
   params: StellarSdk.xdr.ScVal[],
-  server: StellarSdk.SorobanRpc.Server,
+  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server,
   builder: StellarSdk.TransactionBuilder
 ) => {
   const contract = new StellarSdk.Contract(contractId);
