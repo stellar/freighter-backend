@@ -131,7 +131,6 @@ async function main() {
       connectionName: conf.redisConnectionName,
       host: conf.hostname,
       port: conf.redisPort,
-      connectTimeout: 500,
       maxRetriesPerRequest: 1,
     });
 
