@@ -20,7 +20,7 @@ const getServer = async (network: NetworkNames) => {
   }
 
   const Rpc =
-    network === "FUTURENET"
+    network === "FUTURENET" || network === "TESTNET"
       ? StellarSdkNext.SorobanRpc.Server
       : StellarSdk.SorobanRpc.Server;
 
@@ -35,7 +35,7 @@ const getTxBuilder = async (
   server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server
 ) => {
   const TxBuilder =
-    network === "FUTURENET"
+    network === "FUTURENET" || network === "TESTNET"
       ? StellarSdkNext.TransactionBuilder
       : StellarSdk.TransactionBuilder;
   const sourceAccount = await server.getAccount(pubKey);
@@ -189,7 +189,10 @@ const getLedgerKeyContractCode = (
   contractId: string,
   network: NetworkNames
 ) => {
-  const xdr = network === "FUTURENET" ? StellarSdkNext.xdr : StellarSdk.xdr;
+  const xdr =
+    network === "FUTURENET" || network === "TESTNET"
+      ? StellarSdkNext.xdr
+      : StellarSdk.xdr;
   const ledgerKey = xdr.LedgerKey.contractData(
     new xdr.LedgerKeyContractData({
       contract: new StellarSdk.Address(contractId).toScAddress(),
@@ -204,7 +207,10 @@ const getLedgerKeyWasmId = (
   contractLedgerEntryData: string,
   network: NetworkNames
 ) => {
-  const xdr = network === "FUTURENET" ? StellarSdkNext.xdr : StellarSdk.xdr;
+  const xdr =
+    network === "FUTURENET" || network === "TESTNET"
+      ? StellarSdkNext.xdr
+      : StellarSdk.xdr;
   const contractCodeWasmHash = xdr.LedgerEntryData.fromXDR(
     contractLedgerEntryData,
     "base64"
@@ -223,7 +229,10 @@ const getLedgerKeyWasmId = (
 };
 
 async function parseWasmXdr(xdrContents: string, network: NetworkNames) {
-  const xdr = network === "FUTURENET" ? StellarSdkNext.xdr : StellarSdk.xdr;
+  const xdr =
+    network === "FUTURENET" || network === "TESTNET"
+      ? StellarSdkNext.xdr
+      : StellarSdk.xdr;
   const wasmBuffer = xdr.LedgerEntryData.fromXDR(xdrContents, "base64")
     .contractCode()
     .code();
@@ -416,7 +425,10 @@ const isSacContractExecutable = async (
 ) => {
   // verify the contract executable in the instance entry
   // The SAC has a unique contract executable type
-  const xdr = network === "FUTURENET" ? StellarSdkNext.xdr : StellarSdk.xdr;
+  const xdr =
+    network === "FUTURENET" || network === "TESTNET"
+      ? StellarSdkNext.xdr
+      : StellarSdk.xdr;
   const server = await getServer(network);
   const instance = new StellarSdk.Contract(contractId).getFootprint();
   const ledgerKeyContractCode = instance.toXDR("base64");
