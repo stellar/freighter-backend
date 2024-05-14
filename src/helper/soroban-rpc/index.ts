@@ -193,9 +193,15 @@ const getLedgerKeyContractCode = (
     network === "FUTURENET" || network === "TESTNET"
       ? StellarSdkNext.xdr
       : StellarSdk.xdr;
+
+  const SdkAddress =
+    network === "FUTURENET" || network === "TESTNET"
+      ? StellarSdkNext.Address
+      : StellarSdk.Address;
+
   const ledgerKey = xdr.LedgerKey.contractData(
     new xdr.LedgerKeyContractData({
-      contract: new StellarSdk.Address(contractId).toScAddress(),
+      contract: new SdkAddress(contractId).toScAddress(),
       key: xdr.ScVal.scvLedgerKeyContractInstance(),
       durability: xdr.ContractDataDurability.persistent(),
     })
