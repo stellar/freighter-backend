@@ -451,7 +451,7 @@ export class MercuryClient {
       }
 
       const Server =
-        network === "FUTURENET"
+        network === "FUTURENET" || network === "TESTNET"
           ? StellarSdkNext.Horizon.Server
           : StellarSdk.Horizon.Server;
 
@@ -619,7 +619,7 @@ export class MercuryClient {
       throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
     const Server =
-      network === "FUTURENET"
+      network === "FUTURENET" || network === "TESTNET"
         ? StellarSdkNext.Horizon.Server
         : StellarSdk.Horizon.Server;
 
