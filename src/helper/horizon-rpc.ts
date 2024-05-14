@@ -249,11 +249,13 @@ export const submitTransaction = async (
   error: unknown;
 }> => {
   const TxBuilder =
-    networkPassphrase === StellarSdk.Networks.FUTURENET
+    networkPassphrase === StellarSdk.Networks.FUTURENET ||
+    networkPassphrase === StellarSdk.Networks.TESTNET
       ? StellarSdkNext.TransactionBuilder
       : StellarSdk.TransactionBuilder;
   const Server =
-    networkPassphrase === StellarSdk.Networks.FUTURENET
+    networkPassphrase === StellarSdk.Networks.FUTURENET ||
+    networkPassphrase === StellarSdk.Networks.TESTNET
       ? StellarSdkNext.Horizon.Server
       : StellarSdk.Horizon.Server;
   const tx = TxBuilder.fromXDR(signedXDR, networkPassphrase);

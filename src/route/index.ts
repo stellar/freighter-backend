@@ -126,7 +126,8 @@ export async function initApiServer(
           }
 
           const Server =
-            request.query.network === "FUTURENET"
+            request.query.network === "FUTURENET" ||
+            request.query.network === "TESTNET"
               ? StellarSdkNext.SorobanRpc.Server
               : StellarSdk.SorobanRpc.Server;
 

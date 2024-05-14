@@ -103,7 +103,8 @@ const transformAccountBalancesCurrentData = async (
   networkpassPhrase: StellarSdk.Networks
 ) => {
   const xdr =
-    networkpassPhrase === StellarSdk.Networks.FUTURENET
+    networkpassPhrase === StellarSdk.Networks.FUTURENET ||
+    networkpassPhrase === StellarSdk.Networks.TESTNET
       ? StellarSdkNext.xdr
       : StellarSdk.xdr;
   const accountObject = rawResponseCurrentData?.data?.accountByPublicKey;
