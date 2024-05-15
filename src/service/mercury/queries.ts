@@ -683,6 +683,9 @@ export const query = {
       accountMergeByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             destination
             destinationMuxed
             source
@@ -706,6 +709,9 @@ export const query = {
       bumpSequenceByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             source
             sourceMuxed
             bumpTo
@@ -728,6 +734,9 @@ export const query = {
       claimClaimableBalanceByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             source
             sourceMuxed
             balanceId
@@ -750,6 +759,9 @@ export const query = {
       createClaimableBalanceByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             amount
             asset
             assetNative
@@ -774,6 +786,9 @@ export const query = {
       allowTrustByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             authorize
             code
             source
@@ -798,6 +813,9 @@ export const query = {
       manageDataByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             dataName
             dataValue
             source
@@ -821,6 +839,9 @@ export const query = {
       beginSponsoringFutureReservesByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             source
             sourceMuxed
             opId
@@ -842,6 +863,9 @@ export const query = {
       endSponsoringFutureReservesByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             source
             sourceMuxed
             opId
@@ -863,6 +887,9 @@ export const query = {
       revokeSponsorshipByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             source
             sourceMuxed
             sponsorship
@@ -885,6 +912,9 @@ export const query = {
       clawbackByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             amount
             asset
             assetNative
@@ -911,6 +941,9 @@ export const query = {
       setTrustLineFlagsByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             asset
             assetNative
             clearFlags
@@ -937,6 +970,9 @@ export const query = {
       liquidityPoolDepositByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             maxAmountA
             maxAmountB
             maxPriceD
@@ -963,6 +999,9 @@ export const query = {
       liquidityPoolWithdrawByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             amount
             minAmountA
             minAmountB
@@ -987,6 +1026,9 @@ export const query = {
       createClaimableBalanceToPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
+            accountBySource {
+              publickey
+            }
             amount
             asset
             assetNative
