@@ -1,6 +1,7 @@
 import BigNumber from "bignumber.js";
 import * as StellarSdkNext from "stellar-sdk-next";
 import * as StellarSdk from "stellar-sdk";
+import { getSdk } from "./stellar";
 
 export const BASE_RESERVE = 0.5;
 export const BASE_RESERVE_MIN_COUNT = 2;
@@ -248,18 +249,9 @@ export const submitTransaction = async (
   data: StellarSdk.Horizon.HorizonApi.SubmitTransactionResponse | null;
   error: unknown;
 }> => {
-  const TxBuilder =
-    networkPassphrase === StellarSdk.Networks.FUTURENET ||
-    networkPassphrase === StellarSdk.Networks.TESTNET
-      ? StellarSdkNext.TransactionBuilder
-      : StellarSdk.TransactionBuilder;
-  const Server =
-    networkPassphrase === StellarSdk.Networks.FUTURENET ||
-    networkPassphrase === StellarSdk.Networks.TESTNET
-      ? StellarSdkNext.Horizon.Server
-      : StellarSdk.Horizon.Server;
-  const tx = TxBuilder.fromXDR(signedXDR, networkPassphrase);
-  const server = new Server(networkUrl);
+  const Sdk = getSdk(networkPassphrase as StellarSdk.Networks);
+  const tx = Sdk.TransactionBuilder.fromXDR(signedXDR, networkPassphrase);
+  const server = new Sdk.Horizon.Server(networkUrl);
 
   try {
     const data = await server.submitTransaction(tx);
