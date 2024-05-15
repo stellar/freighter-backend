@@ -36,6 +36,7 @@ import {
   hasIndexerSupport,
   hasSubForPublicKey,
 } from "../../helper/mercury";
+import { getSdk } from "../../helper/stellar";
 
 const DEFAULT_RETRY_AMOUNT = 5;
 
@@ -132,11 +133,12 @@ export class MercuryClient {
     register.registerMetric(this.criticalError);
   }
 
-  tokenBalanceKey = (pubKey: string) => {
+  tokenBalanceKey = (pubKey: string, network: NetworkNames) => {
+    const Sdk = getSdk(StellarSdk.Networks[network]);
     // { "vec": [{ "symbol": "Balance" }, { "Address": <...pubkey...> }] }
-    const addr = new StellarSdk.Address(pubKey).toScVal();
-    return StellarSdk.xdr.ScVal.scvVec([
-      StellarSdk.xdr.ScVal.scvSymbol("Balance"),
+    const addr = new Sdk.Address(pubKey).toScVal();
+    return Sdk.xdr.ScVal.scvVec([
+      Sdk.xdr.ScVal.scvSymbol("Balance"),
       addr,
     ]).toXDR("base64");
   };
@@ -206,6 +208,7 @@ export class MercuryClient {
     pubKey: string,
     network: NetworkNames
   ) => {
+    const Sdk = getSdk(StellarSdkNext.Networks[network]);
     if (!hasIndexerSupport(network)) {
       return {
         data: null,
@@ -216,19 +219,19 @@ export class MercuryClient {
     const transferToSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: StellarSdk.xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
-      topic2: StellarSdk.xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
+      topic1: Sdk.xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
+      topic2: Sdk.xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
     };
     const transferFromSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: StellarSdk.xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
-      topic3: StellarSdk.xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
+      topic1: Sdk.xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
+      topic3: Sdk.xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
     };
     const mintSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: StellarSdk.xdr.ScVal.scvSymbol("mint").toXDR("base64"),
+      topic1: Sdk.xdr.ScVal.scvSymbol("mint").toXDR("base64"),
     };
 
     try {
@@ -346,7 +349,7 @@ export class MercuryClient {
       const entrySub = {
         contract_id: contractId,
         max_single_size: 300,
-        key_xdr: this.tokenBalanceKey(pubKey),
+        key_xdr: this.tokenBalanceKey(pubKey, network),
         durability: "persistent",
       };
 
@@ -412,14 +415,20 @@ export class MercuryClient {
       const decimals = await getTokenDecimals(
         contractId,
         server,
-        decimalsBuilder
+        decimalsBuilder,
+        network
       );
 
       const nameBuilder = await getTxBuilder(pubKey, network, server);
-      const name = await getTokenName(contractId, server, nameBuilder);
+      const name = await getTokenName(contractId, server, nameBuilder, network);
 
       const symbolsBuilder = await getTxBuilder(pubKey, network, server);
-      const symbol = await getTokenSymbol(contractId, server, symbolsBuilder);
+      const symbol = await getTokenSymbol(
+        contractId,
+        server,
+        symbolsBuilder,
+        network
+      );
       const tokenDetails = {
         name,
         decimals,
@@ -450,12 +459,10 @@ export class MercuryClient {
         throw new Error(ERROR.UNSUPPORTED_NETWORK);
       }
 
-      const Server =
-        network === "FUTURENET" || network === "TESTNET"
-          ? StellarSdkNext.Horizon.Server
-          : StellarSdk.Horizon.Server;
+      const Sdk = getSdk(StellarSdkNext.Networks[network]);
+      const { Horizon } = Sdk;
 
-      const server = new Server(networkUrl, {
+      const server = new Horizon.Server(networkUrl, {
         allowHttp: !networkUrl.includes("https"),
       });
       const data = await fetchAccountHistory(pubKey, server);
@@ -519,7 +526,7 @@ export class MercuryClient {
       };
       const data = await this.renewAndRetry(getData, network);
       return {
-        data: await transformAccountHistory(data),
+        data: await transformAccountHistory(data, network),
         error: null,
       };
     } catch (error) {
@@ -562,6 +569,7 @@ export class MercuryClient {
     contractIds: string[],
     network: NetworkNames
   ) => {
+    const Sdk = getSdk(StellarSdk.Networks[network]);
     const networkUrl = SOROBAN_RPC_URLS[network];
     if (!networkUrl) {
       throw new Error(ERROR.UNSUPPORTED_NETWORK);
@@ -574,8 +582,14 @@ export class MercuryClient {
     for (const id of contractIds) {
       try {
         const builder = await getTxBuilder(pubKey, network, server);
-        const params = [new StellarSdk.Address(pubKey).toScVal()];
-        const balance = await getTokenBalance(id, params, server, builder);
+        const params = [new Sdk.Address(pubKey).toScVal()];
+        const balance = await getTokenBalance(
+          id,
+          params,
+          server,
+          builder,
+          network
+        );
         const tokenDetails = await this.tokenDetails(pubKey, id, network);
         balances.push({
           id,
@@ -618,12 +632,10 @@ export class MercuryClient {
     if (!networkUrl) {
       throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
-    const Server =
-      network === "FUTURENET" || network === "TESTNET"
-        ? StellarSdkNext.Horizon.Server
-        : StellarSdk.Horizon.Server;
+    const Sdk = getSdk(StellarSdkNext.Networks[network]);
+    const { Horizon } = Sdk;
 
-    const server = new Server(networkUrl, {
+    const server = new Horizon.Server(networkUrl, {
       allowHttp: !networkUrl.includes("https"),
     });
     const resp = await fetchAccountDetails(pubKey, server);
@@ -682,7 +694,7 @@ export class MercuryClient {
         const responseCurrentData = await urqlClientCurrentData.query(
           query.getCurrentDataAccountBalances(
             pubKey,
-            this.tokenBalanceKey(pubKey),
+            this.tokenBalanceKey(pubKey, network),
             contractIds
           ),
           {}
@@ -870,7 +882,10 @@ export class MercuryClient {
           this.mercurySession.token
         );
         const response = await urqlClient.query(
-          query.getTokenBalanceSub(contractId, this.tokenBalanceKey(publicKey)),
+          query.getTokenBalanceSub(
+            contractId,
+            this.tokenBalanceKey(publicKey, network)
+          ),
           {}
         );
 
