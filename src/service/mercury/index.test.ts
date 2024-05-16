@@ -34,7 +34,7 @@ describe("Mercury Service", () => {
   });
 
   it("can build a balance ledger key for a pub key", async () => {
-    const ledgerKey = mockMercuryClient.tokenBalanceKey(pubKey);
+    const ledgerKey = mockMercuryClient.tokenBalanceKey(pubKey, "TESTNET");
     const scVal = xdr.ScVal.fromXDR(
       Buffer.from(ledgerKey, "base64")
     ).value() as xdr.ScVal[];

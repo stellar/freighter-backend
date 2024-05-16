@@ -1,5 +1,4 @@
 import { OperationResult } from "@urql/core";
-import * as StellarSdkNext from "stellar-sdk-next";
 import * as StellarSdk from "stellar-sdk";
 import BigNumber from "bignumber.js";
 import {
@@ -10,6 +9,8 @@ import {
 } from "../../../helper/horizon-rpc";
 import { formatTokenAmount } from "../../../helper/format";
 import { getOpArgs, isSacContract } from "../../../helper/soroban-rpc";
+import { getSdk } from "../../../helper/stellar";
+import { NetworkNames } from "../../../helper/validate";
 
 // Transformers take an API response, and transform it/augment it for frontend consumption
 
@@ -102,10 +103,8 @@ const transformAccountBalancesCurrentData = async (
   contractIds: string[],
   networkpassPhrase: StellarSdk.Networks
 ) => {
-  const xdr =
-    networkpassPhrase === StellarSdk.Networks.FUTURENET
-      ? StellarSdkNext.xdr
-      : StellarSdk.xdr;
+  const Sdk = getSdk(networkpassPhrase);
+  const { xdr } = Sdk;
   const accountObject = rawResponseCurrentData?.data?.accountByPublicKey;
   const accountCurrentTrustlines =
     rawResponseCurrentData?.data?.trustlinesByPublicKey || [];
@@ -157,7 +156,7 @@ const transformAccountBalancesCurrentData = async (
 
       case "assetTypeCreditAlphanum4": {
         const code = trustline.alphaNum4().assetCode().toString();
-        const issuer = StellarSdk.StrKey.encodeEd25519PublicKey(
+        const issuer = Sdk.StrKey.encodeEd25519PublicKey(
           trustline.alphaNum4().issuer().ed25519()
         );
         prev[`${code}:${issuer}`] = {
@@ -175,7 +174,7 @@ const transformAccountBalancesCurrentData = async (
 
       case "assetTypeCreditAlphanum12": {
         const code = trustline.alphaNum12().assetCode().toString();
-        const issuer = StellarSdk.StrKey.encodeEd25519PublicKey(
+        const issuer = Sdk.StrKey.encodeEd25519PublicKey(
           trustline.alphaNum12().issuer().ed25519()
         );
         prev[`${code}:${issuer}`] = {
@@ -214,7 +213,7 @@ const transformAccountBalancesCurrentData = async (
     return {
       ...entry,
       ...details,
-      total: StellarSdk.scValToNative(val),
+      total: Sdk.scValToNative(val),
     };
   });
 
@@ -251,8 +250,10 @@ const transformAccountBalancesCurrentData = async (
 const transformAccountBalances = async (
   rawResponse: OperationResult<MercuryAccountBalancesData>,
   tokenDetails: TokenDetails,
-  contractIds: string[]
+  contractIds: string[],
+  network: StellarSdk.Networks
 ) => {
+  const Sdk = getSdk(network);
   const accountObjectData =
     rawResponse?.data?.accountObjectByPublicKey.nodes || [];
   const classicBalanceData = rawResponse?.data?.balanceByPublicKey.nodes || [];
@@ -286,13 +287,13 @@ const transformAccountBalances = async (
 
   const formattedBalances = tokenBalanceData.map(([entry]) => {
     const details = tokenDetails[entry.contractId];
-    const totalScVal = StellarSdk.xdr.ScVal.fromXDR(
+    const totalScVal = Sdk.xdr.ScVal.fromXDR(
       Buffer.from(entry.valueXdr, "base64")
     );
     return {
       ...entry,
       ...details,
-      total: StellarSdk.scValToNative(totalScVal),
+      total: Sdk.scValToNative(totalScVal),
     };
   });
 
@@ -337,16 +338,20 @@ const transformAccountBalances = async (
   };
 };
 
-const transformBaseOperation = (operation: BaseOperation) => {
+const transformBaseOperation = (
+  operation: BaseOperation,
+  network: NetworkNames
+) => {
+  const Sdk = getSdk(StellarSdk.Networks[network]);
   let isTxSuccessful = true;
   if (operation.txInfoByTx.resultXdr) {
-    const { name } = StellarSdk.xdr.TransactionResult.fromXDR(
+    const { name } = Sdk.xdr.TransactionResult.fromXDR(
       operation.txInfoByTx.resultXdr,
       "base64"
     )
       .result()
       .switch();
-    if (name === StellarSdk.xdr.TransactionResultCode.txFailed().name) {
+    if (name === Sdk.xdr.TransactionResultCode.txFailed().name) {
       isTxSuccessful = false;
     }
   }
@@ -871,8 +876,10 @@ type MercuryAccountHistory = {
 };
 
 const transformAccountHistory = async (
-  rawResponse: OperationResult<MercuryAccountHistory>
+  rawResponse: OperationResult<MercuryAccountHistory>,
+  network: NetworkNames
 ): Promise<Partial<StellarSdk.Horizon.ServerApi.OperationRecord>[]> => {
+  const Sdk = getSdk(StellarSdk.Networks[network]);
   const invokeHostFnEdges =
     rawResponse.data?.invokeHostFnByPublicKey.edges || [];
   const invokeHostFn = invokeHostFnEdges
@@ -880,7 +887,7 @@ const transformAccountHistory = async (
       // we only want to keep these history entries if the Host Fn is
       // for invoking a contract, we dont show contract create or wasm upload in wallet history right now.
       try {
-        const hostFn = StellarSdk.xdr.HostFunction.fromXDR(
+        const hostFn = Sdk.xdr.HostFunction.fromXDR(
           Buffer.from(edge.node.hostFunction, "base64")
         );
         hostFn.invokeContract();
@@ -890,8 +897,8 @@ const transformAccountHistory = async (
       }
     })
     .map((edge) => {
-      const baseFields = transformBaseOperation(edge.node);
-      const hostFn = StellarSdk.xdr.HostFunction.fromXDR(
+      const baseFields = transformBaseOperation(edge.node, network);
+      const hostFn = Sdk.xdr.HostFunction.fromXDR(
         Buffer.from(edge.node.hostFunction, "base64")
       );
 
@@ -904,11 +911,11 @@ const transformAccountHistory = async (
         type_i: 24,
         transaction_attr: {
           ...baseFields.transaction_attr,
-          contractId: StellarSdk.StrKey.encodeContract(
+          contractId: Sdk.StrKey.encodeContract(
             invocation.contractAddress().contractId()
           ),
           fnName,
-          args: getOpArgs(fnName, invocation.args()),
+          args: getOpArgs(fnName, invocation.args(), network),
           result_meta_xdr: edge.node.sorobanMeta,
         },
       } as Partial<StellarSdk.Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
@@ -917,7 +924,7 @@ const transformAccountHistory = async (
   const createAccountEdges =
     rawResponse.data?.createAccountByPublicKey.edges || [];
   const createAccount = createAccountEdges.map((edge) => {
-    const baseFields = transformBaseOperation(edge.node);
+    const baseFields = transformBaseOperation(edge.node, network);
     return {
       ...baseFields,
       account: edge.node.accountByDestination.publickey,
@@ -933,7 +940,7 @@ const transformAccountHistory = async (
   const createAccountToEdges =
     rawResponse.data?.createAccountToPublicKey.edges || [];
   const createAccountTo = createAccountToEdges.map((edge) => {
-    const baseFields = transformBaseOperation(edge.node);
+    const baseFields = transformBaseOperation(edge.node, network);
     return {
       ...baseFields,
       account: edge.node.accountByDestination.publickey,
@@ -949,7 +956,7 @@ const transformAccountHistory = async (
   const paymentsByPublicKeyEdges =
     rawResponse.data?.paymentsByPublicKey.edges || [];
   const paymentsByPublicKey = paymentsByPublicKeyEdges.map((edge) => {
-    const baseFields = transformBaseOperation(edge.node);
+    const baseFields = transformBaseOperation(edge.node, network);
     const code = edge.node.assetByAsset
       ? getAssetType(atob(edge.node.assetByAsset?.code!))
       : null;
@@ -973,7 +980,7 @@ const transformAccountHistory = async (
   const paymentsToPublicKeyEdges =
     rawResponse.data?.paymentsToPublicKey.edges || [];
   const paymentsToPublicKey = paymentsToPublicKeyEdges.map((edge) => {
-    const baseFields = transformBaseOperation(edge.node);
+    const baseFields = transformBaseOperation(edge.node, network);
     const code = edge.node.assetByAsset
       ? atob(edge.node.assetByAsset?.code!)
       : null;
@@ -998,7 +1005,7 @@ const transformAccountHistory = async (
     rawResponse.data?.pathPaymentsStrictSendByPublicKey.nodes || [];
   const pathPaymentsStrictSendByPublicKey =
     pathPaymentsStrictSendByPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge);
+      const baseFields = transformBaseOperation(edge, network);
       const code = atob(edge.assetByDestAsset.code);
       return {
         ...baseFields,
@@ -1019,7 +1026,7 @@ const transformAccountHistory = async (
     rawResponse.data?.pathPaymentsStrictSendToPublicKey.nodes || [];
   const pathPaymentsStrictSendToPublicKey =
     pathPaymentsStrictSendToPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge);
+      const baseFields = transformBaseOperation(edge, network);
       const code = atob(edge.assetByDestAsset.code);
       return {
         ...baseFields,
@@ -1040,7 +1047,7 @@ const transformAccountHistory = async (
     rawResponse.data?.pathPaymentsStrictReceiveByPublicKey.nodes || [];
   const pathPaymentsStrictReceiveByPublicKey =
     pathPaymentsStrictReceiveByPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge);
+      const baseFields = transformBaseOperation(edge, network);
       const code = edge.assetByDestAsset.code;
       return {
         ...baseFields,
@@ -1064,7 +1071,7 @@ const transformAccountHistory = async (
     rawResponse.data?.pathPaymentsStrictReceiveToPublicKey.nodes || [];
   const pathPaymentsStrictReceiveToPublicKey =
     pathPaymentsStrictReceiveToPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge);
+      const baseFields = transformBaseOperation(edge, network);
       const code = edge.assetByDestAsset.code;
 
       return {
@@ -1086,7 +1093,7 @@ const transformAccountHistory = async (
     rawResponse.data?.manageBuyOfferByPublicKey.edges || [];
   const manageBuyOfferByPublicKey = manageBuyOfferByPublicKeyEdges.map(
     (edge) => {
-      const baseFields = transformBaseOperation(edge.node);
+      const baseFields = transformBaseOperation(edge.node, network);
       return {
         ...baseFields,
         type: "manage_sell_offer",
@@ -1099,7 +1106,7 @@ const transformAccountHistory = async (
     rawResponse.data?.manageSellOfferByPublicKey.edges || [];
   const manageSellOfferByPublicKey = manageSellOfferByPublicKeyEdges.map(
     (edge) => {
-      const baseFields = transformBaseOperation(edge.node);
+      const baseFields = transformBaseOperation(edge.node, network);
       return {
         ...baseFields,
         type: "manage_sell_offer",
@@ -1112,7 +1119,7 @@ const transformAccountHistory = async (
     rawResponse.data?.createPassiveSellOfferByPublicKey.nodes || [];
   const createPassiveSellOfferByPublicKey =
     createPassiveSellOfferByPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge);
+      const baseFields = transformBaseOperation(edge, network);
       return {
         ...baseFields,
         type: "create_passive_sell_offer",
@@ -1123,7 +1130,7 @@ const transformAccountHistory = async (
   const changeTrustByPublicKeyEdges =
     rawResponse.data?.changeTrustByPublicKey.nodes || [];
   const changeTrustByPublicKey = changeTrustByPublicKeyEdges.map((edge) => {
-    const baseFields = transformBaseOperation(edge);
+    const baseFields = transformBaseOperation(edge, network);
     return {
       ...baseFields,
       type: "change_trust",
@@ -1134,7 +1141,7 @@ const transformAccountHistory = async (
   const accountMergeByPublicKeyEdges =
     rawResponse.data?.accountMergeByPublicKey.edges || [];
   const accountMergeByPublicKey = accountMergeByPublicKeyEdges.map((edge) => {
-    const baseFields = transformBaseOperation(edge.node);
+    const baseFields = transformBaseOperation(edge.node, network);
     return {
       ...baseFields,
       type: "account_merge",
@@ -1145,7 +1152,7 @@ const transformAccountHistory = async (
   const bumpSequenceByPublicKeyEdges =
     rawResponse.data?.bumpSequenceByPublicKey.edges || [];
   const bumpSequenceByPublicKey = bumpSequenceByPublicKeyEdges.map((edge) => {
-    const baseFields = transformBaseOperation(edge.node);
+    const baseFields = transformBaseOperation(edge.node, network);
     return {
       ...baseFields,
       type: "bump_sequence",
@@ -1157,7 +1164,7 @@ const transformAccountHistory = async (
     rawResponse.data?.claimClaimableBalanceByPublicKey.edges || [];
   const claimClaimableBalanceByPublicKey =
     claimClaimableBalanceByPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge.node);
+      const baseFields = transformBaseOperation(edge.node, network);
       return {
         ...baseFields,
         type: "claim_claimable_balance",
@@ -1169,7 +1176,7 @@ const transformAccountHistory = async (
     rawResponse.data?.createClaimableBalanceByPublicKey.edges || [];
   const createClaimableBalanceByPublicKey =
     createClaimableBalanceByPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge.node);
+      const baseFields = transformBaseOperation(edge.node, network);
       return {
         ...baseFields,
         type: "create_claimable_balance",
@@ -1180,7 +1187,7 @@ const transformAccountHistory = async (
   const allowTrustByPublicKeyEdges =
     rawResponse.data?.allowTrustByPublicKey.edges || [];
   const allowTrustByPublicKey = allowTrustByPublicKeyEdges.map((edge) => {
-    const baseFields = transformBaseOperation(edge.node);
+    const baseFields = transformBaseOperation(edge.node, network);
     return {
       ...baseFields,
       type: "allow_trust",
@@ -1191,7 +1198,7 @@ const transformAccountHistory = async (
   const manageDataByPublicKeyEdges =
     rawResponse.data?.manageDataByPublicKey.edges || [];
   const manageDataByPublicKey = manageDataByPublicKeyEdges.map((edge) => {
-    const baseFields = transformBaseOperation(edge.node);
+    const baseFields = transformBaseOperation(edge.node, network);
     return {
       ...baseFields,
       type: "manage_data",
@@ -1203,7 +1210,7 @@ const transformAccountHistory = async (
     rawResponse.data?.beginSponsoringFutureReservesByPublicKey.edges || [];
   const beginSponsoringFutureReservesByPublicKey =
     beginSponsoringFutureReservesByPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge.node);
+      const baseFields = transformBaseOperation(edge.node, network);
       return {
         ...baseFields,
         type: "begin_sponsoring_future_reserves",
@@ -1215,7 +1222,7 @@ const transformAccountHistory = async (
     rawResponse.data?.endSponsoringFutureReservesByPublicKey.edges || [];
   const endSponsoringFutureReservesByPublicKey =
     endSponsoringFutureReservesByPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge.node);
+      const baseFields = transformBaseOperation(edge.node, network);
       return {
         ...baseFields,
         type: "end_sponsoring_future_reserves",
@@ -1227,7 +1234,7 @@ const transformAccountHistory = async (
     rawResponse.data?.revokeSponsorshipByPublicKey.edges || [];
   const revokeSponsorshipByPublicKey = revokeSponsorshipByPublicKeyEdges.map(
     (edge) => {
-      const baseFields = transformBaseOperation(edge.node);
+      const baseFields = transformBaseOperation(edge.node, network);
       return {
         ...baseFields,
         type: "revoke_sponsorship",
@@ -1239,7 +1246,7 @@ const transformAccountHistory = async (
   const clawbackByPublicKeyEdges =
     rawResponse.data?.clawbackByPublicKey.edges || [];
   const clawbackByPublicKey = clawbackByPublicKeyEdges.map((edge) => {
-    const baseFields = transformBaseOperation(edge.node);
+    const baseFields = transformBaseOperation(edge.node, network);
     return {
       ...baseFields,
       type: "clawback",
@@ -1251,7 +1258,7 @@ const transformAccountHistory = async (
     rawResponse.data?.setTrustLineFlagsByPublicKey.edges || [];
   const setTrustLineFlagsByPublicKey = setTrustLineFlagsByPublicKeyEdges.map(
     (edge) => {
-      const baseFields = transformBaseOperation(edge.node);
+      const baseFields = transformBaseOperation(edge.node, network);
       return {
         ...baseFields,
         type: "set_trust_line_flags",
@@ -1264,7 +1271,7 @@ const transformAccountHistory = async (
     rawResponse.data?.liquidityPoolDepositByPublicKey.edges || [];
   const liquidityPoolDepositByPublicKey =
     liquidityPoolDepositByPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge.node);
+      const baseFields = transformBaseOperation(edge.node, network);
       return {
         ...baseFields,
         type: "liquidity_pool_deposit",
@@ -1276,7 +1283,7 @@ const transformAccountHistory = async (
     rawResponse.data?.liquidityPoolWithdrawByPublicKey.edges || [];
   const liquidityPoolWithdrawByPublicKey =
     liquidityPoolWithdrawByPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge.node);
+      const baseFields = transformBaseOperation(edge.node, network);
       return {
         ...baseFields,
         type: "liquidity_pool_withdraw",
@@ -1288,7 +1295,7 @@ const transformAccountHistory = async (
     rawResponse.data?.createClaimableBalanceToPublicKey.edges || [];
   const createClaimableBalanceToPublicKey =
     createClaimableBalanceToPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge.node);
+      const baseFields = transformBaseOperation(edge.node, network);
       return {
         ...baseFields,
         type: "create_claimable_balance",
