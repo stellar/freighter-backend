@@ -751,31 +751,6 @@ const getIsTokenSpec = async (
   }
 };
 
-const isDeepEqual = (
-  object1: Record<string, any>,
-  object2: Record<string, any>
-) => {
-  const objKeys1 = Object.keys(object1);
-  const objKeys2 = Object.keys(object2);
-
-  if (objKeys1.length !== objKeys2.length) return false;
-
-  for (var key of objKeys1) {
-    const value1 = object1[key];
-    const value2 = object2[key];
-
-    const isObjects = typeof value1 === "object" && typeof value2 === "object";
-
-    if (
-      (isObjects && !isDeepEqual(value1, value2)) ||
-      (!isObjects && value1 !== value2)
-    ) {
-      return false;
-    }
-  }
-  return true;
-};
-
 const isTokenSpec = (spec: Record<string, any>) => {
   return JSON.stringify(spec) === JSON.stringify(TOKEN_SPEC_DEFINITIONS);
 };
