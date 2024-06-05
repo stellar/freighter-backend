@@ -12,6 +12,7 @@ import { initApiServer } from "./route";
 import { initMetricsServer } from "./route/metrics";
 import { NetworkNames } from "./helper/validate";
 import { MercurySupportedNetworks, hasIndexerSupport } from "./helper/mercury";
+import { IntegrityChecker } from "./service/integrity-checker";
 
 interface CliArgs {
   env: string;
@@ -164,6 +165,13 @@ async function main() {
   } catch (err) {
     server.log.error(err);
     process.exit(1);
+  }
+
+  try {
+    const stellarClient = new IntegrityChecker(logger, mercuryClient);
+    await stellarClient.watchLedger("PUBLIC");
+  } catch (err) {
+    logger.error(err);
   }
 
   process.on("SIGTERM", async () => {
