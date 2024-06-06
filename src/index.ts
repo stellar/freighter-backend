@@ -168,7 +168,7 @@ async function main() {
   }
 
   try {
-    const stellarClient = new IntegrityChecker(logger, mercuryClient);
+    const stellarClient = new IntegrityChecker(logger, mercuryClient, register);
     await stellarClient.watchLedger("PUBLIC");
   } catch (err) {
     logger.error(err);
