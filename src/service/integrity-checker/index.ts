@@ -1,5 +1,6 @@
 import { Logger } from "pino";
 import { Networks, Horizon } from "stellar-sdk";
+import Prometheus from "prom-client";
 
 import { getSdk } from "../../helper/stellar";
 import { NETWORK_URLS } from "../../helper/horizon-rpc";
@@ -12,10 +13,32 @@ export class IntegrityChecker {
   logger: Logger;
   lastCheckedLedger: number;
   mercuryClient: MercuryClient;
-  constructor(logger: Logger, mercuryClient: MercuryClient) {
+  dataIntegrityCheckPass: Prometheus.Counter<"dataIntegrityCheckPass">;
+  dataIntegrityCheckFail: Prometheus.Counter<"dataIntegrityCheckFail">;
+
+  constructor(
+    logger: Logger,
+    mercuryClient: MercuryClient,
+    register: Prometheus.Registry
+  ) {
     this.logger = logger;
     this.lastCheckedLedger = 0;
     this.mercuryClient = mercuryClient;
+
+    this.dataIntegrityCheckPass = new Prometheus.Counter({
+      name: "freighter_backend_integrity_check_pass",
+      help: "Count of times the integrity check has passed between Horizon <-> Mercury",
+      labelNames: ["dataIntegrityCheckPass"],
+      registers: [register],
+    });
+    this.dataIntegrityCheckFail = new Prometheus.Counter({
+      name: "freighter_backend_integrity_check_fail",
+      help: "Count of times the integrity check has failed between Horizon <-> Mercury",
+      labelNames: ["dataIntegrityCheckFail"],
+      registers: [register],
+    });
+    register.registerMetric(this.dataIntegrityCheckPass);
+    register.registerMetric(this.dataIntegrityCheckFail);
   }
 
   watchLedger = async (network: NetworkNames, cursor: string = "now") => {
@@ -53,6 +76,7 @@ export class IntegrityChecker {
       await this.checkOperationIntegrity(firstOp, network);
     } catch (error) {
       this.logger.error(error);
+      this.dataIntegrityCheckFail.inc();
     }
   };
 
@@ -79,15 +103,25 @@ export class IntegrityChecker {
           sourceAccount,
           network
         );
+
       if (history && historyHorizon) {
         const match = history.find((historyItem) => historyItem.id === opId);
         const matchHorizon = historyHorizon.find(
           (historyItem) => historyItem.id === opId
         );
+
         if (match && matchHorizon) {
           for (const key of Object.keys(match)) {
             const mercuryValue = (match as any)[key];
             const horizonValue = (matchHorizon as any)[key];
+
+            if (!mercuryValue || !horizonValue) {
+              this.logger.error(
+                `Missing field for key ${key}, horizon: ${horizonValue}, mercury: ${mercuryValue}`
+              );
+              this.dataIntegrityCheckFail.inc();
+              return;
+            }
 
             // if key is array or object, check members
             if (Array.isArray(mercuryValue) && Array.isArray(horizonValue)) {
@@ -96,7 +130,8 @@ export class IntegrityChecker {
                   this.logger.error(
                     `Failed check for operation ID - ${operation.id}, key - ${key}`
                   );
-                  // record metric, set off alert, etc.
+                  this.dataIntegrityCheckFail.inc();
+                  return;
                 }
               }
             }
@@ -110,7 +145,8 @@ export class IntegrityChecker {
                   this.logger.error(
                     `Failed check for operation ID - ${operation.id}, key - ${key}`
                   );
-                  // record metric, set off alert, etc.
+                  this.dataIntegrityCheckFail.inc();
+                  return;
                 }
               }
             }
@@ -119,11 +155,34 @@ export class IntegrityChecker {
               this.logger.error(
                 `Failed check for operation ID - ${operation.id}, key - ${key}`
               );
-              // record metric, set off alert, etc.
+              this.dataIntegrityCheckFail.inc();
+              return;
+            } else {
+              this.dataIntegrityCheckPass.inc();
+              return;
             }
           }
+        } else {
+          this.logger.error(
+            `Failed to find matching operation from both data sources - horizon: ${JSON.stringify(
+              match
+            )}, mercury: ${JSON.stringify(matchHorizon)}`
+          );
+          this.dataIntegrityCheckFail.inc();
         }
+      } else {
+        this.logger.error(
+          `Failed to history from both data sources - horizon: ${JSON.stringify(
+            history
+          )}, mercury: ${JSON.stringify(historyHorizon)}`
+        );
+        this.dataIntegrityCheckFail.inc();
       }
+    } else {
+      this.logger.error(
+        `Failed to subscribe to account to perform integrity check`
+      );
+      this.dataIntegrityCheckFail.inc();
     }
   };
 }
