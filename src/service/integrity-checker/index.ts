@@ -86,11 +86,36 @@ export class IntegrityChecker {
         );
         if (match && matchHorizon) {
           for (const key of Object.keys(match)) {
+            const mercuryValue = (match as any)[key];
+            const horizonValue = (matchHorizon as any)[key];
+
             // if key is array or object, check members
+            if (Array.isArray(mercuryValue) && Array.isArray(horizonValue)) {
+              for (var i = 0; i < mercuryValue.length; i++) {
+                if (mercuryValue[i] !== horizonValue[i]) {
+                  this.logger.error(
+                    `Failed check for operation ID - ${operation.id}, key - ${key}`
+                  );
+                  // record metric, set off alert, etc.
+                }
+              }
+            }
+
             if (
-              (match as any)[key] !== (matchHorizon as any)[key] &&
-              !SKIP_KEYS.includes(key)
+              mercuryValue.constructor === Object &&
+              horizonValue.constructor === Object
             ) {
+              for (const valKey of Object.keys(mercuryValue)) {
+                if (mercuryValue[valKey] !== horizonValue[valKey]) {
+                  this.logger.error(
+                    `Failed check for operation ID - ${operation.id}, key - ${key}`
+                  );
+                  // record metric, set off alert, etc.
+                }
+              }
+            }
+
+            if (mercuryValue !== horizonValue && !SKIP_KEYS.includes(key)) {
               this.logger.error(
                 `Failed check for operation ID - ${operation.id}, key - ${key}`
               );
