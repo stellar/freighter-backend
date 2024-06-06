@@ -27,6 +27,7 @@ import { ERROR } from "../helper/error";
 import axios from "axios";
 import { getSdk } from "../helper/stellar";
 import { Networks } from "stellar-sdk-next";
+import { getHttpRequestDurationLabels } from "../helper/metrics";
 
 const API_VERSION = "v1";
 
@@ -45,7 +46,7 @@ export async function initApiServer(
   const httpRequestDurationMicroseconds = new Prometheus.Histogram({
     name: "http_request_duration_s",
     help: "Duration of HTTP requests in seconds",
-    labelNames: ["method", "route", "status"],
+    labelNames: ["method", "route", "status", "network"],
     buckets: [0.1, 0.5, 1, 2, 5],
     registers: [register],
   });
@@ -82,11 +83,7 @@ export async function initApiServer(
       return done();
     }
 
-    const labels = {
-      method: request.method,
-      route: request.url,
-      status: reply.statusCode,
-    };
+    const labels = getHttpRequestDurationLabels(request, reply);
     histMetric(labels);
     return done();
   });
