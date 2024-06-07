@@ -1,39 +1,39 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 
-export const httpLabelUrl = (method: string) => {
-  const [route, search] = method.split("?");
+export const httpLabelUrl = (url: string) => {
+  const [route, search] = url.split("?");
   const params = new URLSearchParams(search);
   const network = params.get("network") || "unknown";
 
-  if (method.includes("account-history")) {
+  if (url.includes("account-history")) {
     return {
       route: "account-history",
       network,
     };
   }
 
-  if (method.includes("account-balances")) {
+  if (url.includes("account-balances")) {
     return {
       route: "account-balances",
       network,
     };
   }
 
-  if (method.includes("token-details")) {
+  if (url.includes("token-details")) {
     return {
       route: "token-details",
       network,
     };
   }
 
-  if (method.includes("token-spec")) {
+  if (url.includes("token-spec")) {
     return {
       route: "token-spec",
       network,
     };
   }
 
-  if (method.includes("contract-spec")) {
+  if (url.includes("contract-spec")) {
     return {
       route: "contract-spec",
       network,
@@ -50,7 +50,7 @@ export const getHttpRequestDurationLabels = (
   request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { route, network } = httpLabelUrl(request.method);
+  const { route, network } = httpLabelUrl(request.url);
   return {
     method: request.method,
     route,
