@@ -172,7 +172,7 @@ export class IntegrityChecker {
         }
       } else {
         this.logger.error(
-          `Failed to history from both data sources - horizon: ${JSON.stringify(
+          `Failed to get history from both data sources - horizon: ${JSON.stringify(
             history
           )}, mercury: ${JSON.stringify(historyHorizon)}`
         );

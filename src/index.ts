@@ -39,7 +39,7 @@ async function main() {
     },
   }).argv as CliArgs;
 
-  const env = argv.env || "development";
+  const env = argv.env || conf.mode;
   const port = argv.port || 3002;
 
   const register = new Prometheus.Registry();
@@ -127,7 +127,7 @@ async function main() {
 
   let redis = undefined;
   // use in-memory store in dev
-  if (conf.mode !== "development") {
+  if (env !== "development") {
     redis = new Redis({
       connectionName: conf.redisConnectionName,
       host: conf.hostname,
@@ -168,8 +168,14 @@ async function main() {
   }
 
   try {
-    const stellarClient = new IntegrityChecker(logger, mercuryClient, register);
-    await stellarClient.watchLedger("PUBLIC");
+    if (conf.useMercury) {
+      const stellarClient = new IntegrityChecker(
+        logger,
+        mercuryClient,
+        register
+      );
+      await stellarClient.watchLedger("PUBLIC");
+    }
   } catch (err) {
     logger.error(err);
   }
