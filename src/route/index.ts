@@ -27,6 +27,7 @@ import { ERROR } from "../helper/error";
 import axios from "axios";
 import { getSdk } from "../helper/stellar";
 import { Networks } from "stellar-sdk-next";
+import { REDIS_USE_MERCURY_KEY } from "../helper/mercury";
 
 const API_VERSION = "v1";
 
@@ -228,12 +229,19 @@ export async function initApiServer(
           reply
         ) => {
           try {
+            let redisUseMercury = undefined;
+            if (redis) {
+              const redisValue = await redis.get(REDIS_USE_MERCURY_KEY);
+              if (redisValue) {
+                redisUseMercury = Boolean(redisValue);
+              }
+            }
             const pubKey = request.params["pubKey"];
             const { network } = request.query;
             const { data, error } = await mercuryClient.getAccountHistory(
               pubKey,
               network,
-              useMercury
+              redisUseMercury || useMercury
             );
             if (error) {
               reply.code(400).send(JSON.stringify(error));
@@ -280,6 +288,14 @@ export async function initApiServer(
           reply
         ) => {
           try {
+            let redisUseMercury = undefined;
+            if (redis) {
+              const redisValue = await redis.get(REDIS_USE_MERCURY_KEY);
+              if (redisValue) {
+                redisUseMercury = Boolean(redisValue);
+              }
+            }
+
             const pubKey = request.params["pubKey"];
             const { network } = request.query;
 
@@ -292,7 +308,7 @@ export async function initApiServer(
               pubKey,
               skipSorobanPubnet ? [] : contractIds,
               network,
-              useMercury
+              redisUseMercury || useMercury
             );
 
             reply.code(200).send(data);
@@ -486,8 +502,16 @@ export async function initApiServer(
           reply
         ) => {
           const { contract_id, pub_key, network } = request.body;
-
-          if (!useMercury) {
+          let redisUseMercury = undefined;
+          if (redis) {
+            const redisValue = await redis.get(REDIS_USE_MERCURY_KEY);
+            if (redisValue) {
+              redisUseMercury = Boolean(redisValue);
+            }
+          }
+          const _useMercury =
+            redisUseMercury === undefined ? useMercury : redisUseMercury;
+          if (!_useMercury) {
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
@@ -531,8 +555,17 @@ export async function initApiServer(
           reply
         ) => {
           const { pub_key, network } = request.body;
+          let redisUseMercury = undefined;
+          if (redis) {
+            const redisValue = await redis.get(REDIS_USE_MERCURY_KEY);
+            if (redisValue) {
+              redisUseMercury = Boolean(redisValue);
+            }
+          }
 
-          if (!useMercury) {
+          const _useMercury =
+            redisUseMercury === undefined ? useMercury : redisUseMercury;
+          if (!_useMercury) {
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
@@ -580,8 +613,17 @@ export async function initApiServer(
           reply
         ) => {
           const { pub_key, contract_id, network } = request.body;
+          let redisUseMercury = undefined;
+          if (redis) {
+            const redisValue = await redis.get(REDIS_USE_MERCURY_KEY);
+            if (redisValue) {
+              redisUseMercury = Boolean(redisValue);
+            }
+          }
 
-          if (!useMercury) {
+          const _useMercury =
+            redisUseMercury === undefined ? useMercury : redisUseMercury;
+          if (!_useMercury) {
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 

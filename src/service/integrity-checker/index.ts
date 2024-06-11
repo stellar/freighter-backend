@@ -6,6 +6,8 @@ import { getSdk } from "../../helper/stellar";
 import { NETWORK_URLS } from "../../helper/horizon-rpc";
 import { NetworkNames } from "../../helper/validate";
 import { MercuryClient } from "../mercury";
+import { Redis } from "ioredis";
+import { REDIS_USE_MERCURY_KEY } from "../../helper/mercury";
 
 const CHECK_INTERVAL = 10;
 
@@ -13,17 +15,20 @@ export class IntegrityChecker {
   logger: Logger;
   lastCheckedLedger: number;
   mercuryClient: MercuryClient;
+  redisClient: Redis;
   dataIntegrityCheckPass: Prometheus.Counter<"dataIntegrityCheckPass">;
   dataIntegrityCheckFail: Prometheus.Counter<"dataIntegrityCheckFail">;
 
   constructor(
     logger: Logger,
     mercuryClient: MercuryClient,
+    redisClient: Redis,
     register: Prometheus.Registry
   ) {
     this.logger = logger;
     this.lastCheckedLedger = 0;
     this.mercuryClient = mercuryClient;
+    this.redisClient = redisClient;
 
     this.dataIntegrityCheckPass = new Prometheus.Counter({
       name: "freighter_backend_integrity_check_pass",
@@ -120,6 +125,7 @@ export class IntegrityChecker {
                 `Missing field for key ${key}, horizon: ${horizonValue}, mercury: ${mercuryValue}`
               );
               this.dataIntegrityCheckFail.inc();
+              await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
               return;
             }
 
@@ -131,6 +137,7 @@ export class IntegrityChecker {
                     `Failed check for operation ID - ${operation.id}, key - ${key}`
                   );
                   this.dataIntegrityCheckFail.inc();
+                  await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
                   return;
                 }
               }
@@ -146,6 +153,7 @@ export class IntegrityChecker {
                     `Failed check for operation ID - ${operation.id}, key - ${key}`
                   );
                   this.dataIntegrityCheckFail.inc();
+                  await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
                   return;
                 }
               }
@@ -156,9 +164,11 @@ export class IntegrityChecker {
                 `Failed check for operation ID - ${operation.id}, key - ${key}`
               );
               this.dataIntegrityCheckFail.inc();
+              await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
               return;
             } else {
               this.dataIntegrityCheckPass.inc();
+              await this.redisClient.set(REDIS_USE_MERCURY_KEY, "true");
               return;
             }
           }
@@ -169,6 +179,7 @@ export class IntegrityChecker {
             )}, mercury: ${JSON.stringify(matchHorizon)}`
           );
           this.dataIntegrityCheckFail.inc();
+          await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
         }
       } else {
         this.logger.error(
@@ -177,12 +188,14 @@ export class IntegrityChecker {
           )}, mercury: ${JSON.stringify(historyHorizon)}`
         );
         this.dataIntegrityCheckFail.inc();
+        await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
       }
     } else {
       this.logger.error(
         `Failed to subscribe to account to perform integrity check`
       );
       this.dataIntegrityCheckFail.inc();
+      await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
     }
   };
 }

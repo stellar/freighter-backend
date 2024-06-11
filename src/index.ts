@@ -11,7 +11,11 @@ import { MercuryClient } from "./service/mercury";
 import { initApiServer } from "./route";
 import { initMetricsServer } from "./route/metrics";
 import { NetworkNames } from "./helper/validate";
-import { MercurySupportedNetworks, hasIndexerSupport } from "./helper/mercury";
+import {
+  MercurySupportedNetworks,
+  REDIS_USE_MERCURY_KEY,
+  hasIndexerSupport,
+} from "./helper/mercury";
 import { IntegrityChecker } from "./service/integrity-checker";
 
 interface CliArgs {
@@ -135,10 +139,12 @@ async function main() {
       maxRetriesPerRequest: 1,
     });
 
-    redis.on("error", (error) => {
-      logger.error(error);
-      throw new Error(JSON.stringify(error));
+    redis.on("error", (error: any) => {
+      logger.info("redis connection error", error);
+      throw new Error(error);
     });
+
+    await redis.set(REDIS_USE_MERCURY_KEY, String(conf.useMercury));
   }
 
   const mercuryClient = new MercuryClient(
@@ -168,10 +174,11 @@ async function main() {
   }
 
   try {
-    if (conf.useMercury) {
+    if (conf.useMercury && redis) {
       const stellarClient = new IntegrityChecker(
         logger,
         mercuryClient,
+        redis,
         register
       );
       await stellarClient.watchLedger("PUBLIC");
