@@ -16,7 +16,7 @@ import {
   REDIS_USE_MERCURY_KEY,
   hasIndexerSupport,
 } from "./helper/mercury";
-import { IntegrityChecker } from "./service/integrity-checker";
+// import { IntegrityChecker } from "./service/integrity-checker";
 
 interface CliArgs {
   env: string;
@@ -175,13 +175,13 @@ async function main() {
 
   try {
     if (conf.useMercury && redis) {
-      const stellarClient = new IntegrityChecker(
-        logger,
-        mercuryClient,
-        redis,
-        register
-      );
-      await stellarClient.watchLedger("PUBLIC");
+      // const stellarClient = new IntegrityChecker(
+      //   logger,
+      //   mercuryClient,
+      //   redis,
+      //   register
+      // );
+      // await stellarClient.watchLedger("PUBLIC");
     }
   } catch (err) {
     logger.error(err);
