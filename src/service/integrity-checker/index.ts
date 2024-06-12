@@ -7,7 +7,10 @@ import { NETWORK_URLS } from "../../helper/horizon-rpc";
 import { NetworkNames } from "../../helper/validate";
 import { MercuryClient } from "../mercury";
 import { Redis } from "ioredis";
-import { REDIS_USE_MERCURY_KEY } from "../../helper/mercury";
+import {
+  REDIS_TOGGLE_USE_MERCURY_KEY,
+  REDIS_USE_MERCURY_KEY,
+} from "../../helper/mercury";
 
 const CHECK_INTERVAL = 10;
 
@@ -126,6 +129,7 @@ export class IntegrityChecker {
               );
               this.dataIntegrityCheckFail.inc();
               await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
+              await this.redisClient.set(REDIS_TOGGLE_USE_MERCURY_KEY, "false");
               return;
             }
 
@@ -138,6 +142,10 @@ export class IntegrityChecker {
                   );
                   this.dataIntegrityCheckFail.inc();
                   await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
+                  await this.redisClient.set(
+                    REDIS_TOGGLE_USE_MERCURY_KEY,
+                    "false"
+                  );
                   return;
                 }
               }
@@ -154,6 +162,10 @@ export class IntegrityChecker {
                   );
                   this.dataIntegrityCheckFail.inc();
                   await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
+                  await this.redisClient.set(
+                    REDIS_TOGGLE_USE_MERCURY_KEY,
+                    "false"
+                  );
                   return;
                 }
               }
@@ -165,10 +177,16 @@ export class IntegrityChecker {
               );
               this.dataIntegrityCheckFail.inc();
               await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
+              await this.redisClient.set(REDIS_TOGGLE_USE_MERCURY_KEY, "false");
               return;
             } else {
               this.dataIntegrityCheckPass.inc();
-              await this.redisClient.set(REDIS_USE_MERCURY_KEY, "true");
+              const shouldToggleUseMercury = await this.redisClient.get(
+                REDIS_TOGGLE_USE_MERCURY_KEY
+              );
+              if (Boolean(shouldToggleUseMercury)) {
+                await this.redisClient.set(REDIS_USE_MERCURY_KEY, "true");
+              }
               return;
             }
           }
@@ -180,6 +198,7 @@ export class IntegrityChecker {
           );
           this.dataIntegrityCheckFail.inc();
           await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
+          await this.redisClient.set(REDIS_TOGGLE_USE_MERCURY_KEY, "false");
         }
       } else {
         this.logger.error(
@@ -189,6 +208,7 @@ export class IntegrityChecker {
         );
         this.dataIntegrityCheckFail.inc();
         await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
+        await this.redisClient.set(REDIS_TOGGLE_USE_MERCURY_KEY, "false");
       }
     } else {
       this.logger.error(
@@ -196,6 +216,7 @@ export class IntegrityChecker {
       );
       this.dataIntegrityCheckFail.inc();
       await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
+      await this.redisClient.set(REDIS_TOGGLE_USE_MERCURY_KEY, "false");
     }
   };
 }

@@ -1,6 +1,7 @@
 import { NetworkNames } from "./validate";
 
 export const REDIS_USE_MERCURY_KEY = "USE_MERCURY";
+export const REDIS_TOGGLE_USE_MERCURY_KEY = "TOGGLE_USE_MERCURY";
 
 export const hasIndexerSupport = (network: NetworkNames) => {
   return network === "TESTNET" || network === "PUBLIC";
