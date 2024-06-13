@@ -6,427 +6,177 @@ import { ERROR } from "../error";
 import { Logger } from "pino";
 import { getSdk } from "../stellar";
 
-const TOKEN_SPEC_DEFINITIONS = {
-  $schema: "http://json-schema.org/draft-07/schema#",
-  definitions: {
-    U32: {
-      type: "integer",
-      minimum: 0,
-      maximum: 4294967295,
-    },
-    I32: {
-      type: "integer",
-      minimum: -2147483648,
-      maximum: 2147483647,
-    },
-    U64: {
-      type: "string",
-      pattern: "^([1-9][0-9]*|0)$",
-      minLength: 1,
-      maxLength: 20,
-    },
-    I64: {
-      type: "string",
-      pattern: "^(-?[1-9][0-9]*|0)$",
-      minLength: 1,
-      maxLength: 21,
-    },
-    U128: {
-      type: "string",
-      pattern: "^([1-9][0-9]*|0)$",
-      minLength: 1,
-      maxLength: 39,
-    },
-    I128: {
-      type: "string",
-      pattern: "^(-?[1-9][0-9]*|0)$",
-      minLength: 1,
-      maxLength: 40,
-    },
-    U256: {
-      type: "string",
-      pattern: "^([1-9][0-9]*|0)$",
-      minLength: 1,
-      maxLength: 78,
-    },
-    I256: {
-      type: "string",
-      pattern: "^(-?[1-9][0-9]*|0)$",
-      minLength: 1,
-      maxLength: 79,
-    },
-    Address: {
-      type: "string",
-      format: "address",
-      description: "Address can be a public key or contract id",
-    },
-    ScString: {
-      type: "string",
-      description: "ScString is a string",
-    },
-    ScSymbol: {
-      type: "string",
-      description: "ScString is a string",
-    },
-    DataUrl: {
-      type: "string",
-      pattern:
-        "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=)?$",
-    },
-    initialize: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {
-            admin: {
-              $ref: "#/definitions/Address",
-            },
-            decimal: {
-              $ref: "#/definitions/U32",
-            },
-            name: {
-              $ref: "#/definitions/ScString",
-            },
-            symbol: {
-              $ref: "#/definitions/ScString",
-            },
-          },
-          type: "object",
-          required: ["admin", "decimal", "name", "symbol"],
-        },
-      },
-      additionalProperties: false,
-    },
-    mint: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {
-            to: {
-              $ref: "#/definitions/Address",
-            },
-            amount: {
-              $ref: "#/definitions/I128",
-            },
-          },
-          type: "object",
-          required: ["to", "amount"],
-        },
-      },
-      additionalProperties: false,
-    },
-    set_admin: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {
-            new_admin: {
-              $ref: "#/definitions/Address",
-            },
-          },
-          type: "object",
-          required: ["new_admin"],
-        },
-      },
-      additionalProperties: false,
-    },
-    allowance: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {
-            from: {
-              $ref: "#/definitions/Address",
-            },
-            spender: {
-              $ref: "#/definitions/Address",
-            },
-          },
-          type: "object",
-          required: ["from", "spender"],
-        },
-      },
-      additionalProperties: false,
-    },
-    approve: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {
-            from: {
-              $ref: "#/definitions/Address",
-            },
-            spender: {
-              $ref: "#/definitions/Address",
-            },
-            amount: {
-              $ref: "#/definitions/I128",
-            },
-            expiration_ledger: {
-              $ref: "#/definitions/U32",
-            },
-          },
-          type: "object",
-          required: ["from", "spender", "amount", "expiration_ledger"],
-        },
-      },
-      additionalProperties: false,
-    },
-    balance: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {
-            id: {
-              $ref: "#/definitions/Address",
-            },
-          },
-          type: "object",
-          required: ["id"],
-        },
-      },
-      additionalProperties: false,
-    },
-    transfer: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {
-            from: {
-              $ref: "#/definitions/Address",
-            },
-            to: {
-              $ref: "#/definitions/Address",
-            },
-            amount: {
-              $ref: "#/definitions/I128",
-            },
-          },
-          type: "object",
-          required: ["from", "to", "amount"],
-        },
-      },
-      additionalProperties: false,
-    },
-    transfer_from: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {
-            spender: {
-              $ref: "#/definitions/Address",
-            },
-            from: {
-              $ref: "#/definitions/Address",
-            },
-            to: {
-              $ref: "#/definitions/Address",
-            },
-            amount: {
-              $ref: "#/definitions/I128",
-            },
-          },
-          type: "object",
-          required: ["spender", "from", "to", "amount"],
-        },
-      },
-      additionalProperties: false,
-    },
-    burn: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {
-            from: {
-              $ref: "#/definitions/Address",
-            },
-            amount: {
-              $ref: "#/definitions/I128",
-            },
-          },
-          type: "object",
-          required: ["from", "amount"],
-        },
-      },
-      additionalProperties: false,
-    },
-    burn_from: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {
-            spender: {
-              $ref: "#/definitions/Address",
-            },
-            from: {
-              $ref: "#/definitions/Address",
-            },
-            amount: {
-              $ref: "#/definitions/I128",
-            },
-          },
-          type: "object",
-          required: ["spender", "from", "amount"],
-        },
-      },
-      additionalProperties: false,
-    },
-    decimals: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {},
-          type: "object",
-        },
-      },
-      additionalProperties: false,
-    },
-    name: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {},
-          type: "object",
-        },
-      },
-      additionalProperties: false,
-    },
-    symbol: {
-      properties: {
-        args: {
-          additionalProperties: false,
-          properties: {},
-          type: "object",
-        },
-      },
-      additionalProperties: false,
-    },
-    AllowanceDataKey: {
-      description: "",
-      properties: {
-        from: {
-          $ref: "#/definitions/Address",
-        },
-        spender: {
-          $ref: "#/definitions/Address",
-        },
+const TOKEN_SPEC_DEFINITIONS: { [index: string]: any } = {
+  allowance: {
+    properties: {
+      args: {
         additionalProperties: false,
+        properties: {
+          from: {
+            $ref: "#/definitions/Address",
+          },
+          spender: {
+            $ref: "#/definitions/Address",
+          },
+        },
+        type: "object",
+        required: ["from", "spender"],
       },
-      required: ["from", "spender"],
-      type: "object",
     },
-    AllowanceValue: {
-      description: "",
-      properties: {
-        amount: {
-          $ref: "#/definitions/I128",
-        },
-        expiration_ledger: {
-          $ref: "#/definitions/U32",
-        },
+    additionalProperties: false,
+  },
+  approve: {
+    properties: {
+      args: {
         additionalProperties: false,
+        properties: {
+          from: {
+            $ref: "#/definitions/Address",
+          },
+          spender: {
+            $ref: "#/definitions/Address",
+          },
+          amount: {
+            $ref: "#/definitions/I128",
+          },
+          expiration_ledger: {
+            $ref: "#/definitions/U32",
+          },
+        },
+        type: "object",
+        required: ["from", "spender", "amount", "expiration_ledger"],
       },
-      required: ["amount", "expiration_ledger"],
-      type: "object",
     },
-    DataKey: {
-      oneOf: [
-        {
-          type: "object",
-          title: "Allowance",
-          properties: {
-            tag: "Allowance",
-            values: {
-              type: "array",
-              items: [
-                {
-                  $ref: "#/definitions/AllowanceDataKey",
-                },
-              ],
-            },
-          },
-          required: ["tag", "values"],
-          additionalProperties: false,
-        },
-        {
-          type: "object",
-          title: "Balance",
-          properties: {
-            tag: "Balance",
-            values: {
-              type: "array",
-              items: [
-                {
-                  $ref: "#/definitions/Address",
-                },
-              ],
-            },
-          },
-          required: ["tag", "values"],
-          additionalProperties: false,
-        },
-        {
-          type: "object",
-          title: "Nonce",
-          properties: {
-            tag: "Nonce",
-            values: {
-              type: "array",
-              items: [
-                {
-                  $ref: "#/definitions/Address",
-                },
-              ],
-            },
-          },
-          required: ["tag", "values"],
-          additionalProperties: false,
-        },
-        {
-          type: "object",
-          title: "State",
-          properties: {
-            tag: "State",
-            values: {
-              type: "array",
-              items: [
-                {
-                  $ref: "#/definitions/Address",
-                },
-              ],
-            },
-          },
-          required: ["tag", "values"],
-          additionalProperties: false,
-        },
-        {
-          type: "object",
-          title: "Admin",
-          properties: {
-            tag: "Admin",
-          },
-          additionalProperties: false,
-          required: ["tag"],
-        },
-      ],
-    },
-    TokenMetadata: {
-      description: "",
-      properties: {
-        decimal: {
-          $ref: "#/definitions/U32",
-        },
-        name: {
-          $ref: "#/definitions/ScString",
-        },
-        symbol: {
-          $ref: "#/definitions/ScString",
-        },
+    additionalProperties: false,
+  },
+  balance: {
+    properties: {
+      args: {
         additionalProperties: false,
+        properties: {
+          id: {
+            $ref: "#/definitions/Address",
+          },
+        },
+        type: "object",
+        required: ["id"],
       },
-      required: ["decimal", "name", "symbol"],
-      type: "object",
     },
+    additionalProperties: false,
+  },
+  transfer: {
+    properties: {
+      args: {
+        additionalProperties: false,
+        properties: {
+          from: {
+            $ref: "#/definitions/Address",
+          },
+          to: {
+            $ref: "#/definitions/Address",
+          },
+          amount: {
+            $ref: "#/definitions/I128",
+          },
+        },
+        type: "object",
+        required: ["from", "to", "amount"],
+      },
+    },
+    additionalProperties: false,
+  },
+  transfer_from: {
+    properties: {
+      args: {
+        additionalProperties: false,
+        properties: {
+          spender: {
+            $ref: "#/definitions/Address",
+          },
+          from: {
+            $ref: "#/definitions/Address",
+          },
+          to: {
+            $ref: "#/definitions/Address",
+          },
+          amount: {
+            $ref: "#/definitions/I128",
+          },
+        },
+        type: "object",
+        required: ["spender", "from", "to", "amount"],
+      },
+    },
+    additionalProperties: false,
+  },
+  burn: {
+    properties: {
+      args: {
+        additionalProperties: false,
+        properties: {
+          from: {
+            $ref: "#/definitions/Address",
+          },
+          amount: {
+            $ref: "#/definitions/I128",
+          },
+        },
+        type: "object",
+        required: ["from", "amount"],
+      },
+    },
+    additionalProperties: false,
+  },
+  burn_from: {
+    properties: {
+      args: {
+        additionalProperties: false,
+        properties: {
+          spender: {
+            $ref: "#/definitions/Address",
+          },
+          from: {
+            $ref: "#/definitions/Address",
+          },
+          amount: {
+            $ref: "#/definitions/I128",
+          },
+        },
+        type: "object",
+        required: ["spender", "from", "amount"],
+      },
+    },
+    additionalProperties: false,
+  },
+  decimals: {
+    properties: {
+      args: {
+        additionalProperties: false,
+        properties: {},
+        type: "object",
+      },
+    },
+    additionalProperties: false,
+  },
+  name: {
+    properties: {
+      args: {
+        additionalProperties: false,
+        properties: {},
+        type: "object",
+      },
+    },
+    additionalProperties: false,
+  },
+  symbol: {
+    properties: {
+      args: {
+        additionalProperties: false,
+        properties: {},
+        type: "object",
+      },
+    },
+    additionalProperties: false,
   },
 };
 
@@ -744,7 +494,10 @@ const getIsTokenSpec = async (
 ) => {
   try {
     const spec = await getContractSpec(contractId, network, logger);
-    return { error: null, result: isTokenSpec(spec) };
+    if (spec.error) {
+      throw new Error(spec.error);
+    }
+    return { error: null, result: isTokenSpec(spec.result!) };
   } catch (error) {
     logger.error(error);
     return { error: "Unable to fetch token spec", result: null };
@@ -752,7 +505,17 @@ const getIsTokenSpec = async (
 };
 
 const isTokenSpec = (spec: Record<string, any>) => {
-  return JSON.stringify(spec) === JSON.stringify(TOKEN_SPEC_DEFINITIONS);
+  for (const tokenMethod of Object.keys(TOKEN_SPEC_DEFINITIONS)) {
+    const specMethod = spec.definitions[tokenMethod];
+    if (
+      !specMethod ||
+      JSON.stringify(specMethod) !==
+        JSON.stringify(TOKEN_SPEC_DEFINITIONS[tokenMethod])
+    ) {
+      return false;
+    }
+  }
+  return true;
 };
 
 const isSacContractExecutable = async (
