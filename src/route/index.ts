@@ -395,7 +395,7 @@ export async function initApiServer(
             if (error) {
               reply.code(400).send({ error, result: null });
             } else {
-              reply.code(200).send({ isSep41Compliant: result, error: null });
+              reply.code(200).send({ data: result, error: null });
             }
           } catch (error) {
             reply.code(500).send("Unexpected Server Error");
