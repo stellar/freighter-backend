@@ -359,7 +359,7 @@ const transformBaseOperation = (
     created_at: new Date(
       operation.txInfoByTx.ledgerByLedger.closeTime * 1000
     ).toISOString(),
-    source_account: operation.accountBySource.publickey,
+    source_account: operation.source,
     transaction_hash: operation.tx,
     id: operation.opId,
     transaction_successful: isTxSuccessful,
@@ -375,9 +375,7 @@ const transformBaseOperation = (
 };
 
 interface BaseOperation {
-  accountBySource: {
-    publickey: string;
-  };
+  source: string;
   tx: string;
   opId: string;
   txInfoByTx: TxInfo;
@@ -405,9 +403,7 @@ type MercuryAccountHistory = {
   createAccountByPublicKey: {
     edges: {
       node: {
-        accountByDestination: {
-          publickey: string;
-        };
+        destination: string;
         startingBalance: string;
       } & BaseOperation;
     }[];
@@ -415,9 +411,7 @@ type MercuryAccountHistory = {
   createAccountToPublicKey: {
     edges: {
       node: {
-        accountByDestination: {
-          publickey: string;
-        };
+        destination: string;
         startingBalance: string;
       } & BaseOperation;
     }[];
@@ -431,9 +425,7 @@ type MercuryAccountHistory = {
           code: string;
           issuer: string;
         } | null;
-        accountByDestination: {
-          publickey: string;
-        };
+        destination: string;
       } & BaseOperation;
     }[];
   };
@@ -446,17 +438,13 @@ type MercuryAccountHistory = {
           code: string;
           issuer: string;
         } | null;
-        accountByDestination: {
-          publickey: string;
-        };
+        destination: string;
       } & BaseOperation;
     }[];
   };
   pathPaymentsStrictSendByPublicKey: {
     nodes: ({
-      accountByDestination: {
-        publickey: string;
-      };
+      destination: string;
       assetByDestAsset: {
         code: string;
         issuer: string;
@@ -498,9 +486,7 @@ type MercuryAccountHistory = {
   };
   pathPaymentsStrictSendToPublicKey: {
     nodes: ({
-      accountByDestination: {
-        publickey: string;
-      };
+      destination: string;
       assetByDestAsset: {
         code: string;
         issuer: string;
@@ -542,9 +528,7 @@ type MercuryAccountHistory = {
   };
   pathPaymentsStrictReceiveByPublicKey: {
     nodes: ({
-      accountByDestination: {
-        publickey: string;
-      };
+      destination: string;
       assetByDestAsset: {
         code: string;
         issuer: string;
@@ -586,9 +570,7 @@ type MercuryAccountHistory = {
   };
   pathPaymentsStrictReceiveToPublicKey: {
     nodes: ({
-      accountByDestination: {
-        publickey: string;
-      };
+      destination: string;
       assetByDestAsset: {
         code: string;
         issuer: string;
@@ -644,10 +626,7 @@ type MercuryAccountHistory = {
           closeTime: number;
           sequence: string;
         };
-        muxedaccountBySourceMuxed: {
-          id: string;
-          publickey: string;
-        };
+        source: string;
         offerId: string;
         priceD: string;
         priceN: string;
@@ -671,10 +650,7 @@ type MercuryAccountHistory = {
           closeTime: number;
           sequence: string;
         };
-        muxedaccountBySourceMuxed: {
-          id: string;
-          publickey: string;
-        };
+        source: string;
         offerId: string;
         priceD: string;
         priceN: string;
@@ -698,10 +674,7 @@ type MercuryAccountHistory = {
         closeTime: number;
         sequence: string;
       };
-      muxedaccountBySourceMuxed: {
-        id: string;
-        publickey: string;
-      };
+      source: string;
       priceD: string;
       priceN: string;
       sellingNative: boolean;
@@ -730,9 +703,7 @@ type MercuryAccountHistory = {
     edges: {
       node: {
         destination: string;
-        destinationMuxed: string;
         source: string;
-        sourceMuxed: string;
       } & BaseOperation;
     }[];
   };
@@ -740,7 +711,6 @@ type MercuryAccountHistory = {
     edges: {
       node: {
         source: string;
-        sourceMuxed: string;
         bumpTo: string;
       } & BaseOperation;
     }[];
@@ -749,7 +719,6 @@ type MercuryAccountHistory = {
     edges: {
       node: {
         source: string;
-        sourceMuxed: string;
         balanceId: string;
       } & BaseOperation;
     }[];
@@ -761,7 +730,6 @@ type MercuryAccountHistory = {
         asset: string;
         assetNative: boolean;
         source: string;
-        sourceMuxed: string;
       } & BaseOperation;
     }[];
   };
@@ -771,7 +739,6 @@ type MercuryAccountHistory = {
         authorize: boolean;
         code: string;
         source: string;
-        sourceMuxed: string;
         trustor: string;
       } & BaseOperation;
     }[];
@@ -782,7 +749,6 @@ type MercuryAccountHistory = {
         dataName: string;
         dataValue: string;
         source: string;
-        sourceMuxed: string;
       } & BaseOperation;
     }[];
   };
@@ -790,7 +756,6 @@ type MercuryAccountHistory = {
     edges: {
       node: {
         source: string;
-        sourceMuxed: string;
       } & BaseOperation;
     }[];
   };
@@ -798,7 +763,6 @@ type MercuryAccountHistory = {
     edges: {
       node: {
         source: string;
-        sourceMuxed: string;
       } & BaseOperation;
     }[];
   };
@@ -806,7 +770,6 @@ type MercuryAccountHistory = {
     edges: {
       node: {
         source: string;
-        sourceMuxed: string;
         sponsorship: string;
       } & BaseOperation;
     }[];
@@ -818,9 +781,7 @@ type MercuryAccountHistory = {
         asset: string;
         assetNative: boolean;
         from: string;
-        fromMuxed: string;
         source: string;
-        sourceMuxed: string;
       } & BaseOperation;
     }[];
   };
@@ -832,7 +793,6 @@ type MercuryAccountHistory = {
         clearFlags: boolean;
         setFlags: boolean;
         source: string;
-        sourceMuxed: string;
         trustor: string;
       } & BaseOperation;
     }[];
@@ -846,7 +806,6 @@ type MercuryAccountHistory = {
         maxPriceN: string;
         minPriceD: string;
         source: string;
-        sourceMuxed: string;
       } & BaseOperation;
     }[];
   };
@@ -857,7 +816,6 @@ type MercuryAccountHistory = {
         minAmountA: string;
         minAmountB: string;
         source: string;
-        sourceMuxed: string;
       } & BaseOperation;
     }[];
   };
@@ -927,7 +885,7 @@ const transformAccountHistory = async (
     const baseFields = transformBaseOperation(edge.node, network);
     return {
       ...baseFields,
-      account: edge.node.accountByDestination.publickey,
+      account: edge.node.destination,
       starting_balance: formatTokenAmount(
         new BigNumber(edge.node.startingBalance),
         7
@@ -943,7 +901,7 @@ const transformAccountHistory = async (
     const baseFields = transformBaseOperation(edge.node, network);
     return {
       ...baseFields,
-      account: edge.node.accountByDestination.publickey,
+      account: edge.node.destination,
       starting_balance: formatTokenAmount(
         new BigNumber(edge.node.startingBalance),
         7
@@ -966,8 +924,8 @@ const transformAccountHistory = async (
 
     return {
       ...baseFields,
-      from: edge.node.accountBySource.publickey,
-      to: edge.node.accountByDestination.publickey,
+      from: edge.node.source,
+      to: edge.node.destination,
       asset_type: code,
       asset_code: code,
       asset_issuer: issuer,
@@ -990,8 +948,8 @@ const transformAccountHistory = async (
 
     return {
       ...baseFields,
-      from: edge.node.accountBySource.publickey,
-      to: edge.node.accountByDestination.publickey,
+      from: edge.node.source,
+      to: edge.node.destination,
       asset_type: code,
       asset_code: code,
       asset_issuer: issuer,
@@ -1014,9 +972,9 @@ const transformAccountHistory = async (
         asset_code: code,
         asset_issuer: edge.assetByDestAsset.issuer,
         asset_type: getAssetType(code),
-        source_account: edge.accountBySource.publickey,
-        from: edge.accountBySource.publickey,
-        to: edge.accountByDestination.publickey,
+        source_account: edge.source,
+        from: edge.source,
+        to: edge.destination,
         destination_min: edge.destMin,
         amount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
       } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
@@ -1035,9 +993,9 @@ const transformAccountHistory = async (
         asset_code: code,
         asset_issuer: edge.assetByDestAsset.issuer,
         asset_type: getAssetType(code),
-        source_account: edge.accountBySource.publickey,
-        from: edge.accountBySource.publickey,
-        to: edge.accountByDestination.publickey,
+        source_account: edge.source,
+        from: edge.source,
+        to: edge.destination,
         destination_min: edge.destMin,
         amount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
       } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
@@ -1059,9 +1017,9 @@ const transformAccountHistory = async (
         asset_code: code,
         asset_issuer: edge.assetByDestAsset.issuer,
         asset_type: getAssetType(code),
-        source_account: edge.accountBySource.publickey,
-        from: edge.accountBySource.publickey,
-        to: edge.accountByDestination.publickey,
+        source_account: edge.source,
+        from: edge.source,
+        to: edge.destination,
         destination_min: edge.destMin,
         amount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
       } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentOperationRecord>;
@@ -1081,9 +1039,9 @@ const transformAccountHistory = async (
         asset_code: code,
         asset_issuer: edge.assetByDestAsset.issuer,
         asset_type: getAssetType(code),
-        source_account: edge.accountBySource.publickey,
-        from: edge.accountBySource.publickey,
-        to: edge.accountByDestination.publickey,
+        source_account: edge.source,
+        from: edge.source,
+        to: edge.destination,
         destination_min: edge.destMin,
         amount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
       } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentOperationRecord>;
