@@ -494,7 +494,7 @@ export async function initApiServer(
 
             reply.code(200).send({ isSacContract });
           } catch (error) {
-            reply.code(500).send("Unexpected Server Error");
+            reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
