@@ -156,9 +156,7 @@ export const query = {
             auth
             hostFunction
             sorobanMeta
-            accountBySource {
-              publickey
-            }
+            source
             tx
             opId
             txInfoByTx {
@@ -178,12 +176,8 @@ export const query = {
       createAccountByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
-            accountByDestination {
-              publickey
-            }
+            source
+            destination
             startingBalance
             opId
             txInfoByTx {
@@ -203,12 +197,8 @@ export const query = {
       createAccountToPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
-            accountByDestination {
-              publickey
-            }
+            source
+            destination
             startingBalance
             opId
             txInfoByTx {
@@ -234,12 +224,8 @@ export const query = {
               code
               issuer
             }
-            accountBySource {
-              publickey
-            }
-            accountByDestination {
-              publickey
-            }
+            source
+            destination
             opId
             txInfoByTx {
               fee
@@ -264,12 +250,8 @@ export const query = {
               code
               issuer
             }
-            accountBySource {
-              publickey
-            }
-            accountByDestination {
-              publickey
-            }
+            source
+            destination
             opId
             txInfoByTx {
               fee
@@ -288,12 +270,8 @@ export const query = {
 
       pathPaymentsStrictSendByPublicKey(publicKeyText: $pubKey) {
         nodes {
-          accountBySource {
-            publickey
-          }
-          accountByDestination {
-            publickey
-          }
+          source
+          destination
           assetByDestAsset {
             code
             issuer
@@ -348,12 +326,8 @@ export const query = {
 
       pathPaymentsStrictSendToPublicKey(publicKeyText: $pubKey) {
         nodes {
-          accountBySource {
-            publickey
-          }
-          accountByDestination {
-            publickey
-          }
+          source
+          destination
           assetByDestAsset {
             code
             issuer
@@ -408,12 +382,8 @@ export const query = {
 
       pathPaymentsStrictReceiveByPublicKey(publicKeyText: $pubKey) {
         nodes {
-          accountBySource {
-            publickey
-          }
-          accountByDestination {
-            publickey
-          }
+          source
+          destination
           assetByDestAsset {
             code
             issuer
@@ -468,12 +438,8 @@ export const query = {
 
       pathPaymentsStrictReceiveToPublicKey(publicKeyText: $pubKey) {
         nodes {
-          accountBySource {
-            publickey
-          }
-          accountByDestination {
-            publickey
-          }
+          source
+          destination
           assetByDestAsset {
             code
             issuer
@@ -532,9 +498,7 @@ export const query = {
         edges {
           node {
             buyingNative
-            accountBySource {
-              publickey
-            }
+            source
             assetByBuying {
               issuer
               code
@@ -542,10 +506,6 @@ export const query = {
             assetBySelling {
               code
               issuer
-            }
-            muxedaccountBySourceMuxed {
-              id
-              publickey
             }
             offerId
             priceD
@@ -573,9 +533,7 @@ export const query = {
         edges {
           node {
             buyingNative
-            accountBySource {
-              publickey
-            }
+            source
             assetByBuying {
               issuer
               code
@@ -583,10 +541,6 @@ export const query = {
             assetBySelling {
               code
               issuer
-            }
-            muxedaccountBySourceMuxed {
-              id
-              publickey
             }
             offerId
             priceD
@@ -610,9 +564,7 @@ export const query = {
 
       createPassiveSellOfferByPublicKey(publicKeyText: $pubKey) {
         nodes {
-          accountBySource {
-            publickey
-          }
+          source
           amount
           assetByBuying {
             code
@@ -623,10 +575,6 @@ export const query = {
             issuer
           }
           buyingNative
-          muxedaccountBySourceMuxed {
-            id
-            publickey
-          }
           priceD
           priceN
           sellingNative
@@ -647,9 +595,7 @@ export const query = {
 
       changeTrustByPublicKey(publicKeyText: $pubKey) {
         nodes {
-          accountBySource {
-            publickey
-          }
+          source
           assetByLineAsset {
             issuer
             code
@@ -683,13 +629,9 @@ export const query = {
       accountMergeByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
-            destination
-            destinationMuxed
             source
-            sourceMuxed
+            destination
+            source
             opId
             txInfoByTx {
               fee
@@ -709,11 +651,7 @@ export const query = {
       bumpSequenceByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
             source
-            sourceMuxed
             bumpTo
             opId
             txInfoByTx {
@@ -734,11 +672,7 @@ export const query = {
       claimClaimableBalanceByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
             source
-            sourceMuxed
             balanceId
             opId
             txInfoByTx {
@@ -759,14 +693,11 @@ export const query = {
       createClaimableBalanceByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
+            source
             amount
             asset
             assetNative
             source
-            sourceMuxed
             opId
             txInfoByTx {
               fee
@@ -786,13 +717,10 @@ export const query = {
       allowTrustByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
+            source
             authorize
             code
             source
-            sourceMuxed
             trustor
             opId
             txInfoByTx {
@@ -813,13 +741,10 @@ export const query = {
       manageDataByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
+            source
             dataName
             dataValue
             source
-            sourceMuxed
             opId
             txInfoByTx {
               fee
@@ -839,11 +764,7 @@ export const query = {
       beginSponsoringFutureReservesByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
             source
-            sourceMuxed
             opId
             txInfoByTx {
               fee
@@ -863,11 +784,7 @@ export const query = {
       endSponsoringFutureReservesByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
             source
-            sourceMuxed
             opId
             txInfoByTx {
               fee
@@ -887,11 +804,7 @@ export const query = {
       revokeSponsorshipByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
             source
-            sourceMuxed
             sponsorship
             opId
             txInfoByTx {
@@ -912,16 +825,12 @@ export const query = {
       clawbackByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
+            source
             amount
             asset
             assetNative
             from
-            fromMuxed
             source
-            sourceMuxed
             opId
             txInfoByTx {
               fee
@@ -941,15 +850,12 @@ export const query = {
       setTrustLineFlagsByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
+            source
             asset
             assetNative
             clearFlags
             setFlags
             source
-            sourceMuxed
             trustor
             opId
             txInfoByTx {
@@ -970,16 +876,13 @@ export const query = {
       liquidityPoolDepositByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
+            source
             maxAmountA
             maxAmountB
             maxPriceD
             maxPriceN
             minPriceD
             source
-            sourceMuxed
             opId
             txInfoByTx {
               fee
@@ -999,14 +902,11 @@ export const query = {
       liquidityPoolWithdrawByPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
+            source
             amount
             minAmountA
             minAmountB
             source
-            sourceMuxed
             opId
             txInfoByTx {
               fee
@@ -1026,9 +926,7 @@ export const query = {
       createClaimableBalanceToPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
-            accountBySource {
-              publickey
-            }
+            source
             amount
             asset
             assetNative
