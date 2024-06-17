@@ -15,7 +15,6 @@ import {
   NetworkNames,
 } from "../helper/validate";
 import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
-import * as StellarSdkNext from "stellar-sdk-next";
 import * as StellarSdk from "stellar-sdk";
 import {
   SOROBAN_RPC_URLS,
@@ -27,6 +26,9 @@ import {
 } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
 import axios from "axios";
+import { getSdk } from "../helper/stellar";
+import { Networks } from "stellar-sdk-next";
+import { getHttpRequestDurationLabels } from "../helper/metrics";
 
 const API_VERSION = "v1";
 
@@ -45,7 +47,7 @@ export async function initApiServer(
   const httpRequestDurationMicroseconds = new Prometheus.Histogram({
     name: "http_request_duration_s",
     help: "Duration of HTTP requests in seconds",
-    labelNames: ["method", "route", "status"],
+    labelNames: ["method", "route", "status", "network"],
     buckets: [0.1, 0.5, 1, 2, 5],
     registers: [register],
   });
@@ -82,11 +84,7 @@ export async function initApiServer(
       return done();
     }
 
-    const labels = {
-      method: request.method,
-      route: request.url,
-      status: reply.statusCode,
-    };
+    const labels = getHttpRequestDurationLabels(request, reply);
     histMetric(labels);
     return done();
   });
@@ -126,13 +124,11 @@ export async function initApiServer(
             return reply.code(400).send("Unknown network");
           }
 
-          const Server =
-            request.query.network === "FUTURENET"
-              ? StellarSdkNext.SorobanRpc.Server
-              : StellarSdk.SorobanRpc.Server;
+          const Sdk = getSdk(StellarSdk.Networks[request.query.network]);
+          const { SorobanRpc } = Sdk;
 
           try {
-            const server = new Server(networkUrl, {
+            const server = new SorobanRpc.Server(networkUrl, {
               allowHttp: networkUrl.startsWith("http://"),
             });
 
@@ -400,7 +396,7 @@ export async function initApiServer(
             if (error) {
               reply.code(400).send({ error, result: null });
             } else {
-              reply.code(200).send({ isSep41Compliant: result, error: null });
+              reply.code(200).send({ data: result, error: null });
             }
           } catch (error) {
             reply.code(500).send("Unexpected Server Error");
@@ -710,18 +706,20 @@ export async function initApiServer(
           const { signed_xdr, network_url, network_passphrase } = request.body;
 
           try {
-            const tx = StellarSdk.TransactionBuilder.fromXDR(
+            const Sdk = getSdk(network_passphrase as Networks);
+            const tx = Sdk.TransactionBuilder.fromXDR(
               signed_xdr,
               network_passphrase
             );
-            const server = new StellarSdk.SorobanRpc.Server(network_url);
+            const server = new Sdk.SorobanRpc.Server(network_url);
 
             const data = await simulateTx<unknown>(
               tx as StellarSdk.Transaction<
                 StellarSdk.Memo<StellarSdk.MemoType>,
                 StellarSdk.Operation[]
               >,
-              server
+              server,
+              network_passphrase as Networks
             );
             reply.code(200).send(data);
           } catch (error) {
@@ -772,27 +770,36 @@ export async function initApiServer(
           } = request.body;
 
           try {
-            const _fee = fee || StellarSdk.BASE_FEE;
-            const server = new StellarSdk.SorobanRpc.Server(network_url, {
+            const Sdk = getSdk(network_passphrase as Networks);
+            const _fee = fee || Sdk.BASE_FEE;
+            const server = new Sdk.SorobanRpc.Server(network_url, {
               allowHttp: network_url.startsWith("http://"),
             });
             const sourceAccount = await server.getAccount(pub_key);
-            const builder = new StellarSdk.TransactionBuilder(sourceAccount, {
+            const builder = new Sdk.TransactionBuilder(sourceAccount, {
               fee: _fee,
               networkPassphrase: network_passphrase,
             });
             const _params = [
-              new StellarSdk.Address(params.publicKey).toScVal(), // from
-              new StellarSdk.Address(params.destination).toScVal(), // to
-              new StellarSdk.XdrLargeInt("i128", params.amount).toI128(), // amount
+              new Sdk.Address(params.publicKey).toScVal(), // from
+              new Sdk.Address(params.destination).toScVal(), // to
+              new Sdk.XdrLargeInt("i128", params.amount).toI128(), // amount
             ];
-            const tx = buildTransfer(address, _params, memo, builder);
+            const tx = buildTransfer(
+              address,
+              _params,
+              memo,
+              builder,
+              network_passphrase as Networks
+            );
             const simulationResponse = (await server.simulateTransaction(
               tx
             )) as StellarSdk.SorobanRpc.Api.SimulateTransactionSuccessResponse;
 
-            const preparedTransaction =
-              StellarSdk.SorobanRpc.assembleTransaction(tx, simulationResponse);
+            const preparedTransaction = Sdk.SorobanRpc.assembleTransaction(
+              tx,
+              simulationResponse
+            );
 
             const built = preparedTransaction.build();
             switch (built.operations[0].type) {
@@ -804,7 +811,7 @@ export async function initApiServer(
                 for (const auth of auths) {
                   if (
                     auth.credentials().switch() !==
-                    StellarSdk.xdr.SorobanCredentialsType.sorobanCredentialsSourceAccount()
+                    Sdk.xdr.SorobanCredentialsType.sorobanCredentialsSourceAccount()
                   ) {
                     throw new Error(ERROR.ACCOUNT_NOT_SOURCE);
                   }

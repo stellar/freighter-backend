@@ -19,9 +19,12 @@ describe("API routes", () => {
       const data = await response.json();
       expect(response.status).toEqual(200);
       expect(data).toMatchObject(
-        transformAccountHistory({
-          data: queryMockResponse[query.getAccountHistory],
-        } as any)
+        transformAccountHistory(
+          {
+            data: queryMockResponse[query.getAccountHistory],
+          } as any,
+          "TESTNET"
+        )
       );
       register.clear();
       await server.close();

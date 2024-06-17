@@ -29,10 +29,10 @@ export function buildConfig(config: Record<string, string>) {
 
   return {
     hostname: config.HOSTNAME || process.env.HOSTNAME!,
-    mercuryBackendTestnet: "https://api.mercurydata.app:8443",
-    mercuryGraphQLTestnet: "https://api.mercurydata.app:2083/graphql",
-    mercuryBackendPubnet: "https://mainnet.mercurydata.app:8443",
-    mercuryGraphQLPubnet: "https://mainnet.mercurydata.app:2083/graphql",
+    mercuryBackendTestnet: "https://api.mercurydata.app/account",
+    mercuryGraphQLTestnet: "https://api.mercurydata.app/graphql",
+    mercuryBackendPubnet: "https://mainnet.mercurydata.app/account",
+    mercuryGraphQLPubnet: "https://mainnet.mercurydata.app/graphql",
     mercuryGraphQLCurrentDataTestnet:
       "https://api.mercurydata.app:2096/graphql",
     mercuryGraphQLCurrentDataPubnet:
