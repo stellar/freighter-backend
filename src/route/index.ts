@@ -22,6 +22,7 @@ import {
   getContractSpec,
   getIsTokenSpec,
   simulateTx,
+  isSacContractExecutable,
 } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
 import axios from "axios";
@@ -447,6 +448,53 @@ export async function initApiServer(
             reply.code(error ? 400 : 200).send({ data: result, error });
           } catch (error) {
             reply.code(500).send("Unexpected Server Error");
+          }
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/is-sac-contract/:contractId",
+        schema: {
+          params: {
+            ["contractId"]: {
+              type: "string",
+              validator: (qStr: string) => isContractId(qStr),
+            },
+          },
+          querystring: {
+            ["network"]: {
+              type: "string",
+              validator: (qStr: string) => isNetwork(qStr),
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Params: { ["contractId"]: string };
+            Querystring: {
+              ["network"]: NetworkNames;
+            };
+          }>,
+          reply
+        ) => {
+          const contractId = request.params["contractId"];
+          const { network } = request.query;
+
+          const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
+          if (skipSorobanPubnet) {
+            return reply.code(400).send("Soroban has been disabled on pubnet");
+          }
+
+          try {
+            const isSacContract = await isSacContractExecutable(
+              contractId,
+              network
+            );
+
+            reply.code(200).send({ isSacContract });
+          } catch (error) {
+            reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
