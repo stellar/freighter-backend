@@ -543,7 +543,8 @@ const isSacContractExecutable = async (
       xdr.ContractExecutableType.contractExecutableStellarAsset().name
     );
   }
-  throw new Error(ERROR.ENTRY_NOT_FOUND.CONTRACT_CODE);
+
+  return false;
 };
 
 const isSacContract = (
