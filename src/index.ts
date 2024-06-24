@@ -96,10 +96,7 @@ async function main() {
     });
   };
 
-  const backendClientMaker = (
-    network: NetworkNames,
-    key: string = conf.mercuryKey
-  ) => {
+  const backendClientMaker = (network: NetworkNames, key: string) => {
     if (!hasIndexerSupport(network)) {
       throw new Error(`network not currently supported: ${network}`);
     }
@@ -116,10 +113,7 @@ async function main() {
     });
   };
 
-  const currentDataClientMaker = (
-    network: NetworkNames,
-    key: string = conf.mercuryKey
-  ) => {
+  const currentDataClientMaker = (network: NetworkNames, key: string) => {
     if (!hasIndexerSupport(network)) {
       throw new Error(`network not currently supported: ${network}`);
     }
@@ -139,7 +133,6 @@ async function main() {
   };
 
   const mercurySession = {
-    token: "",
     renewClientMaker,
     backendClientMaker,
     currentDataClientMaker,
@@ -154,7 +147,6 @@ async function main() {
         password: conf.mercuryPasswordTestnet,
       },
     },
-    userId: conf.mercuryUserId,
   };
 
   const mercuryErrorCounter = new Prometheus.Counter({
@@ -233,7 +225,6 @@ async function main() {
       const checkNetwork = "PUBLIC";
       // initial token and userID not needed for integrity checks
       const integrityCheckMercurySession = {
-        token: conf.mercuryKey,
         renewClientMaker,
         backendClientMaker,
         currentDataClientMaker,
@@ -249,7 +240,6 @@ async function main() {
             password: conf.mercuryIntegrityCheckPass,
           },
         },
-        userId: "",
       };
       const integrityCheckMercuryClient = new MercuryClient(
         integrityCheckMercurySession,

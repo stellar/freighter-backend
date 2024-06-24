@@ -93,8 +93,6 @@ interface MercurySession {
       password: string;
     };
   };
-  token: string;
-  userId: string;
 }
 
 interface Balances {
@@ -103,6 +101,11 @@ interface Balances {
 
 export class MercuryClient {
   mercurySession: MercurySession;
+  tokens: {
+    [index: string]: string;
+    TESTNET: string;
+    PUBLIC: string;
+  };
   redisClient?: Redis;
   logger: Logger;
   mercuryErrorCounter: Prometheus.Counter<"endpoint">;
@@ -127,6 +130,11 @@ export class MercuryClient {
     this.mercuryErrorCounter = metrics.mercuryErrorCounter;
     this.rpcErrorCounter = metrics.rpcErrorCounter;
     this.criticalError = metrics.criticalError;
+
+    this.tokens = {
+      TESTNET: "",
+      PUBLIC: "",
+    };
 
     register.registerMetric(this.mercuryErrorCounter);
     register.registerMetric(this.rpcErrorCounter);
@@ -159,7 +167,7 @@ export class MercuryClient {
       if (error) {
         throw new Error(getGraphQlError(error));
       }
-      this.mercurySession.token = data.authenticate.jwtToken;
+      this.tokens[network] = data.authenticate.jwtToken;
 
       return {
         data,
@@ -233,14 +241,14 @@ export class MercuryClient {
     };
 
     try {
-      if (!this.mercurySession.token) {
+      if (!this.tokens[network]) {
         await this.renewMercuryToken(network);
       }
 
       const subscribe = async () => {
         const config = {
           headers: {
-            Authorization: `Bearer ${this.mercurySession.token}`,
+            Authorization: `Bearer ${this.tokens[network]}`,
           },
         };
 
@@ -300,13 +308,13 @@ export class MercuryClient {
     }
 
     try {
-      if (!this.mercurySession.token) {
+      if (!this.tokens[network]) {
         await this.renewMercuryToken(network);
       }
       const subscribe = async () => {
         const config = {
           headers: {
-            Authorization: `Bearer ${this.mercurySession.token}`,
+            Authorization: `Bearer ${this.tokens[network]}`,
           },
           validateStatus: (status: number) => status < 400,
         };
@@ -350,6 +358,9 @@ export class MercuryClient {
     pubKey: string,
     network: NetworkNames
   ) => {
+    if (!hasIndexerSupport(network)) {
+      throw new Error(`network not currently supported: ${network}`);
+    }
     try {
       const entrySub = {
         contract_id: contractId,
@@ -358,13 +369,13 @@ export class MercuryClient {
         durability: "persistent",
       };
 
-      if (!this.mercurySession.token) {
+      if (!this.tokens[network]) {
         await this.renewMercuryToken(network);
       }
 
       const config = {
         headers: {
-          Authorization: `Bearer ${this.mercurySession.token}`,
+          Authorization: `Bearer ${this.tokens[network]}`,
         },
         validateStatus: (status: number) => status < 400,
       };
@@ -517,13 +528,13 @@ export class MercuryClient {
         throw new Error(ERROR.MISSING_SUB_FOR_PUBKEY);
       }
 
-      if (!this.mercurySession.token) {
+      if (!this.tokens[network]) {
         await this.renewMercuryToken(network);
       }
 
       const urqlClient = this.mercurySession.backendClientMaker(
         network,
-        this.mercurySession.token
+        this.tokens[network]
       );
       const getData = async () => {
         const data = await urqlClient.query(query.getAccountHistory, {
@@ -697,7 +708,7 @@ export class MercuryClient {
         tokenDetails[contractId] = details;
       }
 
-      if (!this.mercurySession.token) {
+      if (!this.tokens[network]) {
         await this.renewMercuryToken(network);
       }
 
@@ -705,7 +716,7 @@ export class MercuryClient {
         const urqlClientCurrentData =
           this.mercurySession.currentDataClientMaker(
             network,
-            this.mercurySession.token
+            this.tokens[network]
           );
 
         const responseCurrentData = await urqlClientCurrentData.query(
@@ -861,14 +872,18 @@ export class MercuryClient {
     publicKey: string,
     network: NetworkNames
   ): Promise<{ publickey: string }[]> => {
+    if (!hasIndexerSupport(network)) {
+      throw new Error(`network not currently supported: ${network}`);
+    }
+
     try {
-      if (!this.mercurySession.token) {
+      if (!this.tokens[network]) {
         await this.renewMercuryToken(network);
       }
       const getData = async () => {
         const urqlClient = this.mercurySession.backendClientMaker(
           network,
-          this.mercurySession.token
+          this.tokens[network]
         );
         const response = await urqlClient.query(
           query.getAccountSubForPubKey(publicKey),
@@ -895,14 +910,17 @@ export class MercuryClient {
     contractId: string,
     network: NetworkNames
   ) => {
+    if (!hasIndexerSupport(network)) {
+      throw new Error(`network not currently supported: ${network}`);
+    }
     try {
-      if (!this.mercurySession.token) {
+      if (!this.tokens[network]) {
         await this.renewMercuryToken(network);
       }
       const getData = async () => {
         const urqlClient = this.mercurySession.backendClientMaker(
           network,
-          this.mercurySession.token
+          this.tokens[network]
         );
         const response = await urqlClient.query(
           query.getTokenBalanceSub(

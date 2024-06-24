@@ -195,7 +195,6 @@ const backends = {
 };
 
 const mercurySession = {
-  token: "mercury-token",
   renewClientMaker,
   backendClientMaker,
   currentDataClientMaker: backendClientMaker,
@@ -210,7 +209,6 @@ const mercurySession = {
       password: "user-password",
     },
   },
-  userId: "1",
 };
 
 const valueXdr = nativeToScVal(1).toXDR();

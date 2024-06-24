@@ -6,8 +6,6 @@ const ENV_KEYS = [
   "AUTH_EMAIL_TESTNET",
   "AUTH_PASS_TESTNET",
   "HOSTNAME",
-  "MERCURY_KEY",
-  "MERCURY_USER_ID",
   "MODE",
   "REDIS_CONNECTION_NAME",
   "REDIS_PORT",
@@ -47,8 +45,6 @@ export function buildConfig(config: Record<string, string>) {
       config.AUTH_EMAIL_TESTNET || process.env.AUTH_EMAIL_TESTNET!,
     mercuryPasswordTestnet:
       config.AUTH_PASS_TESTNET || process.env.AUTH_PASS_TESTNET!,
-    mercuryKey: config.MERCURY_KEY || process.env.MERCURY_KEY!,
-    mercuryUserId: config.MERCURY_USER_ID || process.env.MERCURY_USER_ID!,
     mercuryIntegrityCheckEmail:
       config.MERCURY_INTEGRITY_CHECK_ACCOUNT_EMAIL ||
       process.env.MERCURY_INTEGRITY_CHECK_ACCOUNT_EMAIL!,
