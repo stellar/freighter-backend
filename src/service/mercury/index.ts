@@ -80,6 +80,10 @@ interface MercurySession {
     PUBLIC: string;
   };
   credentials: {
+    [index: string]: {
+      email: string;
+      password: string;
+    };
     TESTNET: {
       email: string;
       password: string;

@@ -200,8 +200,16 @@ const mercurySession = {
   backendClientMaker,
   currentDataClientMaker: backendClientMaker,
   backends,
-  email: "user-email",
-  password: "user-password",
+  credentials: {
+    TESTNET: {
+      email: "user-email",
+      password: "user-password",
+    },
+    PUBLIC: {
+      email: "user-email",
+      password: "user-password",
+    },
+  },
   userId: "1",
 };
 
@@ -469,15 +477,43 @@ const queryMockResponse = {
     createClaimableBalanceToPublicKey: {
       edges: [],
     },
+    setOptionsByPublicKey: {
+      edges: [],
+    },
   },
 };
 
 export const register = new Prometheus.Registry();
 
+const mercuryErrorCounter = new Prometheus.Counter({
+  name: "freighter_backend_mercury_error_count",
+  help: "Count of errors returned from Mercury",
+  labelNames: ["endpoint"],
+  registers: [register],
+});
+
+const rpcErrorCounter = new Prometheus.Counter({
+  name: "freighter_backend_rpc_error_count",
+  help: "Count of errors returned from Horizon or Soroban RPCs",
+  labelNames: ["rpc"],
+  registers: [register],
+});
+
+const criticalError = new Prometheus.Counter({
+  name: "freighter_backend_critical_error_count",
+  help: "Count of errors that need manual operator intervention or investigation",
+  labelNames: ["message"],
+  registers: [register],
+});
 const mockMercuryClient = new MercuryClient(
   mercurySession,
   testLogger,
-  register
+  register,
+  {
+    mercuryErrorCounter,
+    rpcErrorCounter,
+    criticalError,
+  }
 );
 
 jest
