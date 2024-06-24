@@ -18,6 +18,8 @@ import {
   hasIndexerSupport,
 } from "./helper/mercury";
 import { IntegrityChecker } from "./service/integrity-checker";
+import { isValidMode } from "./helper/env";
+import { ERROR } from "./helper/error";
 
 interface CliArgs {
   env: string;
@@ -45,6 +47,9 @@ async function main() {
   }).argv as CliArgs;
 
   const env = argv.env || conf.mode;
+  if (!isValidMode(env)) {
+    throw new Error(ERROR.INVALID_RUN_MODE);
+  }
   const port = argv.port || 3002;
 
   const register = new Prometheus.Registry();
@@ -206,6 +211,7 @@ async function main() {
     conf.useMercury,
     conf.useSorobanPublic,
     register,
+    env,
     redis
   );
   const metricsServer = await initMetricsServer(register, redis);
@@ -252,7 +258,6 @@ async function main() {
         },
         redis
       );
-      await integrityCheckMercuryClient.renewMercuryToken(checkNetwork);
       const stellarClient = new IntegrityChecker(
         logger,
         integrityCheckMercuryClient,

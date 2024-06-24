@@ -1,10 +1,13 @@
 import Fastify, { FastifyRequest } from "fastify";
+import axios from "axios";
 import helmet from "@fastify/helmet";
 import rateLimiter from "@fastify/rate-limit";
 import cors from "@fastify/cors";
 import { Logger } from "pino";
 import { Redis } from "ioredis";
 import Prometheus from "prom-client";
+import { Networks } from "stellar-sdk-next";
+import * as StellarSdk from "stellar-sdk";
 
 import { MercuryClient } from "../service/mercury";
 import { ajv } from "./validators";
@@ -15,7 +18,6 @@ import {
   NetworkNames,
 } from "../helper/validate";
 import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
-import * as StellarSdk from "stellar-sdk";
 import {
   SOROBAN_RPC_URLS,
   buildTransfer,
@@ -24,20 +26,20 @@ import {
   simulateTx,
 } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
-import axios from "axios";
 import { getSdk } from "../helper/stellar";
-import { Networks } from "stellar-sdk-next";
-import { REDIS_USE_MERCURY_KEY } from "../helper/mercury";
+import { getUseMercury } from "../helper/mercury";
 import { getHttpRequestDurationLabels } from "../helper/metrics";
+import { mode } from "../helper/env";
 
 const API_VERSION = "v1";
 
 export async function initApiServer(
   mercuryClient: MercuryClient,
   logger: Logger,
-  useMercury: boolean,
+  useMercuryConf: boolean,
   useSorobanPublic: boolean,
   register: Prometheus.Registry,
+  mode: mode,
   redis?: Redis
 ) {
   const routeMetricsStore = new WeakMap<
@@ -226,19 +228,13 @@ export async function initApiServer(
           reply
         ) => {
           try {
-            let redisUseMercury = undefined;
-            if (redis) {
-              const redisValue = await redis.get(REDIS_USE_MERCURY_KEY);
-              if (redisValue) {
-                redisUseMercury = Boolean(redisValue);
-              }
-            }
+            const useMercury = await getUseMercury(mode, useMercuryConf, redis);
             const pubKey = request.params["pubKey"];
             const { network } = request.query;
             const { data, error } = await mercuryClient.getAccountHistory(
               pubKey,
               network,
-              redisUseMercury || useMercury
+              useMercury
             );
             if (error) {
               reply.code(400).send(JSON.stringify(error));
@@ -285,14 +281,7 @@ export async function initApiServer(
           reply
         ) => {
           try {
-            let redisUseMercury = undefined;
-            if (redis) {
-              const redisValue = await redis.get(REDIS_USE_MERCURY_KEY);
-              if (redisValue) {
-                redisUseMercury = Boolean(redisValue);
-              }
-            }
-
+            const useMercury = await getUseMercury(mode, useMercuryConf, redis);
             const pubKey = request.params["pubKey"];
             const { network } = request.query;
 
@@ -305,7 +294,7 @@ export async function initApiServer(
               pubKey,
               skipSorobanPubnet ? [] : contractIds,
               network,
-              redisUseMercury || useMercury
+              useMercury
             );
 
             reply.code(200).send(data);
@@ -499,16 +488,8 @@ export async function initApiServer(
           reply
         ) => {
           const { contract_id, pub_key, network } = request.body;
-          let redisUseMercury = undefined;
-          if (redis) {
-            const redisValue = await redis.get(REDIS_USE_MERCURY_KEY);
-            if (redisValue) {
-              redisUseMercury = Boolean(redisValue);
-            }
-          }
-          const _useMercury =
-            redisUseMercury === undefined ? useMercury : redisUseMercury;
-          if (!_useMercury) {
+          const useMercury = await getUseMercury(mode, useMercuryConf, redis);
+          if (!useMercury) {
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
@@ -552,17 +533,8 @@ export async function initApiServer(
           reply
         ) => {
           const { pub_key, network } = request.body;
-          let redisUseMercury = undefined;
-          if (redis) {
-            const redisValue = await redis.get(REDIS_USE_MERCURY_KEY);
-            if (redisValue) {
-              redisUseMercury = Boolean(redisValue);
-            }
-          }
-
-          const _useMercury =
-            redisUseMercury === undefined ? useMercury : redisUseMercury;
-          if (!_useMercury) {
+          const useMercury = await getUseMercury(mode, useMercuryConf, redis);
+          if (!useMercury) {
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
@@ -610,17 +582,9 @@ export async function initApiServer(
           reply
         ) => {
           const { pub_key, contract_id, network } = request.body;
-          let redisUseMercury = undefined;
-          if (redis) {
-            const redisValue = await redis.get(REDIS_USE_MERCURY_KEY);
-            if (redisValue) {
-              redisUseMercury = Boolean(redisValue);
-            }
-          }
 
-          const _useMercury =
-            redisUseMercury === undefined ? useMercury : redisUseMercury;
-          if (!_useMercury) {
+          const useMercury = await getUseMercury(mode, useMercuryConf, redis);
+          if (!useMercury) {
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 

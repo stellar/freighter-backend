@@ -18,4 +18,5 @@ export const ERROR = {
   ENTRY_NOT_FOUND: {
     CONTRACT_CODE: "contract code entry not found",
   },
+  INVALID_RUN_MODE: "invalid run mode",
 };
