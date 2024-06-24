@@ -949,6 +949,39 @@ export const query = {
         }
       }
 
+      setOptionsByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            id
+            opId
+            clearFlags
+            setFlags
+            masterWeight
+            lowThreshold
+            medThreshold
+            highThreshold
+            homeDomain
+            signerWeight
+            signerKind
+            signer
+            signedPayload
+            source
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              resultXdr
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+      
+
     }
   `,
 };

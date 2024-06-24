@@ -831,6 +831,23 @@ type MercuryAccountHistory = {
       } & BaseOperation;
     }[];
   };
+  setOptionsByPublicKey: {
+    edges: {
+      node: {
+        clearFlags: number | null;
+        setFlags: number | null;
+        masterWeight: number | null;
+        lowThreshold: number | null;
+        medThreshold: number | null;
+        highThreshold: number | null;
+        homeDomain: string | null;
+        signerWeight: number | null;
+        signerKind: string;
+        signer: string;
+        signedPayload: string | null;
+      } & BaseOperation;
+    }[];
+  };
 };
 
 const transformAccountHistory = async (
@@ -1265,6 +1282,18 @@ const transformAccountHistory = async (
       } as Partial<StellarSdk.Horizon.ServerApi.CreateClaimableBalanceOperationRecord>;
     });
 
+  const setOptionsToPublicKeyEdges =
+    rawResponse.data?.setOptionsByPublicKey.edges || [];
+  const setOptionsToPublicKey = setOptionsToPublicKeyEdges.map((edge) => {
+    const baseFields = transformBaseOperation(edge.node, network);
+    return {
+      ...baseFields,
+      type: "set_options",
+      type_i: 5,
+      source_account: edge.node.source,
+    } as Partial<StellarSdk.Horizon.ServerApi.SetOptionsOperationRecord>;
+  });
+
   return [
     ...createAccount,
     ...createAccountTo,
@@ -1293,6 +1322,7 @@ const transformAccountHistory = async (
     ...clawbackByPublicKey,
     ...setTrustLineFlagsByPublicKey,
     ...invokeHostFn,
+    ...setOptionsToPublicKey,
   ]
     .filter((tx) => tx.transaction_successful)
     .sort((a, b) => {

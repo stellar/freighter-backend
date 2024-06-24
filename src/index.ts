@@ -17,7 +17,7 @@ import {
   REDIS_USE_MERCURY_KEY,
   hasIndexerSupport,
 } from "./helper/mercury";
-// import { IntegrityChecker } from "./service/integrity-checker";
+import { IntegrityChecker } from "./service/integrity-checker";
 
 interface CliArgs {
   env: string;
@@ -120,15 +120,44 @@ async function main() {
   };
 
   const mercurySession = {
-    token: conf.mercuryKey,
+    token: "",
     renewClientMaker,
     backendClientMaker,
     currentDataClientMaker,
     backends,
-    email: conf.mercuryEmail,
-    password: conf.mercuryPassword,
+    credentials: {
+      TESTNET: {
+        email: conf.mercuryEmail,
+        password: conf.mercuryPassword,
+      },
+      PUBLIC: {
+        email: conf.mercuryEmailTestnet,
+        password: conf.mercuryPasswordTestnet,
+      },
+    },
     userId: conf.mercuryUserId,
   };
+
+  const mercuryErrorCounter = new Prometheus.Counter({
+    name: "freighter_backend_mercury_error_count",
+    help: "Count of errors returned from Mercury",
+    labelNames: ["endpoint"],
+    registers: [register],
+  });
+
+  const rpcErrorCounter = new Prometheus.Counter({
+    name: "freighter_backend_rpc_error_count",
+    help: "Count of errors returned from Horizon or Soroban RPCs",
+    labelNames: ["rpc"],
+    registers: [register],
+  });
+
+  const criticalError = new Prometheus.Counter({
+    name: "freighter_backend_critical_error_count",
+    help: "Count of errors that need manual operator intervention or investigation",
+    labelNames: ["message"],
+    registers: [register],
+  });
 
   let redis = undefined;
   // use in-memory store in dev
@@ -153,6 +182,11 @@ async function main() {
     mercurySession,
     logger,
     register,
+    {
+      mercuryErrorCounter,
+      rpcErrorCounter,
+      criticalError,
+    },
     redis
   );
   const server = await initApiServer(
@@ -177,13 +211,46 @@ async function main() {
 
   try {
     if (conf.useMercury && redis) {
-      // const stellarClient = new IntegrityChecker(
-      //   logger,
-      //   mercuryClient,
-      //   redis,
-      //   register
-      // );
-      // await stellarClient.watchLedger("PUBLIC");
+      const checkNetwork = "PUBLIC";
+      // initial token and userID not needed for integrity checks
+      const integrityCheckMercurySession = {
+        token: conf.mercuryKey,
+        renewClientMaker,
+        backendClientMaker,
+        currentDataClientMaker,
+        backends,
+        credentials: {
+          TESTNET: {
+            email: conf.mercuryEmail,
+            password: conf.mercuryPassword,
+          },
+          // need to set this to the integrity check accounts for Mercury to remove entries periodically
+          PUBLIC: {
+            email: conf.mercuryIntegrityCheckEmail,
+            password: conf.mercuryIntegrityCheckPass,
+          },
+        },
+        userId: "",
+      };
+      const integrityCheckMercuryClient = new MercuryClient(
+        integrityCheckMercurySession,
+        logger,
+        register,
+        {
+          mercuryErrorCounter,
+          rpcErrorCounter,
+          criticalError,
+        },
+        redis
+      );
+      await integrityCheckMercuryClient.renewMercuryToken(checkNetwork);
+      const stellarClient = new IntegrityChecker(
+        logger,
+        integrityCheckMercuryClient,
+        redis,
+        register
+      );
+      // await stellarClient.watchLedger(checkNetwork);
     }
   } catch (err) {
     logger.error(err);

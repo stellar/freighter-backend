@@ -80,11 +80,13 @@ export class IntegrityChecker {
     this.lastCheckedLedger = _ledger.sequence;
     const ops = await _ledger.operations();
     const firstOp = ops.records[0];
-    try {
-      await this.checkOperationIntegrity(firstOp, network);
-    } catch (error) {
-      this.logger.error(error);
-      this.dataIntegrityCheckFail.inc();
+    if (firstOp) {
+      try {
+        await this.checkOperationIntegrity(firstOp, network);
+      } catch (error) {
+        this.logger.error(error);
+        this.dataIntegrityCheckFail.inc();
+      }
     }
   };
 
@@ -95,12 +97,14 @@ export class IntegrityChecker {
     const SKIP_KEYS = ["created_at"];
     const sourceAccount = operation.source_account;
     const opId = operation.id;
+    this.logger.info(`Checking integrity of operation ID: ${opId}`);
     const { error } = await this.mercuryClient.accountSubscription(
       sourceAccount,
       network
     );
 
     if (!error) {
+      this.logger.info(`Subscribed to account ${sourceAccount}`);
       const { data: history } =
         await this.mercuryClient.getAccountHistoryMercury(
           sourceAccount,
@@ -180,6 +184,7 @@ export class IntegrityChecker {
               await this.redisClient.set(REDIS_TOGGLE_USE_MERCURY_KEY, "false");
               return;
             } else {
+              this.logger.info(`Passed check for op ${opId}`);
               this.dataIntegrityCheckPass.inc();
               const shouldToggleUseMercury = await this.redisClient.get(
                 REDIS_TOGGLE_USE_MERCURY_KEY
@@ -191,21 +196,29 @@ export class IntegrityChecker {
             }
           }
         } else {
-          this.logger.error(
-            `Failed to find matching operation from both data sources - horizon: ${JSON.stringify(
-              match
-            )}, mercury: ${JSON.stringify(matchHorizon)}`
-          );
+          if (!match) {
+            this.logger.error(
+              `Failed to find matching operation from Mercury, ID: ${opId}, source: ${operation.source_account}`
+            );
+          }
+          if (!matchHorizon) {
+            this.logger.error(
+              `Failed to find matching operation from Horizon, ID: ${opId}`
+            );
+          }
+
           this.dataIntegrityCheckFail.inc();
           await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
           await this.redisClient.set(REDIS_TOGGLE_USE_MERCURY_KEY, "false");
         }
       } else {
-        this.logger.error(
-          `Failed to get history from both data sources - horizon: ${JSON.stringify(
-            history
-          )}, mercury: ${JSON.stringify(historyHorizon)}`
-        );
+        if (!historyHorizon) {
+          this.logger.error(`Failed to get history from Horizon`);
+        }
+        if (!history) {
+          this.logger.error(`Failed to get history from Mercury`);
+        }
+
         this.dataIntegrityCheckFail.inc();
         await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
         await this.redisClient.set(REDIS_TOGGLE_USE_MERCURY_KEY, "false");
