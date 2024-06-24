@@ -63,6 +63,22 @@ async function main() {
     PUBLIC: conf.mercuryGraphQLCurrentDataPubnet,
   };
 
+  // Why does NodeJS.fetch.RequestInfo not work for URL?
+  function fetchWithTimeout(
+    url: any,
+    opts?: NodeJS.fetch.RequestInit
+  ): Promise<NodeJS.fetch.Response> {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 5000);
+
+    return fetch(url, {
+      ...opts,
+      signal: controller.signal,
+    }).finally(() => {
+      clearTimeout(id);
+    });
+  }
+
   const backends = {
     TESTNET: conf.mercuryBackendTestnet,
     PUBLIC: conf.mercuryBackendPubnet,
@@ -76,6 +92,7 @@ async function main() {
     return new Client({
       url: graphQlEndpoints[network as MercurySupportedNetworks],
       exchanges: [fetchExchange],
+      fetch: fetchWithTimeout,
     });
   };
 
@@ -90,6 +107,7 @@ async function main() {
     return new Client({
       url: `${graphQlEndpoints[network as MercurySupportedNetworks]}`,
       exchanges: [fetchExchange],
+      fetch: fetchWithTimeout,
       fetchOptions: () => {
         return {
           headers: { authorization: `Bearer ${key}` },
@@ -111,6 +129,7 @@ async function main() {
         graphQlCurrentDataEndpoints[network as MercurySupportedNetworks]
       }`,
       exchanges: [fetchExchange],
+      fetch: fetchWithTimeout,
       fetchOptions: () => {
         return {
           headers: { authorization: `Bearer ${key}` },
