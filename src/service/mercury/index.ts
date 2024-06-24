@@ -233,6 +233,10 @@ export class MercuryClient {
     };
 
     try {
+      if (!this.mercurySession.token) {
+        await this.renewMercuryToken(network);
+      }
+
       const subscribe = async () => {
         const config = {
           headers: {
@@ -296,6 +300,9 @@ export class MercuryClient {
     }
 
     try {
+      if (!this.mercurySession.token) {
+        await this.renewMercuryToken(network);
+      }
       const subscribe = async () => {
         const config = {
           headers: {
@@ -350,6 +357,10 @@ export class MercuryClient {
         key_xdr: this.tokenBalanceKey(pubKey, network),
         durability: "persistent",
       };
+
+      if (!this.mercurySession.token) {
+        await this.renewMercuryToken(network);
+      }
 
       const config = {
         headers: {
@@ -504,6 +515,10 @@ export class MercuryClient {
           );
         }
         throw new Error(ERROR.MISSING_SUB_FOR_PUBKEY);
+      }
+
+      if (!this.mercurySession.token) {
+        await this.renewMercuryToken(network);
       }
 
       const urqlClient = this.mercurySession.backendClientMaker(
@@ -682,6 +697,10 @@ export class MercuryClient {
         tokenDetails[contractId] = details;
       }
 
+      if (!this.mercurySession.token) {
+        await this.renewMercuryToken(network);
+      }
+
       const getData = async () => {
         const urqlClientCurrentData =
           this.mercurySession.currentDataClientMaker(
@@ -843,6 +862,9 @@ export class MercuryClient {
     network: NetworkNames
   ): Promise<{ publickey: string }[]> => {
     try {
+      if (!this.mercurySession.token) {
+        await this.renewMercuryToken(network);
+      }
       const getData = async () => {
         const urqlClient = this.mercurySession.backendClientMaker(
           network,
@@ -874,6 +896,9 @@ export class MercuryClient {
     network: NetworkNames
   ) => {
     try {
+      if (!this.mercurySession.token) {
+        await this.renewMercuryToken(network);
+      }
       const getData = async () => {
         const urqlClient = this.mercurySession.backendClientMaker(
           network,
