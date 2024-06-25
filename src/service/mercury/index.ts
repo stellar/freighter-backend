@@ -299,7 +299,11 @@ export class MercuryClient {
     }
   };
 
-  accountSubscription = async (pubKey: string, network: NetworkNames) => {
+  accountSubscription = async (
+    pubKey: string,
+    network: NetworkNames,
+    epochs: number = 6
+  ) => {
     if (!hasIndexerSupport(network)) {
       return {
         data: null,
@@ -323,7 +327,7 @@ export class MercuryClient {
           `${
             this.mercurySession.backends[network as MercurySupportedNetworks]
           }/account`,
-          { publickey: pubKey, hydrate: true },
+          { publickey: pubKey, hydrate: true, epochs },
           config
         );
         return data;
@@ -942,6 +946,40 @@ export class MercuryClient {
     } catch (error) {
       this.logger.error(error);
       return [];
+    }
+  };
+
+  checkHydrationStatus = async (hydrationId: number, network: NetworkNames) => {
+    try {
+      if (!this.tokens[network]) {
+        await this.renewMercuryToken(network);
+      }
+      const subscribe = async () => {
+        const config = {
+          headers: {
+            Authorization: `Bearer ${this.tokens[network]}`,
+          },
+          validateStatus: (status: number) => status < 400,
+        };
+
+        const { data } = await axios.get(
+          `${
+            this.mercurySession.backends[network as MercurySupportedNetworks]
+          }/hydrations/${hydrationId}`,
+          config
+        );
+        return data;
+      };
+
+      const data = await this.renewAndRetry(
+        subscribe,
+        network,
+        DEFAULT_RETRY_AMOUNT
+      );
+      return data;
+    } catch (error) {
+      this.logger.error(error);
+      return { status: "error", id: hydrationId };
     }
   };
 }

@@ -143,11 +143,11 @@ async function main() {
     currentDataClientMaker,
     backends,
     credentials: {
-      TESTNET: {
+      PUBLIC: {
         email: conf.mercuryEmail,
         password: conf.mercuryPassword,
       },
-      PUBLIC: {
+      TESTNET: {
         email: conf.mercuryEmailTestnet,
         password: conf.mercuryPasswordTestnet,
       },
@@ -237,8 +237,8 @@ async function main() {
         backends,
         credentials: {
           TESTNET: {
-            email: conf.mercuryEmail,
-            password: conf.mercuryPassword,
+            email: conf.mercuryEmailTestnet,
+            password: conf.mercuryPasswordTestnet,
           },
           // need to set this to the integrity check accounts for Mercury to remove entries periodically
           PUBLIC: {
