@@ -981,13 +981,16 @@ const transformAccountHistory = async (
   const pathPaymentsStrictSendByPublicKey =
     pathPaymentsStrictSendByPublicKeyEdges.map((edge) => {
       const baseFields = transformBaseOperation(edge, network);
-      const code = atob(edge.assetByDestAsset.code);
+      const code = edge.destAssetNative
+        ? "XLM"
+        : atob(edge.assetByDestAsset.code);
+      const issuer = edge.destAssetNative ? "" : edge.assetByDestAsset.issuer;
       return {
         ...baseFields,
         type: "path_payment_strict_send",
         type_i: 13,
         asset_code: code,
-        asset_issuer: edge.assetByDestAsset.issuer,
+        asset_issuer: issuer,
         asset_type: getAssetType(code),
         source_account: edge.source,
         from: edge.source,
@@ -1002,13 +1005,16 @@ const transformAccountHistory = async (
   const pathPaymentsStrictSendToPublicKey =
     pathPaymentsStrictSendToPublicKeyEdges.map((edge) => {
       const baseFields = transformBaseOperation(edge, network);
-      const code = atob(edge.assetByDestAsset.code);
+      const code = edge.destAssetNative
+        ? "XLM"
+        : atob(edge.assetByDestAsset.code);
+      const issuer = edge.destAssetNative ? "" : edge.assetByDestAsset.issuer;
       return {
         ...baseFields,
         type: "path_payment_strict_send",
         type_i: 13,
         asset_code: code,
-        asset_issuer: edge.assetByDestAsset.issuer,
+        asset_issuer: issuer,
         asset_type: getAssetType(code),
         source_account: edge.source,
         from: edge.source,
@@ -1023,7 +1029,10 @@ const transformAccountHistory = async (
   const pathPaymentsStrictReceiveByPublicKey =
     pathPaymentsStrictReceiveByPublicKeyEdges.map((edge) => {
       const baseFields = transformBaseOperation(edge, network);
-      const code = edge.assetByDestAsset.code;
+      const code = edge.destAssetNative
+        ? "XLM"
+        : atob(edge.assetByDestAsset.code);
+      const issuer = edge.destAssetNative ? "" : edge.assetByDestAsset.issuer;
       return {
         ...baseFields,
         created_at: new Date(
@@ -1032,7 +1041,7 @@ const transformAccountHistory = async (
         type: "path_payment_strict_receive",
         type_i: 2,
         asset_code: code,
-        asset_issuer: edge.assetByDestAsset.issuer,
+        asset_issuer: issuer,
         asset_type: getAssetType(code),
         source_account: edge.source,
         from: edge.source,
@@ -1047,14 +1056,17 @@ const transformAccountHistory = async (
   const pathPaymentsStrictReceiveToPublicKey =
     pathPaymentsStrictReceiveToPublicKeyEdges.map((edge) => {
       const baseFields = transformBaseOperation(edge, network);
-      const code = edge.assetByDestAsset.code;
+      const code = edge.destAssetNative
+        ? "XLM"
+        : atob(edge.assetByDestAsset.code);
+      const issuer = edge.destAssetNative ? "" : edge.assetByDestAsset.issuer;
 
       return {
         ...baseFields,
         type: "path_payment_strict_receive",
         type_i: 2,
         asset_code: code,
-        asset_issuer: edge.assetByDestAsset.issuer,
+        asset_issuer: issuer,
         asset_type: getAssetType(code),
         source_account: edge.source,
         from: edge.source,

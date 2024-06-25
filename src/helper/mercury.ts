@@ -33,5 +33,5 @@ export const getUseMercury = async (
     return useMercuryConf;
   }
   const redisValue = await redis.get(REDIS_USE_MERCURY_KEY);
-  return redisValue ? Boolean(redisValue) : false;
+  return redisValue === "true";
 };

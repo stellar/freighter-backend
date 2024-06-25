@@ -134,6 +134,7 @@ export class IntegrityChecker {
         throw new Error(error as any);
       }
 
+      this.logger.info(`Subscribed to account ${sourceAccount}`);
       await this.checkHydrateAndMatchOps(
         data.id,
         sourceAccount,
@@ -166,11 +167,8 @@ export class IntegrityChecker {
     network: NetworkNames
   ) => {
     const opId = operation.id;
-    this.logger.info(`Subscribed to account ${sourceAccount}`);
-    const { data: history } = await this.mercuryClient.getAccountHistoryMercury(
-      sourceAccount,
-      network
-    );
+    const { data: history, error: mercuryHistoryError } =
+      await this.mercuryClient.getAccountHistoryMercury(sourceAccount, network);
     const { data: historyHorizon } =
       await this.mercuryClient.getAccountHistoryHorizon(sourceAccount, network);
 
@@ -275,6 +273,7 @@ export class IntegrityChecker {
       }
       if (!history) {
         this.logger.error(`Failed to get history from Mercury`);
+        this.logger.error(mercuryHistoryError);
       }
 
       this.dataIntegrityCheckFail.inc();
