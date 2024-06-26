@@ -416,7 +416,7 @@ type MercuryAccountHistory = {
       } & BaseOperation;
     }[];
   };
-  paymentsByPublicKey: {
+  paymentsOfPublicKey: {
     edges: {
       node: {
         amount: string;
@@ -429,20 +429,7 @@ type MercuryAccountHistory = {
       } & BaseOperation;
     }[];
   };
-  paymentsToPublicKey: {
-    edges: {
-      node: {
-        amount: string;
-        assetNative: string;
-        assetByAsset: {
-          code: string;
-          issuer: string;
-        } | null;
-        destination: string;
-      } & BaseOperation;
-    }[];
-  };
-  pathPaymentsStrictSendByPublicKey: {
+  pathPaymentsStrictSendOfPublicKey: {
     nodes: ({
       destination: string;
       assetByDestAsset: {
@@ -484,91 +471,7 @@ type MercuryAccountHistory = {
       sendAssetNative: string;
     } & BaseOperation)[];
   };
-  pathPaymentsStrictSendToPublicKey: {
-    nodes: ({
-      destination: string;
-      assetByDestAsset: {
-        code: string;
-        issuer: string;
-      };
-      assetByPath1: {
-        code: string;
-        issuer: string;
-      };
-      assetByPath2: {
-        code: string;
-        issuer: string;
-      };
-      assetByPath3: {
-        issuer: string;
-        code: string;
-      };
-      assetByPath4: {
-        issuer: string;
-        code: string;
-      };
-      assetByPath5: {
-        issuer: string;
-        code: string;
-      };
-      assetBySendAsset: {
-        code: string;
-        issuer: string;
-      };
-      destAssetNative: string;
-      destMin: string;
-      path1Native: string;
-      path2Native: string;
-      path3Native: string;
-      path4Native: string;
-      path5Native: string;
-      sendAmount: string;
-      sendAssetNative: string;
-    } & BaseOperation)[];
-  };
-  pathPaymentsStrictReceiveByPublicKey: {
-    nodes: ({
-      destination: string;
-      assetByDestAsset: {
-        code: string;
-        issuer: string;
-      };
-      assetByPath1: {
-        code: string;
-        issuer: string;
-      };
-      assetByPath2: {
-        code: string;
-        issuer: string;
-      };
-      assetByPath3: {
-        issuer: string;
-        code: string;
-      };
-      assetByPath4: {
-        issuer: string;
-        code: string;
-      };
-      assetByPath5: {
-        issuer: string;
-        code: string;
-      };
-      assetBySendAsset: {
-        code: string;
-        issuer: string;
-      };
-      destAssetNative: string;
-      destMin: string;
-      path1Native: string;
-      path2Native: string;
-      path3Native: string;
-      path4Native: string;
-      path5Native: string;
-      destAmount: string;
-      sendAssetNative: string;
-    } & BaseOperation)[];
-  };
-  pathPaymentsStrictReceiveToPublicKey: {
+  pathPaymentsStrictReceiveOfPublicKey: {
     nodes: ({
       destination: string;
       assetByDestAsset: {
@@ -929,7 +832,7 @@ const transformAccountHistory = async (
   });
 
   const paymentsByPublicKeyEdges =
-    rawResponse.data?.paymentsByPublicKey.edges || [];
+    rawResponse.data?.paymentsOfPublicKey.edges || [];
   const paymentsByPublicKey = paymentsByPublicKeyEdges.map((edge) => {
     const baseFields = transformBaseOperation(edge.node, network);
     const code = edge.node.assetByAsset
@@ -952,45 +855,18 @@ const transformAccountHistory = async (
     } as Partial<StellarSdk.Horizon.ServerApi.PaymentOperationRecord>;
   });
 
-  const paymentsToPublicKeyEdges =
-    rawResponse.data?.paymentsToPublicKey.edges || [];
-  const paymentsToPublicKey = paymentsToPublicKeyEdges.map((edge) => {
-    const baseFields = transformBaseOperation(edge.node, network);
-    const code = edge.node.assetByAsset
-      ? atob(edge.node.assetByAsset?.code!)
-      : null;
-    const issuer = edge.node.assetByAsset
-      ? edge.node.assetByAsset.issuer
-      : null;
-
-    return {
-      ...baseFields,
-      from: edge.node.source,
-      to: edge.node.destination,
-      asset_type: code,
-      asset_code: code,
-      asset_issuer: issuer,
-      amount: formatTokenAmount(new BigNumber(edge.node.amount), 7),
-      type: "payment",
-      type_i: 1,
-    } as Partial<StellarSdk.Horizon.ServerApi.PaymentOperationRecord>;
-  });
-
   const pathPaymentsStrictSendByPublicKeyEdges =
-    rawResponse.data?.pathPaymentsStrictSendByPublicKey.nodes || [];
+    rawResponse.data?.pathPaymentsStrictSendOfPublicKey.nodes || [];
   const pathPaymentsStrictSendByPublicKey =
     pathPaymentsStrictSendByPublicKeyEdges.map((edge) => {
       const baseFields = transformBaseOperation(edge, network);
       const code = edge.destAssetNative
-        ? "XLM"
+        ? undefined
         : atob(edge.assetByDestAsset.code);
-      const issuer = edge.destAssetNative ? "" : edge.assetByDestAsset.issuer;
-      return {
+      const transformedFields = {
         ...baseFields,
         type: "path_payment_strict_send",
         type_i: 13,
-        asset_code: code,
-        asset_issuer: issuer,
         asset_type: getAssetType(code),
         source_account: edge.source,
         from: edge.source,
@@ -998,50 +874,29 @@ const transformAccountHistory = async (
         destination_min: edge.destMin,
         amount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
       } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
-    });
 
-  const pathPaymentsStrictSendToPublicKeyEdges =
-    rawResponse.data?.pathPaymentsStrictSendToPublicKey.nodes || [];
-  const pathPaymentsStrictSendToPublicKey =
-    pathPaymentsStrictSendToPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge, network);
-      const code = edge.destAssetNative
-        ? "XLM"
-        : atob(edge.assetByDestAsset.code);
-      const issuer = edge.destAssetNative ? "" : edge.assetByDestAsset.issuer;
-      return {
-        ...baseFields,
-        type: "path_payment_strict_send",
-        type_i: 13,
-        asset_code: code,
-        asset_issuer: issuer,
-        asset_type: getAssetType(code),
-        source_account: edge.source,
-        from: edge.source,
-        to: edge.destination,
-        destination_min: edge.destMin,
-        amount: formatTokenAmount(new BigNumber(edge.sendAmount), 7),
-      } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentStrictSendOperationRecord>;
+      if (!edge.destAssetNative) {
+        transformedFields.asset_code = atob(edge.assetByDestAsset.code);
+        transformedFields.asset_issuer = edge.assetByDestAsset.issuer;
+      }
+      return transformedFields;
     });
 
   const pathPaymentsStrictReceiveByPublicKeyEdges =
-    rawResponse.data?.pathPaymentsStrictReceiveByPublicKey.nodes || [];
+    rawResponse.data?.pathPaymentsStrictReceiveOfPublicKey.nodes || [];
   const pathPaymentsStrictReceiveByPublicKey =
     pathPaymentsStrictReceiveByPublicKeyEdges.map((edge) => {
       const baseFields = transformBaseOperation(edge, network);
       const code = edge.destAssetNative
-        ? "XLM"
+        ? undefined
         : atob(edge.assetByDestAsset.code);
-      const issuer = edge.destAssetNative ? "" : edge.assetByDestAsset.issuer;
-      return {
+      const transformedFields = {
         ...baseFields,
         created_at: new Date(
           edge.txInfoByTx.ledgerByLedger.closeTime * 1000
         ).toISOString(),
         type: "path_payment_strict_receive",
         type_i: 2,
-        asset_code: code,
-        asset_issuer: issuer,
         asset_type: getAssetType(code),
         source_account: edge.source,
         from: edge.source,
@@ -1049,31 +904,11 @@ const transformAccountHistory = async (
         destination_min: edge.destMin,
         amount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
       } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentOperationRecord>;
-    });
-
-  const pathPaymentsStrictReceiveToPublicKeyEdges =
-    rawResponse.data?.pathPaymentsStrictReceiveToPublicKey.nodes || [];
-  const pathPaymentsStrictReceiveToPublicKey =
-    pathPaymentsStrictReceiveToPublicKeyEdges.map((edge) => {
-      const baseFields = transformBaseOperation(edge, network);
-      const code = edge.destAssetNative
-        ? "XLM"
-        : atob(edge.assetByDestAsset.code);
-      const issuer = edge.destAssetNative ? "" : edge.assetByDestAsset.issuer;
-
-      return {
-        ...baseFields,
-        type: "path_payment_strict_receive",
-        type_i: 2,
-        asset_code: code,
-        asset_issuer: issuer,
-        asset_type: getAssetType(code),
-        source_account: edge.source,
-        from: edge.source,
-        to: edge.destination,
-        destination_min: edge.destMin,
-        amount: formatTokenAmount(new BigNumber(edge.destAmount), 7),
-      } as Partial<StellarSdk.Horizon.ServerApi.PathPaymentOperationRecord>;
+      if (!edge.destAssetNative) {
+        transformedFields.asset_code = atob(edge.assetByDestAsset.code);
+        transformedFields.asset_issuer = edge.assetByDestAsset.issuer;
+      }
+      return transformedFields;
     });
 
   const manageBuyOfferByPublicKeyEdges =
@@ -1311,7 +1146,6 @@ const transformAccountHistory = async (
     ...createAccountTo,
     ...createClaimableBalanceToPublicKey,
     ...paymentsByPublicKey,
-    ...paymentsToPublicKey,
     ...changeTrustByPublicKey,
     ...allowTrustByPublicKey,
     ...accountMergeByPublicKey,
@@ -1319,9 +1153,7 @@ const transformAccountHistory = async (
     ...liquidityPoolDepositByPublicKey,
     ...liquidityPoolWithdrawByPublicKey,
     ...pathPaymentsStrictSendByPublicKey,
-    ...pathPaymentsStrictSendToPublicKey,
     ...pathPaymentsStrictReceiveByPublicKey,
-    ...pathPaymentsStrictReceiveToPublicKey,
     ...claimClaimableBalanceByPublicKey,
     ...createClaimableBalanceByPublicKey,
     ...manageBuyOfferByPublicKey,
