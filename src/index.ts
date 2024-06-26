@@ -262,7 +262,7 @@ async function main() {
         redis,
         register
       );
-      // await integrityCheckerClient.watchLedger(checkNetwork);
+      await integrityCheckerClient.watchLedger(checkNetwork);
     }
   } catch (err) {
     logger.error(err);
