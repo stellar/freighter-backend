@@ -13,7 +13,6 @@ import { initMetricsServer } from "./route/metrics";
 import { NetworkNames } from "./helper/validate";
 import {
   MercurySupportedNetworks,
-  REDIS_TOGGLE_USE_MERCURY_KEY,
   REDIS_USE_MERCURY_KEY,
   hasIndexerSupport,
 } from "./helper/mercury";
@@ -191,7 +190,6 @@ async function main() {
     });
 
     await redis.set(REDIS_USE_MERCURY_KEY, String(conf.useMercury));
-    await redis.set(REDIS_TOGGLE_USE_MERCURY_KEY, "true");
   }
 
   const mercuryClient = new MercuryClient(
