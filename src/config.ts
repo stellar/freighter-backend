@@ -3,13 +3,15 @@ import { ERROR } from "./helper/error";
 const ENV_KEYS = [
   "AUTH_EMAIL",
   "AUTH_PASS",
+  "AUTH_EMAIL_TESTNET",
+  "AUTH_PASS_TESTNET",
   "HOSTNAME",
-  "MERCURY_KEY",
-  "MERCURY_USER_ID",
   "MODE",
   "REDIS_CONNECTION_NAME",
   "REDIS_PORT",
   "USE_MERCURY",
+  "MERCURY_INTEGRITY_CHECK_ACCOUNT_EMAIL",
+  "MERCURY_INTEGRITY_CHECK_ACCOUNT_PASS",
 ];
 
 export function buildConfig(config: Record<string, string>) {
@@ -29,18 +31,26 @@ export function buildConfig(config: Record<string, string>) {
 
   return {
     hostname: config.HOSTNAME || process.env.HOSTNAME!,
-    mercuryBackendTestnet: "https://api.mercurydata.app/account",
+    mercuryBackendTestnet: "https://api.mercurydata.app",
     mercuryGraphQLTestnet: "https://api.mercurydata.app/graphql",
-    mercuryBackendPubnet: "https://mainnet.mercurydata.app/account",
+    mercuryBackendPubnet: "https://mainnet.mercurydata.app",
     mercuryGraphQLPubnet: "https://mainnet.mercurydata.app/graphql",
     mercuryGraphQLCurrentDataTestnet:
       "https://api.mercurydata.app:2096/graphql",
     mercuryGraphQLCurrentDataPubnet:
       "https://mainnet.mercurydata.app:2096/graphql",
     mercuryEmail: config.AUTH_EMAIL || process.env.AUTH_EMAIL!,
-    mercuryKey: config.MERCURY_KEY || process.env.MERCURY_KEY!,
     mercuryPassword: config.AUTH_PASS || process.env.AUTH_PASS!,
-    mercuryUserId: config.MERCURY_USER_ID || process.env.MERCURY_USER_ID!,
+    mercuryEmailTestnet:
+      config.AUTH_EMAIL_TESTNET || process.env.AUTH_EMAIL_TESTNET!,
+    mercuryPasswordTestnet:
+      config.AUTH_PASS_TESTNET || process.env.AUTH_PASS_TESTNET!,
+    mercuryIntegrityCheckEmail:
+      config.MERCURY_INTEGRITY_CHECK_ACCOUNT_EMAIL ||
+      process.env.MERCURY_INTEGRITY_CHECK_ACCOUNT_EMAIL!,
+    mercuryIntegrityCheckPass:
+      config.MERCURY_INTEGRITY_CHECK_ACCOUNT_PASS ||
+      process.env.MERCURY_INTEGRITY_CHECK_ACCOUNT_PASS!,
     mode: config.MODE || process.env.MODE!,
     redisConnectionName:
       config.REDIS_CONNECTION_NAME || process.env.REDIS_CONNECTION_NAME!,

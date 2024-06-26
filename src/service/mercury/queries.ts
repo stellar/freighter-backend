@@ -215,33 +215,7 @@ export const query = {
           }
         }
       }
-      paymentsByPublicKey(publicKeyText: $pubKey) {
-        edges {
-          node {
-            amount
-            assetNative
-            assetByAsset {
-              code
-              issuer
-            }
-            source
-            destination
-            opId
-            txInfoByTx {
-              fee
-              opCount
-              txHash
-              ledger
-              resultXdr
-              ledgerByLedger {
-                closeTime
-                sequence
-              }
-            }
-          }
-        }
-      }
-      paymentsToPublicKey(publicKeyText: $pubKey) {
+      paymentsOfPublicKey(publicKeyText: $pubKey) {
         edges {
           node {
             amount
@@ -268,7 +242,7 @@ export const query = {
         }
       }
 
-      pathPaymentsStrictSendByPublicKey(publicKeyText: $pubKey) {
+      pathPaymentsStrictSendOfPublicKey(publicKeyText: $pubKey) {
         nodes {
           source
           destination
@@ -324,119 +298,7 @@ export const query = {
         }
       }
 
-      pathPaymentsStrictSendToPublicKey(publicKeyText: $pubKey) {
-        nodes {
-          source
-          destination
-          assetByDestAsset {
-            code
-            issuer
-          }
-          assetByPath1 {
-            code
-            issuer
-          }
-          assetByPath2 {
-            code
-            issuer
-          }
-          assetByPath3 {
-            issuer
-            code
-          }
-          assetByPath4 {
-            issuer
-            code
-          }
-          assetByPath5 {
-            issuer
-            code
-          }
-          assetBySendAsset {
-            code
-            issuer
-          }
-          destAssetNative
-          destMin
-          path1Native
-          path2Native
-          path3Native
-          path4Native
-          path5Native
-          sendAmount
-          sendAssetNative
-          opId
-          txInfoByTx {
-            fee
-            opCount
-            txHash
-            ledger
-            resultXdr
-            ledgerByLedger {
-              closeTime
-              sequence
-            }
-          }
-        }
-      }
-
-      pathPaymentsStrictReceiveByPublicKey(publicKeyText: $pubKey) {
-        nodes {
-          source
-          destination
-          assetByDestAsset {
-            code
-            issuer
-          }
-          assetByPath1 {
-            code
-            issuer
-          }
-          assetByPath2 {
-            code
-            issuer
-          }
-          assetByPath2 {
-            issuer
-            code
-          }
-          assetByPath4 {
-            issuer
-            code
-          }
-          assetByPath5 {
-            issuer
-            code
-          }
-          assetBySendAsset {
-            code
-            issuer
-          }
-          destAssetNative
-          path1Native
-          path2Native
-          path3Native
-          path4Native
-          path5Native
-          sendAssetNative
-          destAmount
-          sendMax
-          opId
-          txInfoByTx {
-            fee
-            opCount
-            txHash
-            ledger
-            resultXdr
-            ledgerByLedger {
-              closeTime
-              sequence
-            }
-          }
-        }
-      }
-
-      pathPaymentsStrictReceiveToPublicKey(publicKeyText: $pubKey) {
+      pathPaymentsStrictReceiveOfPublicKey(publicKeyText: $pubKey) {
         nodes {
           source
           destination
@@ -948,6 +810,39 @@ export const query = {
           }
         }
       }
+
+      setOptionsByPublicKey(publicKeyText: $pubKey) {
+        edges {
+          node {
+            id
+            opId
+            clearFlags
+            setFlags
+            masterWeight
+            lowThreshold
+            medThreshold
+            highThreshold
+            homeDomain
+            signerWeight
+            signerKind
+            signer
+            signedPayload
+            source
+            txInfoByTx {
+              fee
+              opCount
+              txHash
+              ledger
+              resultXdr
+              ledgerByLedger {
+                closeTime
+                sequence
+              }
+            }
+          }
+        }
+      }
+      
 
     }
   `,

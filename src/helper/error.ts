@@ -15,4 +15,8 @@ export const ERROR = {
     "Tried to query for data without a subscription setup for a public key",
   MISSING_SUB_FOR_TOKEN_BALANCE:
     "Tried to query for data without a subscription setup for a token balance",
+  ENTRY_NOT_FOUND: {
+    CONTRACT_CODE: "contract code entry not found",
+  },
+  INVALID_RUN_MODE: "invalid run mode",
 };
