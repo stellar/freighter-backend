@@ -17,7 +17,7 @@ import {
   hasIndexerSupport,
 } from "./helper/mercury";
 import { IntegrityChecker } from "./service/integrity-checker";
-import { isValidMode } from "./helper/env";
+import { isValidMode, mode } from "./helper/env";
 import { ERROR } from "./helper/error";
 
 interface CliArgs {
@@ -209,7 +209,7 @@ async function main() {
     conf.useMercury,
     conf.useSorobanPublic,
     register,
-    env,
+    env as mode,
     redis
   );
   const metricsServer = await initMetricsServer(register, redis);
