@@ -258,13 +258,13 @@ async function main() {
         },
         redis
       );
-      const stellarClient = new IntegrityChecker(
+      const integrityCheckerClient = new IntegrityChecker(
         logger,
         integrityCheckMercuryClient,
         redis,
         register
       );
-      // await stellarClient.watchLedger(checkNetwork);
+      // await integrityCheckerClient.watchLedger(checkNetwork);
     }
   } catch (err) {
     logger.error(err);
