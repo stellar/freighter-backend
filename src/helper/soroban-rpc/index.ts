@@ -437,7 +437,7 @@ const getLedgerKeyWasmId = (
 
 async function parseWasmXdr(xdrContents: string, network: NetworkNames) {
   const Sdk = getSdk(StellarSdkNext.Networks[network]);
-  const { xdr, ContractSpec } = Sdk;
+  const { xdr, contract } = Sdk;
   const wasmBuffer = xdr.LedgerEntryData.fromXDR(xdrContents, "base64")
     .contractCode()
     .code();
@@ -452,7 +452,7 @@ async function parseWasmXdr(xdrContents: string, network: NetworkNames) {
   do {
     specs.push(xdr.ScSpecEntry.read(reader));
   } while (!reader.eof);
-  const contractSpec = new ContractSpec(specs);
+  const contractSpec = new contract.Spec(specs);
   return contractSpec.jsonSchema();
 }
 
@@ -543,7 +543,8 @@ const isSacContractExecutable = async (
       xdr.ContractExecutableType.contractExecutableStellarAsset().name
     );
   }
-  throw new Error(ERROR.ENTRY_NOT_FOUND.CONTRACT_CODE);
+
+  return false;
 };
 
 const isSacContract = (
