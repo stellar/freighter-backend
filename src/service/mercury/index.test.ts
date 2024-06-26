@@ -99,7 +99,7 @@ describe("Mercury Service", () => {
       error: null,
     };
     expect(response).toEqual(expected);
-    expect(mockMercuryClient.mercurySession.token).toEqual(
+    expect(mockMercuryClient.tokens["TESTNET"]).toEqual(
       queryMockResponse[mutation.authenticate].authenticate?.jwtToken
     );
   });
