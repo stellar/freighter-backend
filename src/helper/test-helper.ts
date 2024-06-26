@@ -531,7 +531,8 @@ async function getDevServer() {
     testLogger,
     true,
     true,
-    register
+    register,
+    "development"
   );
 
   await server.listen();
