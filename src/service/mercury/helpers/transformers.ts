@@ -836,7 +836,7 @@ const transformAccountHistory = async (
   const paymentsByPublicKey = paymentsByPublicKeyEdges.map((edge) => {
     const baseFields = transformBaseOperation(edge.node, network);
     const code = edge.node.assetByAsset
-      ? getAssetType(atob(edge.node.assetByAsset?.code!))
+      ? atob(edge.node.assetByAsset?.code!)
       : null;
     const issuer = edge.node.assetByAsset
       ? edge.node.assetByAsset.issuer

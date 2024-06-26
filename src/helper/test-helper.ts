@@ -377,7 +377,34 @@ const queryMockResponse = {
       edges: [],
     },
     paymentsOfPublicKey: {
-      edges: [],
+      edges: [
+        {
+          node: {
+            amount: "50000000",
+            assetNative: true,
+            accountBySource: {
+              publickey:
+                "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+            },
+            assetByAsset: {
+              code: btoa("DT"),
+              issuer:
+                "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+            },
+            accountByDestination: {
+              publickey: pubKey,
+            },
+            id: "12235",
+            txInfoByTx: {
+              opCount: 1,
+              fee: "1000",
+              ledgerByLedger: {
+                closeTime: 1703024113,
+              },
+            },
+          },
+        },
+      ],
     },
     pathPaymentsStrictSendOfPublicKey: {
       nodes: [],
