@@ -1,24 +1,29 @@
 import * as dotEnv from "dotenv";
 import { expand } from "dotenv-expand";
 import yargs from "yargs";
-import { Client, fetchExchange } from "@urql/core";
 import Redis from "ioredis";
 import Prometheus from "prom-client";
+import { Worker } from "worker_threads";
 
 import { logger } from "./logger";
 import { buildConfig } from "./config";
 import { MercuryClient } from "./service/mercury";
 import { initApiServer } from "./route";
 import { initMetricsServer } from "./route/metrics";
-import { NetworkNames } from "./helper/validate";
 import {
-  MercurySupportedNetworks,
   REDIS_USE_MERCURY_KEY,
-  hasIndexerSupport,
+  buildBackendClientMaker,
+  buildCurrentDataClientMaker,
+  buildRenewClientMaker,
 } from "./helper/mercury";
-import { IntegrityChecker } from "./service/integrity-checker";
 import { isValidMode, mode } from "./helper/env";
 import { ERROR } from "./helper/error";
+import {
+  register,
+  mercuryErrorCounter,
+  rpcErrorCounter,
+  criticalError,
+} from "./helper/metrics";
 
 interface CliArgs {
   env: string;
@@ -50,11 +55,6 @@ async function main() {
     throw new Error(ERROR.INVALID_RUN_MODE);
   }
   const port = argv.port || 3002;
-
-  const register = new Prometheus.Registry();
-  register.setDefaultLabels({
-    app: "freighter-backend",
-  });
   Prometheus.collectDefaultMetrics({ register });
 
   const graphQlEndpoints = {
@@ -67,79 +67,17 @@ async function main() {
     PUBLIC: conf.mercuryGraphQLCurrentDataPubnet,
   };
 
-  // Why does NodeJS.fetch.RequestInfo not work for URL?
-  function fetchWithTimeout(
-    url: any,
-    opts?: NodeJS.fetch.RequestInit
-  ): Promise<NodeJS.fetch.Response> {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 5000);
-
-    return fetch(url, {
-      ...opts,
-      signal: controller.signal,
-    }).finally(() => {
-      clearTimeout(id);
-    });
-  }
-
   const backends = {
     TESTNET: conf.mercuryBackendTestnet,
     PUBLIC: conf.mercuryBackendPubnet,
   };
 
-  const renewClientMaker = (network: NetworkNames) => {
-    if (!hasIndexerSupport(network)) {
-      throw new Error(`network not currently supported: ${network}`);
-    }
-
-    return new Client({
-      url: graphQlEndpoints[network as MercurySupportedNetworks],
-      exchanges: [fetchExchange],
-      fetch: fetchWithTimeout,
-    });
-  };
-
-  const backendClientMaker = (network: NetworkNames, key: string) => {
-    if (!hasIndexerSupport(network)) {
-      throw new Error(`network not currently supported: ${network}`);
-    }
-
-    return new Client({
-      url: `${graphQlEndpoints[network as MercurySupportedNetworks]}`,
-      exchanges: [fetchExchange],
-      fetch: fetchWithTimeout,
-      fetchOptions: () => {
-        return {
-          headers: { authorization: `Bearer ${key}` },
-        };
-      },
-    });
-  };
-
-  const currentDataClientMaker = (network: NetworkNames, key: string) => {
-    if (!hasIndexerSupport(network)) {
-      throw new Error(`network not currently supported: ${network}`);
-    }
-
-    return new Client({
-      url: `${
-        graphQlCurrentDataEndpoints[network as MercurySupportedNetworks]
-      }`,
-      exchanges: [fetchExchange],
-      fetch: fetchWithTimeout,
-      fetchOptions: () => {
-        return {
-          headers: { authorization: `Bearer ${key}` },
-        };
-      },
-    });
-  };
-
   const mercurySession = {
-    renewClientMaker,
-    backendClientMaker,
-    currentDataClientMaker,
+    renewClientMaker: buildRenewClientMaker(graphQlEndpoints),
+    backendClientMaker: buildBackendClientMaker(graphQlEndpoints),
+    currentDataClientMaker: buildCurrentDataClientMaker(
+      graphQlCurrentDataEndpoints
+    ),
     backends,
     credentials: {
       PUBLIC: {
@@ -152,27 +90,6 @@ async function main() {
       },
     },
   };
-
-  const mercuryErrorCounter = new Prometheus.Counter({
-    name: "freighter_backend_mercury_error_count",
-    help: "Count of errors returned from Mercury",
-    labelNames: ["endpoint"],
-    registers: [register],
-  });
-
-  const rpcErrorCounter = new Prometheus.Counter({
-    name: "freighter_backend_rpc_error_count",
-    help: "Count of errors returned from Horizon or Soroban RPCs",
-    labelNames: ["rpc"],
-    registers: [register],
-  });
-
-  const criticalError = new Prometheus.Counter({
-    name: "freighter_backend_critical_error_count",
-    help: "Count of errors that need manual operator intervention or investigation",
-    labelNames: ["message"],
-    registers: [register],
-  });
 
   let redis = undefined;
   // use in-memory store in dev
@@ -225,44 +142,35 @@ async function main() {
   }
 
   try {
-    if (conf.useMercury && redis) {
-      const checkNetwork = "PUBLIC";
-      // initial token and userID not needed for integrity checks
-      const integrityCheckMercurySession = {
-        renewClientMaker,
-        backendClientMaker,
-        currentDataClientMaker,
-        backends,
-        credentials: {
-          TESTNET: {
-            email: conf.mercuryEmailTestnet,
-            password: conf.mercuryPasswordTestnet,
-          },
-          // need to set this to the integrity check accounts for Mercury to remove entries periodically
-          PUBLIC: {
-            email: conf.mercuryIntegrityCheckEmail,
-            password: conf.mercuryIntegrityCheckPass,
-          },
+    // the worker is not properly instantiated when running this app with ts-node
+    // if you need to test this, build the app with webpack and run the build with node manually
+    if (conf.useMercury && env !== "development") {
+      const workerData = {
+        workerData: {
+          hostname: conf.hostname,
+          mercuryBackendPubnet: conf.mercuryBackendPubnet,
+          mercuryBackendTestnet: conf.mercuryBackendTestnet,
+          mercuryEmailTestnet: conf.mercuryEmailTestnet,
+          mercuryGraphQLCurrentDataPubnet: conf.mercuryGraphQLCurrentDataPubnet,
+          mercuryGraphQLCurrentDataTestnet:
+            conf.mercuryGraphQLCurrentDataTestnet,
+          mercuryGraphQLPubnet: conf.mercuryGraphQLPubnet,
+          mercuryGraphQLTestnet: conf.mercuryGraphQLTestnet,
+          mercuryIntegrityCheckEmail: conf.mercuryIntegrityCheckEmail,
+          mercuryIntegrityCheckPass: conf.mercuryIntegrityCheckPass,
+          mercuryPasswordTestnet: conf.mercuryPasswordTestnet,
+          redisConnectionName: conf.redisConnectionName,
+          redisPort: conf.redisPort,
         },
       };
-      const integrityCheckMercuryClient = new MercuryClient(
-        integrityCheckMercurySession,
-        logger,
-        register,
-        {
-          mercuryErrorCounter,
-          rpcErrorCounter,
-          criticalError,
-        },
-        redis
-      );
-      const integrityCheckerClient = new IntegrityChecker(
-        logger,
-        integrityCheckMercuryClient,
-        redis,
-        register
-      );
-      await integrityCheckerClient.watchLedger(checkNetwork);
+      const integrityCheckWorker = new Worker("./build/worker.js", workerData);
+      integrityCheckWorker.on("error", (e) => {
+        logger.error(e);
+        integrityCheckWorker.terminate();
+      });
+      integrityCheckWorker.on("exit", () => {
+        logger.info("Integrity checker worker exited");
+      });
     }
   } catch (err) {
     logger.error(err);

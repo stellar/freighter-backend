@@ -1,4 +1,31 @@
 import { FastifyReply, FastifyRequest } from "fastify";
+import Prometheus from "prom-client";
+
+export const register = new Prometheus.Registry();
+register.setDefaultLabels({
+  app: "freighter-backend",
+});
+
+export const mercuryErrorCounter = new Prometheus.Counter({
+  name: "freighter_backend_mercury_error_count",
+  help: "Count of errors returned from Mercury",
+  labelNames: ["endpoint"],
+  registers: [register],
+});
+
+export const rpcErrorCounter = new Prometheus.Counter({
+  name: "freighter_backend_rpc_error_count",
+  help: "Count of errors returned from Horizon or Soroban RPCs",
+  labelNames: ["rpc"],
+  registers: [register],
+});
+
+export const criticalError = new Prometheus.Counter({
+  name: "freighter_backend_critical_error_count",
+  help: "Count of errors that need manual operator intervention or investigation",
+  labelNames: ["message"],
+  registers: [register],
+});
 
 export const httpLabelUrl = (url: string) => {
   const [route, search] = url.split("?");
