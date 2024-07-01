@@ -4,6 +4,7 @@ import yargs from "yargs";
 import Redis from "ioredis";
 import Prometheus from "prom-client";
 import { Worker } from "worker_threads";
+import Sentry from "@sentry/node";
 
 import { logger } from "./logger";
 import { buildConfig } from "./config";
@@ -36,6 +37,12 @@ async function main() {
 
   const config = _config.parsed || {};
   const conf = buildConfig(config);
+
+  if (conf.sentryKey) {
+    Sentry.init({
+      dsn: conf.sentryKey,
+    });
+  }
 
   const argv = yargs(process.argv).options({
     env: {

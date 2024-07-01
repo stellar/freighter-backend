@@ -14,7 +14,7 @@ const ENV_KEYS = [
   "MERCURY_INTEGRITY_CHECK_ACCOUNT_PASS",
 ];
 
-export function buildConfig(config: Record<string, string>) {
+export function buildConfig(config: Record<string, string | undefined>) {
   const configKeys = Object.keys(config);
   const missingKeys = [] as string[];
 
@@ -58,6 +58,7 @@ export function buildConfig(config: Record<string, string>) {
     useMercury:
       config.USE_MERCURY === "true" || process.env.USE_MERCURY === "true",
     useSorobanPublic: true,
+    sentryKey: config.SENTRY_KEY,
   };
 }
 
