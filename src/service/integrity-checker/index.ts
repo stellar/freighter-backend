@@ -10,8 +10,6 @@ import { NetworkNames } from "../../helper/validate";
 import { MercuryClient } from "../mercury";
 import { REDIS_USE_MERCURY_KEY } from "../../helper/mercury";
 import {
-  dataIntegrityCheckFail,
-  dataIntegrityCheckPass,
   WorkerMessage,
 } from "../../helper/metrics";
 import { parentPort } from "worker_threads";
