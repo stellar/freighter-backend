@@ -1,6 +1,11 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import Prometheus from "prom-client";
 
+export enum WorkerMessage {
+  INTEGRITY_CHECK_PASS = "integrityCheckPass",
+  INTEGRITY_CHECK_FAIL = "integrityCheckFail",
+}
+
 export const register = new Prometheus.Registry();
 register.setDefaultLabels({
   app: "freighter-backend",
