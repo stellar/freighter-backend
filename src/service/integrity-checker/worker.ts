@@ -97,8 +97,7 @@ const main = async () => {
   const integrityCheckerClient = new IntegrityChecker(
     logger,
     integrityCheckMercuryClient,
-    redis,
-    register
+    redis
   );
   await integrityCheckerClient.watchLedger(checkNetwork);
 };

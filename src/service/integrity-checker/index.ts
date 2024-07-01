@@ -2,13 +2,17 @@ import { Logger } from "pino";
 import { Networks, Horizon } from "stellar-sdk";
 import Prometheus from "prom-client";
 import { Redis } from "ioredis";
-import Sentry from "@sentry/node";
+import * as Sentry from "@sentry/node";
 
 import { getSdk } from "../../helper/stellar";
 import { NETWORK_URLS } from "../../helper/horizon-rpc";
 import { NetworkNames } from "../../helper/validate";
 import { MercuryClient } from "../mercury";
 import { REDIS_USE_MERCURY_KEY } from "../../helper/mercury";
+import {
+  dataIntegrityCheckFail,
+  dataIntegrityCheckPass,
+} from "../../helper/metrics";
 
 const CHECK_INTERVAL = 50;
 const EPOCHS_TO_CHECK = 1;
@@ -30,28 +34,17 @@ export class IntegrityChecker {
   constructor(
     logger: Logger,
     mercuryClient: MercuryClient,
-    redisClient: Redis,
-    register: Prometheus.Registry
+    redisClient: Redis
   ) {
     this.logger = logger;
     this.lastCheckedLedger = 0;
     this.mercuryClient = mercuryClient;
     this.redisClient = redisClient;
 
-    this.dataIntegrityCheckPass = new Prometheus.Counter({
-      name: "freighter_backend_integrity_check_pass",
-      help: "Count of times the integrity check has passed between Horizon <-> Mercury",
-      labelNames: ["dataIntegrityCheckPass"],
-      registers: [register],
-    });
-    this.dataIntegrityCheckFail = new Prometheus.Counter({
-      name: "freighter_backend_integrity_check_fail",
-      help: "Count of times the integrity check has failed between Horizon <-> Mercury",
-      labelNames: ["dataIntegrityCheckFail"],
-      registers: [register],
-    });
-    register.registerMetric(this.dataIntegrityCheckPass);
-    register.registerMetric(this.dataIntegrityCheckFail);
+    this.dataIntegrityCheckPass = dataIntegrityCheckPass;
+    this.dataIntegrityCheckFail = dataIntegrityCheckFail;
+    console.log(this.dataIntegrityCheckFail);
+    this.dataIntegrityCheckFail.inc();
   }
 
   watchLedger = async (network: NetworkNames, cursor: string = "now") => {
