@@ -2,6 +2,7 @@ import { Logger } from "pino";
 import { Networks, Horizon } from "stellar-sdk";
 import Prometheus from "prom-client";
 import { Redis } from "ioredis";
+import Sentry from "@sentry/node";
 
 import { getSdk } from "../../helper/stellar";
 import { NETWORK_URLS } from "../../helper/horizon-rpc";
@@ -12,6 +13,11 @@ import { REDIS_USE_MERCURY_KEY } from "../../helper/mercury";
 const CHECK_INTERVAL = 50;
 const EPOCHS_TO_CHECK = 1;
 const SKIP_KEYS = ["created_at"];
+
+const alertFailure = (opId: string) =>
+  Sentry.captureException(
+    `Failed Mercury integrity check, operation ID: ${opId}`
+  );
 
 export class IntegrityChecker {
   logger: Logger;
@@ -80,11 +86,19 @@ export class IntegrityChecker {
     const ops = await _ledger.operations();
     const firstOp = ops.records[0];
     if (firstOp) {
+      const redisUseMercuryFlag = await this.redisClient.get(
+        REDIS_USE_MERCURY_KEY
+      );
+      const redisUseMercury = redisUseMercuryFlag === "true";
       try {
-        await this.checkOperationIntegrity(firstOp, network);
+        await this.checkOperationIntegrity(firstOp, network, redisUseMercury);
       } catch (error) {
         this.logger.error(error);
         this.dataIntegrityCheckFail.inc();
+        if (redisUseMercury) {
+          alertFailure(firstOp.id);
+        }
+        await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
       }
     }
   };
@@ -93,14 +107,20 @@ export class IntegrityChecker {
     hydrationId: number,
     sourceAccount: string,
     operation: Horizon.ServerApi.OperationRecord,
-    network: NetworkNames
+    network: NetworkNames,
+    redisUseMercury: boolean
   ) => {
     const hydration = await this.mercuryClient.checkHydrationStatus(
       hydrationId,
       network
     );
     if (hydration.status === "complete") {
-      await this.matchOperations(sourceAccount, operation, network);
+      await this.matchOperations(
+        sourceAccount,
+        operation,
+        network,
+        redisUseMercury
+      );
       return;
     }
 
@@ -109,7 +129,8 @@ export class IntegrityChecker {
         hydrationId,
         sourceAccount,
         operation,
-        network
+        network,
+        redisUseMercury
       );
       return;
     }
@@ -119,7 +140,8 @@ export class IntegrityChecker {
   subscribeAndCheckOp = async (
     sourceAccount: string,
     operation: Horizon.ServerApi.OperationRecord,
-    network: NetworkNames
+    network: NetworkNames,
+    redisUseMercury: boolean
   ) => {
     try {
       const { data, error } = await this.mercuryClient.accountSubscription(
@@ -136,7 +158,8 @@ export class IntegrityChecker {
         data.id,
         sourceAccount,
         operation,
-        network
+        network,
+        redisUseMercury
       );
     } catch (error) {
       this.logger.error(
@@ -144,23 +167,33 @@ export class IntegrityChecker {
       );
       this.logger.error(error);
       this.dataIntegrityCheckFail.inc();
+      if (redisUseMercury) {
+        alertFailure(operation.id);
+      }
       await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
     }
   };
 
   checkOperationIntegrity = async (
     operation: Horizon.ServerApi.OperationRecord,
-    network: NetworkNames
+    network: NetworkNames,
+    redisUseMercury: boolean
   ) => {
     const sourceAccount = operation.source_account;
     this.logger.info(`Checking integrity of operation ID: ${operation.id}`);
-    await this.subscribeAndCheckOp(sourceAccount, operation, network);
+    await this.subscribeAndCheckOp(
+      sourceAccount,
+      operation,
+      network,
+      redisUseMercury
+    );
   };
 
   matchOperations = async (
     sourceAccount: string,
     operation: Horizon.ServerApi.OperationRecord,
-    network: NetworkNames
+    network: NetworkNames,
+    redisUseMercury: boolean
   ) => {
     const opId = operation.id;
     const { data: history, error: mercuryHistoryError } =
@@ -184,6 +217,9 @@ export class IntegrityChecker {
               `Missing field for key ${key}, horizon: ${horizonValue}, mercury: ${mercuryValue}`
             );
             this.dataIntegrityCheckFail.inc();
+            if (redisUseMercury) {
+              alertFailure(operation.id);
+            }
             await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
             return;
           }
@@ -196,6 +232,9 @@ export class IntegrityChecker {
                   `Failed check for operation ID - ${operation.id}, key - ${key}`
                 );
                 this.dataIntegrityCheckFail.inc();
+                if (redisUseMercury) {
+                  alertFailure(operation.id);
+                }
                 await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
                 return;
               }
@@ -212,6 +251,9 @@ export class IntegrityChecker {
                   `Failed check for operation ID - ${operation.id}, key - ${key}`
                 );
                 this.dataIntegrityCheckFail.inc();
+                if (redisUseMercury) {
+                  alertFailure(operation.id);
+                }
                 await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
                 return;
               }
@@ -223,6 +265,9 @@ export class IntegrityChecker {
               `Failed check for operation ID - ${operation.id}, key - ${key}`
             );
             this.dataIntegrityCheckFail.inc();
+            if (redisUseMercury) {
+              alertFailure(operation.id);
+            }
             await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
             return;
           } else {
@@ -238,6 +283,9 @@ export class IntegrityChecker {
             `Failed to find matching operation from Mercury, ID: ${opId}, source: ${operation.source_account}`
           );
           this.dataIntegrityCheckFail.inc();
+          if (redisUseMercury) {
+            alertFailure(operation.id);
+          }
           await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
         }
         if (!matchHorizon) {
@@ -254,6 +302,9 @@ export class IntegrityChecker {
         this.logger.error(`Failed to get history from Mercury`);
         this.logger.error(mercuryHistoryError);
         this.dataIntegrityCheckFail.inc();
+        if (redisUseMercury) {
+          alertFailure(operation.id);
+        }
         await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
       }
     }
