@@ -1,6 +1,5 @@
 import { Logger } from "pino";
 import { Networks, Horizon } from "stellar-sdk";
-import Prometheus from "prom-client";
 import { Redis } from "ioredis";
 import * as Sentry from "@sentry/node";
 
@@ -9,9 +8,7 @@ import { NETWORK_URLS } from "../../helper/horizon-rpc";
 import { NetworkNames } from "../../helper/validate";
 import { MercuryClient } from "../mercury";
 import { REDIS_USE_MERCURY_KEY } from "../../helper/mercury";
-import {
-  WorkerMessage,
-} from "../../helper/metrics";
+import { WorkerMessage } from "../../helper/metrics";
 import { parentPort } from "worker_threads";
 
 const CHECK_INTERVAL = 50;
@@ -28,8 +25,6 @@ export class IntegrityChecker {
   lastCheckedLedger: number;
   mercuryClient: MercuryClient;
   redisClient: Redis;
-  dataIntegrityCheckPass: Prometheus.Counter<"dataIntegrityCheckPass">;
-  dataIntegrityCheckFail: Prometheus.Counter<"dataIntegrityCheckFail">;
 
   constructor(
     logger: Logger,
@@ -40,9 +35,6 @@ export class IntegrityChecker {
     this.lastCheckedLedger = 0;
     this.mercuryClient = mercuryClient;
     this.redisClient = redisClient;
-
-    this.dataIntegrityCheckPass = dataIntegrityCheckPass;
-    this.dataIntegrityCheckFail = dataIntegrityCheckFail;
   }
 
   watchLedger = async (network: NetworkNames, cursor: string = "now") => {
