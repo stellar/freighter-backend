@@ -1,6 +1,5 @@
 import { Logger } from "pino";
 import { Networks, Horizon } from "stellar-sdk";
-import Prometheus from "prom-client";
 import { Redis } from "ioredis";
 import * as Sentry from "@sentry/node";
 
@@ -9,10 +8,8 @@ import { NETWORK_URLS } from "../../helper/horizon-rpc";
 import { NetworkNames } from "../../helper/validate";
 import { MercuryClient } from "../mercury";
 import { REDIS_USE_MERCURY_KEY } from "../../helper/mercury";
-import {
-  dataIntegrityCheckFail,
-  dataIntegrityCheckPass,
-} from "../../helper/metrics";
+import { WorkerMessage } from "../../helper/metrics";
+import { parentPort } from "worker_threads";
 
 const CHECK_INTERVAL = 50;
 const EPOCHS_TO_CHECK = 1;
@@ -28,8 +25,6 @@ export class IntegrityChecker {
   lastCheckedLedger: number;
   mercuryClient: MercuryClient;
   redisClient: Redis;
-  dataIntegrityCheckPass: Prometheus.Counter<"dataIntegrityCheckPass">;
-  dataIntegrityCheckFail: Prometheus.Counter<"dataIntegrityCheckFail">;
 
   constructor(
     logger: Logger,
@@ -40,11 +35,6 @@ export class IntegrityChecker {
     this.lastCheckedLedger = 0;
     this.mercuryClient = mercuryClient;
     this.redisClient = redisClient;
-
-    this.dataIntegrityCheckPass = dataIntegrityCheckPass;
-    this.dataIntegrityCheckFail = dataIntegrityCheckFail;
-    console.log(this.dataIntegrityCheckFail);
-    this.dataIntegrityCheckFail.inc();
   }
 
   watchLedger = async (network: NetworkNames, cursor: string = "now") => {
@@ -87,7 +77,7 @@ export class IntegrityChecker {
         await this.checkOperationIntegrity(firstOp, network, redisUseMercury);
       } catch (error) {
         this.logger.error(error);
-        this.dataIntegrityCheckFail.inc();
+        parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
         if (redisUseMercury) {
           alertFailure(firstOp.id);
         }
@@ -159,7 +149,7 @@ export class IntegrityChecker {
         `Failed to subscribe to account to perform integrity check`
       );
       this.logger.error(error);
-      this.dataIntegrityCheckFail.inc();
+      parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
       if (redisUseMercury) {
         alertFailure(operation.id);
       }
@@ -209,7 +199,9 @@ export class IntegrityChecker {
             this.logger.error(
               `Missing field for key ${key}, horizon: ${horizonValue}, mercury: ${mercuryValue}`
             );
-            this.dataIntegrityCheckFail.inc();
+            parentPort?.postMessage({
+              type: WorkerMessage.INTEGRITY_CHECK_FAIL,
+            });
             if (redisUseMercury) {
               alertFailure(operation.id);
             }
@@ -224,7 +216,9 @@ export class IntegrityChecker {
                 this.logger.error(
                   `Failed check for operation ID - ${operation.id}, key - ${key}`
                 );
-                this.dataIntegrityCheckFail.inc();
+                parentPort?.postMessage({
+                  type: WorkerMessage.INTEGRITY_CHECK_FAIL,
+                });
                 if (redisUseMercury) {
                   alertFailure(operation.id);
                 }
@@ -243,7 +237,9 @@ export class IntegrityChecker {
                 this.logger.error(
                   `Failed check for operation ID - ${operation.id}, key - ${key}`
                 );
-                this.dataIntegrityCheckFail.inc();
+                parentPort?.postMessage({
+                  type: WorkerMessage.INTEGRITY_CHECK_FAIL,
+                });
                 if (redisUseMercury) {
                   alertFailure(operation.id);
                 }
@@ -257,7 +253,9 @@ export class IntegrityChecker {
             this.logger.error(
               `Failed check for operation ID - ${operation.id}, key - ${key}`
             );
-            this.dataIntegrityCheckFail.inc();
+            parentPort?.postMessage({
+              type: WorkerMessage.INTEGRITY_CHECK_FAIL,
+            });
             if (redisUseMercury) {
               alertFailure(operation.id);
             }
@@ -265,7 +263,9 @@ export class IntegrityChecker {
             return;
           } else {
             this.logger.info(`Passed check for op ${opId}`);
-            this.dataIntegrityCheckPass.inc();
+            parentPort?.postMessage({
+              type: WorkerMessage.INTEGRITY_CHECK_PASS,
+            });
             //  no need to flip REDIS_USE_MERCURY_KEY to true, this is done manually on intervention after a failure.
             return;
           }
@@ -275,7 +275,7 @@ export class IntegrityChecker {
           this.logger.error(
             `Failed to find matching operation from Mercury, ID: ${opId}, source: ${operation.source_account}`
           );
-          this.dataIntegrityCheckFail.inc();
+          parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
           if (redisUseMercury) {
             alertFailure(operation.id);
           }
@@ -294,7 +294,7 @@ export class IntegrityChecker {
       if (!history) {
         this.logger.error(`Failed to get history from Mercury`);
         this.logger.error(mercuryHistoryError);
-        this.dataIntegrityCheckFail.inc();
+        parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
         if (redisUseMercury) {
           alertFailure(operation.id);
         }

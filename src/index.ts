@@ -24,6 +24,9 @@ import {
   mercuryErrorCounter,
   rpcErrorCounter,
   criticalError,
+  WorkerMessage,
+  dataIntegrityCheckFail,
+  dataIntegrityCheckPass,
 } from "./helper/metrics";
 
 interface CliArgs {
@@ -171,6 +174,23 @@ async function main() {
         },
       };
       const integrityCheckWorker = new Worker("./build/worker.js", workerData);
+      integrityCheckWorker.on("message", (message) => {
+        const { type } = message;
+        switch (type) {
+          case WorkerMessage.INTEGRITY_CHECK_FAIL: {
+            dataIntegrityCheckFail.inc();
+            return;
+          }
+          case WorkerMessage.INTEGRITY_CHECK_PASS: {
+            dataIntegrityCheckPass.inc();
+            return;
+          }
+
+          default: {
+            logger.error(`Worker message type not supported: ${type}`);
+          }
+        }
+      });
       integrityCheckWorker.on("error", (e) => {
         logger.error(e);
         integrityCheckWorker.terminate();
