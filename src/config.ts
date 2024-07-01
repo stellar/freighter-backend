@@ -58,7 +58,7 @@ export function buildConfig(config: Record<string, string | undefined>) {
     useMercury:
       config.USE_MERCURY === "true" || process.env.USE_MERCURY === "true",
     useSorobanPublic: true,
-    sentryKey: config.SENTRY_KEY,
+    sentryKey: config.SENTRY_KEY || process.env.SENTRY_KEY,
   };
 }
 
