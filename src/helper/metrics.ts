@@ -27,6 +27,22 @@ export const criticalError = new Prometheus.Counter({
   registers: [register],
 });
 
+export const dataIntegrityCheckPass = new Prometheus.Counter({
+  name: "freighter_backend_integrity_check_pass",
+  help: "Count of times the integrity check has passed between Horizon <-> Mercury",
+  labelNames: ["dataIntegrityCheckPass"],
+  registers: [register],
+});
+export const dataIntegrityCheckFail = new Prometheus.Counter({
+  name: "freighter_backend_integrity_check_fail",
+  help: "Count of times the integrity check has failed between Horizon <-> Mercury",
+  labelNames: ["dataIntegrityCheckFail"],
+  registers: [register],
+});
+
+register.registerMetric(dataIntegrityCheckPass);
+register.registerMetric(dataIntegrityCheckFail);
+
 export const httpLabelUrl = (url: string) => {
   const [route, search] = url.split("?");
   const params = new URLSearchParams(search);
