@@ -4,7 +4,7 @@ import yargs from "yargs";
 import Redis from "ioredis";
 import Prometheus from "prom-client";
 import { Worker } from "worker_threads";
-import Sentry from "@sentry/node";
+import * as Sentry from "@sentry/node";
 
 import { logger } from "./logger";
 import { buildConfig } from "./config";
