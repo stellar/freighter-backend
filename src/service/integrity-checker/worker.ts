@@ -1,6 +1,7 @@
 import { Redis } from "ioredis";
-
+import * as Sentry from "@sentry/node";
 import { workerData } from "worker_threads";
+
 import { IntegrityChecker } from ".";
 import { logger } from "../../logger";
 import {
@@ -30,9 +31,16 @@ const {
   mercuryPasswordTestnet,
   redisConnectionName,
   redisPort,
+  sentryKey,
 } = workerData;
 
 const main = async () => {
+  if (sentryKey) {
+    Sentry.init({
+      dsn: sentryKey,
+    });
+  }
+
   const graphQlEndpoints = {
     TESTNET: mercuryGraphQLTestnet,
     PUBLIC: mercuryGraphQLPubnet,
