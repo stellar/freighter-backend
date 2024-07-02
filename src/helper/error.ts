@@ -19,4 +19,5 @@ export const ERROR = {
     CONTRACT_CODE: "contract code entry not found",
   },
   INVALID_RUN_MODE: "invalid run mode",
+  UNABLE_TO_SCAN_SITE: "unable to scan site using blockaid",
 };

@@ -12,6 +12,7 @@ const ENV_KEYS = [
   "USE_MERCURY",
   "MERCURY_INTEGRITY_CHECK_ACCOUNT_EMAIL",
   "MERCURY_INTEGRITY_CHECK_ACCOUNT_PASS",
+  "BLOCKAID_KEY",
 ];
 
 export function buildConfig(config: Record<string, string | undefined>) {
@@ -30,6 +31,7 @@ export function buildConfig(config: Record<string, string | undefined>) {
   }
 
   return {
+    blockAidKey: config.BLOCKAID_KEY || process.env.BLOCKAID_KEY!,
     hostname: config.HOSTNAME || process.env.HOSTNAME!,
     mercuryBackendTestnet: "https://api.mercurydata.app",
     mercuryGraphQLTestnet: "https://api.mercurydata.app/graphql",
