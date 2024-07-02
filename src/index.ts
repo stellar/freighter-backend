@@ -109,6 +109,7 @@ async function main() {
       throw new Error(error);
     });
 
+    logger.info(`initial conf value useMercury: ${conf.useMercury}`);
     await redis.set(REDIS_USE_MERCURY_KEY, String(conf.useMercury));
   }
 
