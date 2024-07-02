@@ -75,7 +75,6 @@ export class IntegrityChecker {
       const redisUseMercuryFlag = await this.redisClient.get(
         REDIS_USE_MERCURY_KEY
       );
-      this.logger.info(`redis flag value: ${redisUseMercuryFlag}`);
       const redisUseMercury = redisUseMercuryFlag === "true";
       try {
         await this.checkOperationIntegrity(firstOp, network, redisUseMercury);
