@@ -28,6 +28,9 @@ import {
   dataIntegrityCheckFail,
   dataIntegrityCheckPass,
 } from "./helper/metrics";
+import Blockaid from "@blockaid/client";
+import { fetchWithTimeout } from "./helper/fetch";
+import { BlockAidService } from "./service/blockaid";
 
 interface CliArgs {
   env: string;
@@ -119,6 +122,12 @@ async function main() {
     await redis.set(REDIS_USE_MERCURY_KEY, String(conf.useMercury));
   }
 
+  const blockAidClient = new Blockaid({
+    apiKey: conf.blockAidKey,
+    fetch: fetchWithTimeout,
+  });
+  const blockAidService = new BlockAidService(blockAidClient, logger);
+
   const mercuryClient = new MercuryClient(
     mercurySession,
     logger,
@@ -132,6 +141,7 @@ async function main() {
   );
   const server = await initApiServer(
     mercuryClient,
+    blockAidService,
     logger,
     conf.useMercury,
     conf.useSorobanPublic,
