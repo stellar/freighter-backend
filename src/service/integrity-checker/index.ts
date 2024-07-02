@@ -15,10 +15,13 @@ const CHECK_INTERVAL = 50;
 const EPOCHS_TO_CHECK = 1;
 const SKIP_KEYS = ["created_at"];
 
-const alertFailure = (opId: string) =>
-  Sentry.captureException(
+const alertFailure = (opId: string) => {
+  const err = new Error(
     `Failed Mercury integrity check, operation ID: ${opId}`
   );
+  err.name = "Mercury integrity check failed";
+  return Sentry.captureException(err);
+};
 
 export class IntegrityChecker {
   logger: Logger;
