@@ -5,6 +5,7 @@ import Redis from "ioredis";
 import Prometheus from "prom-client";
 import { Worker } from "worker_threads";
 import * as Sentry from "@sentry/node";
+import Blockaid from "@blockaid/client";
 
 import { logger } from "./logger";
 import { buildConfig } from "./config";
@@ -28,7 +29,6 @@ import {
   dataIntegrityCheckFail,
   dataIntegrityCheckPass,
 } from "./helper/metrics";
-import Blockaid from "@blockaid/client";
 import { fetchWithTimeout } from "./helper/fetch";
 import { BlockAidService } from "./service/blockaid";
 

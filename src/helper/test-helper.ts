@@ -2,12 +2,14 @@ import { Client, fetchExchange } from "@urql/core";
 import pino from "pino";
 import { nativeToScVal } from "stellar-sdk";
 import Prometheus from "prom-client";
+import Blockaid from "@blockaid/client";
 
 import { mutation, query } from "../service/mercury/queries";
 import { MercuryClient } from "../service/mercury";
 import { initApiServer } from "../route";
 import { NetworkNames } from "./validate";
 import { hasIndexerSupport } from "./mercury";
+import { BlockAidService } from "../service/blockaid";
 
 export const base64regex =
   /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
@@ -504,6 +506,11 @@ const mockMercuryClient = new MercuryClient(
     criticalError,
   }
 );
+jest.mock("@blockaid/client", () => {
+  return class Blockaid {};
+});
+const blockAidClient = new Blockaid();
+const blockAidService = new BlockAidService(blockAidClient, testLogger);
 
 jest
   .spyOn(mockMercuryClient, "tokenDetails")
@@ -519,6 +526,7 @@ jest
 async function getDevServer() {
   const server = await initApiServer(
     mockMercuryClient,
+    blockAidService,
     testLogger,
     true,
     true,
