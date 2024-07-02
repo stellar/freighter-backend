@@ -36,6 +36,7 @@ const {
 
 const main = async () => {
   if (sentryKey) {
+    logger.info(`inited Sentry: ${sentryKey}`);
     Sentry.init({
       dsn: sentryKey,
     });
@@ -56,6 +57,13 @@ const main = async () => {
     PUBLIC: mercuryBackendPubnet,
   };
 
+  logger.info("redis values");
+  logger.info({
+    connectionName: redisConnectionName,
+    host: hostname,
+    port: redisPort,
+    maxRetriesPerRequest: 1,
+  });
   const redis = new Redis({
     connectionName: redisConnectionName,
     host: hostname,
