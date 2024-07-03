@@ -37,7 +37,6 @@ const {
 const main = async () => {
   const sentryClient = Sentry.init({
     dsn: sentryKey,
-    debug: true,
   });
 
   if (!sentryKey || !sentryClient) {
