@@ -109,7 +109,6 @@ async function main() {
       throw new Error(error);
     });
 
-    logger.info(`setting redis flag to ${String(conf.useMercury)}`);
     await redis.set(REDIS_USE_MERCURY_KEY, String(conf.useMercury));
   }
 

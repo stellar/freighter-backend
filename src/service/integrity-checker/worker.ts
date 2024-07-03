@@ -35,10 +35,14 @@ const {
 } = workerData;
 
 const main = async () => {
-  if (sentryKey) {
-    Sentry.init({
-      dsn: sentryKey,
-    });
+  const sentryClient = Sentry.init({
+    dsn: sentryKey,
+  });
+
+  if (!sentryKey || !sentryClient) {
+    throw new Error(
+      `Sentry misconfiguration, dsn: ${sentryKey}, client: ${sentryClient}`
+    );
   }
 
   const graphQlEndpoints = {
@@ -105,7 +109,8 @@ const main = async () => {
   const integrityCheckerClient = new IntegrityChecker(
     logger,
     integrityCheckMercuryClient,
-    redis
+    redis,
+    sentryClient
   );
   await integrityCheckerClient.watchLedger(checkNetwork);
 };

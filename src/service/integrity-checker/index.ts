@@ -15,12 +15,12 @@ const CHECK_INTERVAL = 50;
 const EPOCHS_TO_CHECK = 1;
 const SKIP_KEYS = ["created_at"];
 
-const alertFailure = (opId: string) => {
+const alertFailure = (opId: string, client: Sentry.NodeClient) => {
   const err = new Error(
     `Failed Mercury integrity check, operation ID: ${opId}`
   );
   err.name = "Mercury integrity check failed";
-  return Sentry.captureException(err);
+  return client.captureException(err);
 };
 
 export class IntegrityChecker {
@@ -28,16 +28,19 @@ export class IntegrityChecker {
   lastCheckedLedger: number;
   mercuryClient: MercuryClient;
   redisClient: Redis;
+  sentryClient: Sentry.NodeClient;
 
   constructor(
     logger: Logger,
     mercuryClient: MercuryClient,
-    redisClient: Redis
+    redisClient: Redis,
+    sentryClient: Sentry.NodeClient
   ) {
     this.logger = logger;
     this.lastCheckedLedger = 0;
     this.mercuryClient = mercuryClient;
     this.redisClient = redisClient;
+    this.sentryClient = sentryClient;
   }
 
   watchLedger = async (network: NetworkNames, cursor: string = "now") => {
@@ -76,15 +79,13 @@ export class IntegrityChecker {
         REDIS_USE_MERCURY_KEY
       );
       const redisUseMercury = redisUseMercuryFlag === "true";
-      this.logger.info(`init loop redis flag: ${redisUseMercury}`);
       try {
         await this.checkOperationIntegrity(firstOp, network, redisUseMercury);
       } catch (error) {
         this.logger.error(error);
         parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
-        this.logger.info(`redis flag before alert: ${redisUseMercury}`);
         if (redisUseMercury) {
-          alertFailure(firstOp.id);
+          alertFailure(firstOp.id, this.sentryClient);
         }
         await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
       }
@@ -155,9 +156,8 @@ export class IntegrityChecker {
       );
       this.logger.error(error);
       parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
-      this.logger.info(`redis flag before alert: ${redisUseMercury}`);
       if (redisUseMercury) {
-        alertFailure(operation.id);
+        alertFailure(operation.id, this.sentryClient);
       }
       await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
     }
@@ -208,9 +208,8 @@ export class IntegrityChecker {
             parentPort?.postMessage({
               type: WorkerMessage.INTEGRITY_CHECK_FAIL,
             });
-            this.logger.info(`redis flag before alert: ${redisUseMercury}`);
             if (redisUseMercury) {
-              alertFailure(operation.id);
+              alertFailure(operation.id, this.sentryClient);
             }
             await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
             return;
@@ -226,9 +225,8 @@ export class IntegrityChecker {
                 parentPort?.postMessage({
                   type: WorkerMessage.INTEGRITY_CHECK_FAIL,
                 });
-                this.logger.info(`redis flag before alert: ${redisUseMercury}`);
                 if (redisUseMercury) {
-                  alertFailure(operation.id);
+                  alertFailure(operation.id, this.sentryClient);
                 }
                 await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
                 return;
@@ -248,9 +246,8 @@ export class IntegrityChecker {
                 parentPort?.postMessage({
                   type: WorkerMessage.INTEGRITY_CHECK_FAIL,
                 });
-                this.logger.info(`redis flag before alert: ${redisUseMercury}`);
                 if (redisUseMercury) {
-                  alertFailure(operation.id);
+                  alertFailure(operation.id, this.sentryClient);
                 }
                 await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
                 return;
@@ -265,9 +262,8 @@ export class IntegrityChecker {
             parentPort?.postMessage({
               type: WorkerMessage.INTEGRITY_CHECK_FAIL,
             });
-            this.logger.info(`redis flag before alert: ${redisUseMercury}`);
             if (redisUseMercury) {
-              alertFailure(operation.id);
+              alertFailure(operation.id, this.sentryClient);
             }
             await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
             return;
@@ -286,9 +282,8 @@ export class IntegrityChecker {
             `Failed to find matching operation from Mercury, ID: ${opId}, source: ${operation.source_account}`
           );
           parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
-          this.logger.info(`redis flag before alert: ${redisUseMercury}`);
           if (redisUseMercury) {
-            alertFailure(operation.id);
+            alertFailure(operation.id, this.sentryClient);
           }
           await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
         }
@@ -306,9 +301,8 @@ export class IntegrityChecker {
         this.logger.error(`Failed to get history from Mercury`);
         this.logger.error(mercuryHistoryError);
         parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
-        this.logger.info(`redis flag before alert: ${redisUseMercury}`);
         if (redisUseMercury) {
-          alertFailure(operation.id);
+          alertFailure(operation.id, this.sentryClient);
         }
         await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
       }
