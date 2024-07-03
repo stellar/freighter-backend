@@ -81,6 +81,7 @@ export class IntegrityChecker {
       } catch (error) {
         this.logger.error(error);
         parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
+        this.logger.info(`redis flag before alert: ${redisUseMercury}`);
         if (redisUseMercury) {
           alertFailure(firstOp.id);
         }
@@ -153,6 +154,7 @@ export class IntegrityChecker {
       );
       this.logger.error(error);
       parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
+      this.logger.info(`redis flag before alert: ${redisUseMercury}`);
       if (redisUseMercury) {
         alertFailure(operation.id);
       }
@@ -205,6 +207,7 @@ export class IntegrityChecker {
             parentPort?.postMessage({
               type: WorkerMessage.INTEGRITY_CHECK_FAIL,
             });
+            this.logger.info(`redis flag before alert: ${redisUseMercury}`);
             if (redisUseMercury) {
               alertFailure(operation.id);
             }
@@ -222,6 +225,7 @@ export class IntegrityChecker {
                 parentPort?.postMessage({
                   type: WorkerMessage.INTEGRITY_CHECK_FAIL,
                 });
+                this.logger.info(`redis flag before alert: ${redisUseMercury}`);
                 if (redisUseMercury) {
                   alertFailure(operation.id);
                 }
@@ -243,6 +247,7 @@ export class IntegrityChecker {
                 parentPort?.postMessage({
                   type: WorkerMessage.INTEGRITY_CHECK_FAIL,
                 });
+                this.logger.info(`redis flag before alert: ${redisUseMercury}`);
                 if (redisUseMercury) {
                   alertFailure(operation.id);
                 }
@@ -259,6 +264,7 @@ export class IntegrityChecker {
             parentPort?.postMessage({
               type: WorkerMessage.INTEGRITY_CHECK_FAIL,
             });
+            this.logger.info(`redis flag before alert: ${redisUseMercury}`);
             if (redisUseMercury) {
               alertFailure(operation.id);
             }
@@ -279,6 +285,7 @@ export class IntegrityChecker {
             `Failed to find matching operation from Mercury, ID: ${opId}, source: ${operation.source_account}`
           );
           parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
+          this.logger.info(`redis flag before alert: ${redisUseMercury}`);
           if (redisUseMercury) {
             alertFailure(operation.id);
           }
@@ -298,6 +305,7 @@ export class IntegrityChecker {
         this.logger.error(`Failed to get history from Mercury`);
         this.logger.error(mercuryHistoryError);
         parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
+        this.logger.info(`redis flag before alert: ${redisUseMercury}`);
         if (redisUseMercury) {
           alertFailure(operation.id);
         }
