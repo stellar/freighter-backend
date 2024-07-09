@@ -2,6 +2,7 @@ import { Logger } from "pino";
 import { Networks, Horizon } from "stellar-sdk";
 import { Redis } from "ioredis";
 import * as Sentry from "@sentry/node";
+import { parentPort } from "worker_threads";
 
 import { getSdk } from "../../helper/stellar";
 import { NETWORK_URLS } from "../../helper/horizon-rpc";
@@ -9,10 +10,9 @@ import { NetworkNames } from "../../helper/validate";
 import { MercuryClient } from "../mercury";
 import { REDIS_USE_MERCURY_KEY } from "../../helper/mercury";
 import { WorkerMessage } from "../../helper/metrics";
-import { parentPort } from "worker_threads";
 
 const CHECK_INTERVAL = 50;
-const EPOCHS_TO_CHECK = 1;
+const EPOCHS_TO_CHECK = 5;
 const SKIP_KEYS = ["created_at"];
 
 const alertFailure = (opId: string, client: Sentry.NodeClient) => {
