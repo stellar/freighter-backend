@@ -4,6 +4,7 @@ import yargs from "yargs";
 import Redis from "ioredis";
 import Prometheus from "prom-client";
 import { Worker } from "worker_threads";
+import * as Sentry from "@sentry/node";
 
 import { logger } from "./logger";
 import { buildConfig } from "./config";
@@ -148,6 +149,21 @@ async function main() {
     // the worker is not properly instantiated when running this app with ts-node
     // if you need to test this, build the app with webpack and run the build with node manually
     if (conf.useMercury && env !== "development") {
+      const sentryClient = Sentry.init({
+        dsn: conf.sentryKey,
+        debug: true,
+      });
+
+      if (!conf.sentryKey || !sentryClient) {
+        logger.info(
+          `Sentry misconfiguration, dsn: ${conf.sentryKey}, client: ${sentryClient}`
+        );
+        return;
+      }
+      const err = new Error(`Test Error`);
+      err.name = "This is just a test";
+      sentryClient.captureException(err);
+
       const workerData = {
         workerData: {
           hostname: conf.hostname,
