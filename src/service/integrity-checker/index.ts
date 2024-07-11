@@ -11,7 +11,7 @@ import { MercuryClient } from "../mercury";
 import { REDIS_USE_MERCURY_KEY } from "../../helper/mercury";
 import { WorkerMessage } from "../../helper/metrics";
 
-const CHECK_INTERVAL = 50;
+const CHECK_INTERVAL = 5;
 const EPOCHS_TO_CHECK = 5;
 const SKIP_KEYS = ["created_at"];
 
@@ -65,7 +65,7 @@ export class IntegrityChecker {
     const _ledger = ledger as Horizon.ServerApi.LedgerRecord;
 
     if (
-      this.lastCheckedLedger + CHECK_INTERVAL < _ledger.sequence &&
+      this.lastCheckedLedger + CHECK_INTERVAL > _ledger.sequence &&
       this.lastCheckedLedger !== 0
     ) {
       return;
