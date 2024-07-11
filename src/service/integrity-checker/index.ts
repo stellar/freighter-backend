@@ -16,17 +16,11 @@ const EPOCHS_TO_CHECK = 5;
 const SKIP_KEYS = ["created_at"];
 
 const alertFailure = (opId: string, client: Sentry.NodeClient) => {
-  try {
-    const err = new Error(
-      `Failed Mercury integrity check, operation ID: ${opId}`
-    );
-    err.name = "Mercury integrity check failed";
-    console.log("Sending Sentry alert");
-    const eventId = client.captureException(err);
-    console.log(eventId);
-  } catch (error) {
-    console.log(error);
-  }
+  const err = new Error(
+    `Failed Mercury integrity check, operation ID: ${opId}`
+  );
+  err.name = "Mercury integrity check failed";
+  client.captureException(err);
 };
 
 export class IntegrityChecker {
