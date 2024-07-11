@@ -292,6 +292,7 @@ export class IntegrityChecker {
             alertFailure(operation.id, this.sentryClient);
           }
           await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
+          return;
         }
         if (!matchHorizon) {
           this.logger.error(
