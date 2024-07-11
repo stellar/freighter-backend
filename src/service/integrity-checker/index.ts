@@ -20,7 +20,7 @@ const alertFailure = (opId: string, client: Sentry.NodeClient) => {
     `Failed Mercury integrity check, operation ID: ${opId}`
   );
   err.name = "Mercury integrity check failed";
-  return client.captureException(err);
+  client.captureException(err);
 };
 
 export class IntegrityChecker {
@@ -286,6 +286,7 @@ export class IntegrityChecker {
             alertFailure(operation.id, this.sentryClient);
           }
           await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
+          return;
         }
         if (!matchHorizon) {
           this.logger.error(
