@@ -18,11 +18,6 @@ export class BlockAidService {
   }> => {
     try {
       const data = await this.blockAidClient.site.scan({ url });
-
-      if (data.status === "miss") {
-        return await this.scanDapp(url);
-      }
-
       return { data, error: null };
     } catch (error) {
       this.logger.error(error);
