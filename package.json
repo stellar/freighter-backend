@@ -29,6 +29,7 @@
     "node": ">=18.12.0"
   },
   "dependencies": {
+    "@blockaid/client": "^0.11.0",
     "@fastify/cors": "^8.5.0",
     "@fastify/helmet": "^11.1.1",
     "@fastify/rate-limit": "^8.0.3",
