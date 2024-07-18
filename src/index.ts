@@ -44,12 +44,6 @@ async function main() {
   const config = _config.parsed || {};
   const conf = buildConfig(config);
 
-  if (conf.sentryKey) {
-    Sentry.init({
-      dsn: conf.sentryKey,
-    });
-  }
-
   const argv = yargs(process.argv).options({
     env: {
       alias: "e",
@@ -181,6 +175,7 @@ async function main() {
           mercuryPasswordTestnet: conf.mercuryPasswordTestnet,
           redisConnectionName: conf.redisConnectionName,
           redisPort: conf.redisPort,
+          sentryKey: conf.sentryKey,
         },
       };
       const integrityCheckWorker = new Worker("./build/worker.js", workerData);

@@ -1,6 +1,7 @@
 import { Redis } from "ioredis";
-
+import * as Sentry from "@sentry/node";
 import { workerData } from "worker_threads";
+
 import { IntegrityChecker } from ".";
 import { logger } from "../../logger";
 import {
@@ -30,9 +31,20 @@ const {
   mercuryPasswordTestnet,
   redisConnectionName,
   redisPort,
+  sentryKey,
 } = workerData;
 
 const main = async () => {
+  const sentryClient = Sentry.init({
+    dsn: sentryKey,
+  });
+
+  if (!sentryKey || !sentryClient) {
+    throw new Error(
+      `Sentry misconfiguration, dsn: ${sentryKey}, client: ${sentryClient}`
+    );
+  }
+
   const graphQlEndpoints = {
     TESTNET: mercuryGraphQLTestnet,
     PUBLIC: mercuryGraphQLPubnet,
@@ -97,7 +109,8 @@ const main = async () => {
   const integrityCheckerClient = new IntegrityChecker(
     logger,
     integrityCheckMercuryClient,
-    redis
+    redis,
+    sentryClient
   );
   await integrityCheckerClient.watchLedger(checkNetwork);
 };

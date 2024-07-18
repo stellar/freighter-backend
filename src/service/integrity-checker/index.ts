@@ -2,6 +2,7 @@ import { Logger } from "pino";
 import { Networks, Horizon } from "stellar-sdk";
 import { Redis } from "ioredis";
 import * as Sentry from "@sentry/node";
+import { parentPort } from "worker_threads";
 
 import { getSdk } from "../../helper/stellar";
 import { NETWORK_URLS } from "../../helper/horizon-rpc";
@@ -9,32 +10,37 @@ import { NetworkNames } from "../../helper/validate";
 import { MercuryClient } from "../mercury";
 import { REDIS_USE_MERCURY_KEY } from "../../helper/mercury";
 import { WorkerMessage } from "../../helper/metrics";
-import { parentPort } from "worker_threads";
 
-const CHECK_INTERVAL = 50;
-const EPOCHS_TO_CHECK = 1;
+const CHECK_INTERVAL = 5;
+const EPOCHS_TO_CHECK = 5;
 const SKIP_KEYS = ["created_at"];
 
-const alertFailure = (opId: string) =>
-  Sentry.captureException(
+const alertFailure = (opId: string, client: Sentry.NodeClient) => {
+  const err = new Error(
     `Failed Mercury integrity check, operation ID: ${opId}`
   );
+  err.name = "Mercury integrity check failed";
+  client.captureException(err);
+};
 
 export class IntegrityChecker {
   logger: Logger;
   lastCheckedLedger: number;
   mercuryClient: MercuryClient;
   redisClient: Redis;
+  sentryClient: Sentry.NodeClient;
 
   constructor(
     logger: Logger,
     mercuryClient: MercuryClient,
-    redisClient: Redis
+    redisClient: Redis,
+    sentryClient: Sentry.NodeClient
   ) {
     this.logger = logger;
     this.lastCheckedLedger = 0;
     this.mercuryClient = mercuryClient;
     this.redisClient = redisClient;
+    this.sentryClient = sentryClient;
   }
 
   watchLedger = async (network: NetworkNames, cursor: string = "now") => {
@@ -59,7 +65,7 @@ export class IntegrityChecker {
     const _ledger = ledger as Horizon.ServerApi.LedgerRecord;
 
     if (
-      this.lastCheckedLedger + CHECK_INTERVAL < _ledger.sequence &&
+      this.lastCheckedLedger + CHECK_INTERVAL > _ledger.sequence &&
       this.lastCheckedLedger !== 0
     ) {
       return;
@@ -79,7 +85,7 @@ export class IntegrityChecker {
         this.logger.error(error);
         parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
         if (redisUseMercury) {
-          alertFailure(firstOp.id);
+          alertFailure(firstOp.id, this.sentryClient);
         }
         await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
       }
@@ -151,7 +157,7 @@ export class IntegrityChecker {
       this.logger.error(error);
       parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
       if (redisUseMercury) {
-        alertFailure(operation.id);
+        alertFailure(operation.id, this.sentryClient);
       }
       await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
     }
@@ -203,7 +209,7 @@ export class IntegrityChecker {
               type: WorkerMessage.INTEGRITY_CHECK_FAIL,
             });
             if (redisUseMercury) {
-              alertFailure(operation.id);
+              alertFailure(operation.id, this.sentryClient);
             }
             await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
             return;
@@ -220,7 +226,7 @@ export class IntegrityChecker {
                   type: WorkerMessage.INTEGRITY_CHECK_FAIL,
                 });
                 if (redisUseMercury) {
-                  alertFailure(operation.id);
+                  alertFailure(operation.id, this.sentryClient);
                 }
                 await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
                 return;
@@ -241,7 +247,7 @@ export class IntegrityChecker {
                   type: WorkerMessage.INTEGRITY_CHECK_FAIL,
                 });
                 if (redisUseMercury) {
-                  alertFailure(operation.id);
+                  alertFailure(operation.id, this.sentryClient);
                 }
                 await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
                 return;
@@ -257,7 +263,7 @@ export class IntegrityChecker {
               type: WorkerMessage.INTEGRITY_CHECK_FAIL,
             });
             if (redisUseMercury) {
-              alertFailure(operation.id);
+              alertFailure(operation.id, this.sentryClient);
             }
             await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
             return;
@@ -277,9 +283,10 @@ export class IntegrityChecker {
           );
           parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
           if (redisUseMercury) {
-            alertFailure(operation.id);
+            alertFailure(operation.id, this.sentryClient);
           }
           await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
+          return;
         }
         if (!matchHorizon) {
           this.logger.error(
@@ -296,7 +303,7 @@ export class IntegrityChecker {
         this.logger.error(mercuryHistoryError);
         parentPort?.postMessage({ type: WorkerMessage.INTEGRITY_CHECK_FAIL });
         if (redisUseMercury) {
-          alertFailure(operation.id);
+          alertFailure(operation.id, this.sentryClient);
         }
         await this.redisClient.set(REDIS_USE_MERCURY_KEY, "false");
       }
