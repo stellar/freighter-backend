@@ -4,6 +4,7 @@ import yargs from "yargs";
 import Redis from "ioredis";
 import Prometheus from "prom-client";
 import { Worker } from "worker_threads";
+import Blockaid from "@blockaid/client";
 
 import { logger } from "./logger";
 import { buildConfig } from "./config";
@@ -27,6 +28,8 @@ import {
   dataIntegrityCheckFail,
   dataIntegrityCheckPass,
 } from "./helper/metrics";
+import { fetchWithTimeout } from "./helper/fetch";
+import { BlockAidService } from "./service/blockaid";
 
 interface CliArgs {
   env: string;
@@ -112,6 +115,12 @@ async function main() {
     await redis.set(REDIS_USE_MERCURY_KEY, String(conf.useMercury));
   }
 
+  const blockAidClient = new Blockaid({
+    apiKey: conf.blockAidKey,
+    fetch: fetchWithTimeout,
+  });
+  const blockAidService = new BlockAidService(blockAidClient, logger, register);
+
   const mercuryClient = new MercuryClient(
     mercurySession,
     logger,
@@ -125,6 +134,7 @@ async function main() {
   );
   const server = await initApiServer(
     mercuryClient,
+    blockAidService,
     logger,
     conf.useMercury,
     conf.useSorobanPublic,

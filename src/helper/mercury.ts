@@ -1,7 +1,8 @@
 import { Redis } from "ioredis";
+import { Client, fetchExchange } from "@urql/core";
+
 import { NetworkNames } from "./validate";
 import { mode } from "./env";
-import { Client, fetchExchange } from "@urql/core";
 import { fetchWithTimeout } from "./fetch";
 
 interface EndpointsMap {

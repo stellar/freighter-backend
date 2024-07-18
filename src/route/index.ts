@@ -10,6 +10,7 @@ import { Networks } from "stellar-sdk-next";
 import * as StellarSdk from "stellar-sdk";
 
 import { MercuryClient } from "../service/mercury";
+import { BlockAidService } from "../service/blockaid";
 import { ajv } from "./validators";
 import {
   isContractId,
@@ -36,6 +37,7 @@ const API_VERSION = "v1";
 
 export async function initApiServer(
   mercuryClient: MercuryClient,
+  blockAidService: BlockAidService,
   logger: Logger,
   useMercuryConf: boolean,
   useSorobanPublic: boolean,
@@ -500,6 +502,34 @@ export async function initApiServer(
             reply.code(200).send({ isSacContract });
           } catch (error) {
             reply.code(500).send(ERROR.SERVER_ERROR);
+          }
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/scan-dapp",
+        schema: {
+          querystring: {
+            ["url"]: {
+              type: "string",
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Querystring: {
+              ["url"]: string;
+            };
+          }>,
+          reply
+        ) => {
+          const { url } = request.query;
+          try {
+            const { data, error } = await blockAidService.scanDapp(url);
+            return reply.code(error ? 400 : 200).send({ data, error });
+          } catch (error) {
+            return reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
