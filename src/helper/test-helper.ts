@@ -510,7 +510,11 @@ jest.mock("@blockaid/client", () => {
   return class Blockaid {};
 });
 const blockAidClient = new Blockaid();
-const blockAidService = new BlockAidService(blockAidClient, testLogger);
+const blockAidService = new BlockAidService(
+  blockAidClient,
+  testLogger,
+  register
+);
 
 jest
   .spyOn(mockMercuryClient, "tokenDetails")

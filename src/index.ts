@@ -126,7 +126,7 @@ async function main() {
     apiKey: conf.blockAidKey,
     fetch: fetchWithTimeout,
   });
-  const blockAidService = new BlockAidService(blockAidClient, logger);
+  const blockAidService = new BlockAidService(blockAidClient, logger, register);
 
   const mercuryClient = new MercuryClient(
     mercurySession,
