@@ -535,6 +535,42 @@ export async function initApiServer(
       });
 
       instance.route({
+        method: "GET",
+        url: "/scan-tx",
+        schema: {
+          querystring: {
+            ["tx_xdr"]: {
+              type: "string",
+            },
+            ["network"]: {
+              type: "string",
+              validator: (qStr: string) => isNetwork(qStr),
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Querystring: {
+              ["tx_xdr"]: string;
+              ["network"]: NetworkNames;
+            };
+          }>,
+          reply
+        ) => {
+          const { tx_xdr, network } = request.query;
+          try {
+            const { data, error } = await blockAidService.scanTx(
+              tx_xdr,
+              network
+            );
+            return reply.code(error ? 400 : 200).send({ data, error });
+          } catch (error) {
+            return reply.code(500).send(ERROR.SERVER_ERROR);
+          }
+        },
+      });
+
+      instance.route({
         method: "POST",
         url: "/subscription/token",
         schema: {
