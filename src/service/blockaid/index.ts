@@ -30,6 +30,7 @@ export class BlockAidService {
     error: string | null;
   }> => {
     try {
+      console.log(url);
       const data = await this.blockAidClient.site.scan({ url });
       return { data, error: null };
     } catch (error) {
