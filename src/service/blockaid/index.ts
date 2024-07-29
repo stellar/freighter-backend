@@ -6,9 +6,12 @@ import { Networks, TransactionBuilder } from "stellar-sdk";
 import { ERROR } from "../../helper/error";
 import { NetworkNames } from "../../helper/validate";
 
-const NetworkNameBlockaid: { [index: string]: "pubnet" | "futurenet" } = {
+const NetworkNameBlockaid: {
+  [index: string]: "pubnet" | "futurenet" | "testnet";
+} = {
   PUBLIC: "pubnet",
   FUTURENET: "futurenet",
+  TESTNET: "testnet",
 };
 
 export class BlockAidService {
