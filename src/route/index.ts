@@ -542,6 +542,9 @@ export async function initApiServer(
             ["tx_xdr"]: {
               type: "string",
             },
+            ["url"]: {
+              type: "string",
+            },
             ["network"]: {
               type: "string",
               validator: (qStr: string) => isNetwork(qStr),
@@ -552,15 +555,17 @@ export async function initApiServer(
           request: FastifyRequest<{
             Querystring: {
               ["tx_xdr"]: string;
+              ["url"]: string;
               ["network"]: NetworkNames;
             };
           }>,
           reply
         ) => {
-          const { tx_xdr, network } = request.query;
+          const { tx_xdr, url, network } = request.query;
           try {
             const { data, error } = await blockAidService.scanTx(
               tx_xdr,
+              url,
               network
             );
             return reply.code(error ? 400 : 200).send({ data, error });
