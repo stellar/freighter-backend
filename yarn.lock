@@ -384,10 +384,10 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@blockaid/client@^0.11.0":
-  version "0.11.0"
-  resolved "https://registry.yarnpkg.com/@blockaid/client/-/client-0.11.0.tgz#1fbc894d605eae0a8c8d7192ade4f344dd34946f"
-  integrity sha512-Lvg+lrQTDTBr03yKdrMOerjYovxEmWM5gUToO3Bbd5Qiybq4rBxoZBFvtBrg/vu5ENIA1f+jIo+1EI8TOktI4w==
+"@blockaid/client@^0.15.0":
+  version "0.15.0"
+  resolved "https://registry.yarnpkg.com/@blockaid/client/-/client-0.15.0.tgz#55e749070193d409390c3fea36ac6d4c5f47c507"
+  integrity sha512-6/9mhd9cqh4GKJtMg+m5vOYxhglxgN1NQly2vReBTdx8l+D6StbxHkrFgYitc4U5jQxMZb9zL7Zx9DPUe88xtg==
   dependencies:
     "@types/node" "^18.11.18"
     "@types/node-fetch" "^2.6.4"
@@ -396,7 +396,6 @@
     form-data-encoder "1.7.2"
     formdata-node "^4.3.2"
     node-fetch "^2.6.7"
-    web-streams-polyfill "^3.2.1"
 
 "@discoveryjs/json-ext@^0.5.0":
   version "0.5.7"
@@ -4179,20 +4178,7 @@ standard-as-callback@^2.1.0:
   resolved "https://registry.yarnpkg.com/standard-as-callback/-/standard-as-callback-2.1.0.tgz#8953fc05359868a77b5b9739a665c5977bb7df45"
   integrity sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==
 
-"stellar-sdk-next@yarn:stellar-sdk@12.1.0":
-  version "12.1.0"
-  resolved "https://registry.yarnpkg.com/stellar-sdk/-/stellar-sdk-12.1.0.tgz#5c484641de1e69719d80b70d4b998241f4977d8e"
-  integrity sha512-cunPIlSoIDB4OWDBpXSBd0ZH+cj7mVnbk+XLvCzplcMDG8nK/tpO5YH5Z2P/4B9JZigBXcXC7YHeHtB4dQvc9g==
-  dependencies:
-    "@stellar/stellar-base" "^12.0.1"
-    axios "^1.7.2"
-    bignumber.js "^9.1.2"
-    eventsource "^2.0.2"
-    randombytes "^2.1.0"
-    toml "^3.0.0"
-    urijs "^1.19.1"
-
-"stellar-sdk@yarn:stellar-sdk@^12.1.0":
+"stellar-sdk-next@yarn:stellar-sdk@12.1.0", "stellar-sdk@yarn:stellar-sdk@^12.1.0":
   version "12.1.0"
   resolved "https://registry.yarnpkg.com/stellar-sdk/-/stellar-sdk-12.1.0.tgz#5c484641de1e69719d80b70d4b998241f4977d8e"
   integrity sha512-cunPIlSoIDB4OWDBpXSBd0ZH+cj7mVnbk+XLvCzplcMDG8nK/tpO5YH5Z2P/4B9JZigBXcXC7YHeHtB4dQvc9g==
@@ -4502,11 +4488,6 @@ web-streams-polyfill@4.0.0-beta.3:
   version "4.0.0-beta.3"
   resolved "https://registry.yarnpkg.com/web-streams-polyfill/-/web-streams-polyfill-4.0.0-beta.3.tgz#2898486b74f5156095e473efe989dcf185047a38"
   integrity sha512-QW95TCTaHmsYfHDybGMwO5IJIM93I/6vTRk+daHTWFPhwh+C8Cg7j7XyKrwrj8Ib6vYXe0ocYNrmzY4xAAN6ug==
-
-web-streams-polyfill@^3.2.1:
-  version "3.3.3"
-  resolved "https://registry.yarnpkg.com/web-streams-polyfill/-/web-streams-polyfill-3.3.3.tgz#2073b91a2fdb1fbfbd401e7de0ac9f8214cecb4b"
-  integrity sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==
 
 webidl-conversions@^3.0.0:
   version "3.0.1"
