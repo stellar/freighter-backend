@@ -46,7 +46,7 @@ export class BlockAidService {
     }
   };
 
-  scanTx = async (txXdr: string, network: NetworkNames) => {
+  scanTx = async (txXdr: string, url: string, network: NetworkNames) => {
     try {
       const networkPassphrase = Networks[network];
       const tx = TransactionBuilder.fromXDR(txXdr, networkPassphrase);
@@ -63,7 +63,7 @@ export class BlockAidService {
         >,
         metadata: {
           type: "wallet" as "wallet",
-          url: "", // TODO: can this be optional, we dont always have it
+          url,
         },
         transactions: [txXdr],
         account_address: source,
