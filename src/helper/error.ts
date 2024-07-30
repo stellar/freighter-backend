@@ -21,4 +21,5 @@ export const ERROR = {
   INVALID_RUN_MODE: "invalid run mode",
   UNABLE_TO_SCAN_SITE: "unable to scan site using blockaid",
   UNABLE_TO_SCAN_TX: "unable to scan tx using blockaid",
+  UNABLE_TO_SCAN_ASSET: "unable to scan asset using blockaid",
 };
