@@ -29,11 +29,12 @@ const logger = pino({
       "req.remotePort",
       "req.headers.host",
       "req.headers['user-agent']",
-      "req.headers.url",
+      "req.url",
+      "req.params.pubKey",
     ],
     censor: (value: string, path: string[]) => {
       const _path = path.join(".");
-      if (_path === "req.headers.url") {
+      if (_path === "req.url") {
         return urlToRedacted(value);
       }
       return "Redacted";
