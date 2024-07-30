@@ -44,7 +44,8 @@ export const getUseMercury = async (
 };
 
 export const buildRenewClientMaker =
-  (endpoints: EndpointsMap) => (network: NetworkNames) => {
+  (endpoints: EndpointsMap, useTimeout = true) =>
+  (network: NetworkNames) => {
     if (!hasIndexerSupport(network)) {
       throw new Error(`network not currently supported: ${network}`);
     }
@@ -52,12 +53,13 @@ export const buildRenewClientMaker =
     return new Client({
       url: endpoints[network as MercurySupportedNetworks],
       exchanges: [fetchExchange],
-      fetch: fetchWithTimeout,
+      fetch: useTimeout ? fetchWithTimeout : fetch,
     });
   };
 
 export const buildBackendClientMaker =
-  (endpoints: EndpointsMap) => (network: NetworkNames, key: string) => {
+  (endpoints: EndpointsMap, useTimeout = true) =>
+  (network: NetworkNames, key: string) => {
     if (!hasIndexerSupport(network)) {
       throw new Error(`network not currently supported: ${network}`);
     }
@@ -65,7 +67,7 @@ export const buildBackendClientMaker =
     return new Client({
       url: `${endpoints[network as MercurySupportedNetworks]}`,
       exchanges: [fetchExchange],
-      fetch: fetchWithTimeout,
+      fetch: useTimeout ? fetchWithTimeout : fetch,
       fetchOptions: () => {
         return {
           headers: { authorization: `Bearer ${key}` },
@@ -75,7 +77,8 @@ export const buildBackendClientMaker =
   };
 
 export const buildCurrentDataClientMaker =
-  (endpoints: EndpointsMap) => (network: NetworkNames, key: string) => {
+  (endpoints: EndpointsMap, useTimeout = true) =>
+  (network: NetworkNames, key: string) => {
     if (!hasIndexerSupport(network)) {
       throw new Error(`network not currently supported: ${network}`);
     }
@@ -83,7 +86,7 @@ export const buildCurrentDataClientMaker =
     return new Client({
       url: `${endpoints[network as MercurySupportedNetworks]}`,
       exchanges: [fetchExchange],
-      fetch: fetchWithTimeout,
+      fetch: useTimeout ? fetchWithTimeout : fetch,
       fetchOptions: () => {
         return {
           headers: { authorization: `Bearer ${key}` },
