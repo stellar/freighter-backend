@@ -75,10 +75,11 @@ const main = async () => {
   const checkNetwork = "PUBLIC";
   // initial token and userID not needed for integrity checks
   const integrityCheckMercurySession = {
-    renewClientMaker: buildRenewClientMaker(graphQlEndpoints),
-    backendClientMaker: buildBackendClientMaker(graphQlEndpoints),
+    renewClientMaker: buildRenewClientMaker(graphQlEndpoints, false),
+    backendClientMaker: buildBackendClientMaker(graphQlEndpoints, false),
     currentDataClientMaker: buildCurrentDataClientMaker(
-      graphQlCurrentDataEndpoints
+      graphQlCurrentDataEndpoints,
+      false
     ),
     backends,
     credentials: {
