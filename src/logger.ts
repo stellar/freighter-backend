@@ -31,6 +31,7 @@ const logger = pino({
       "req.headers['user-agent']",
       "req.url",
       "req.params.pubKey",
+      "req.query.pub_key",
     ],
     censor: (value: string, path: string[]) => {
       const _path = path.join(".");
