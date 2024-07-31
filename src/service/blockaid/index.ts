@@ -78,4 +78,23 @@ export class BlockAidService {
       return { data: null, error: ERROR.UNABLE_TO_SCAN_TX };
     }
   };
+
+  scanAsset = async (
+    address: string
+  ): Promise<{
+    data: Blockaid.Token.TokenScanResponse | null;
+    error: string | null;
+  }> => {
+    try {
+      const data = await this.blockAidClient.token.scan({
+        address,
+        chain: "stellar",
+      });
+      return { data, error: null };
+    } catch (error) {
+      this.logger.error(error);
+      this.scanMissCounter.inc();
+      return { data: null, error: ERROR.UNABLE_TO_SCAN_ASSET };
+    }
+  };
 }

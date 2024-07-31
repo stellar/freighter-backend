@@ -576,6 +576,34 @@ export async function initApiServer(
       });
 
       instance.route({
+        method: "GET",
+        url: "/scan-asset",
+        schema: {
+          querystring: {
+            ["address"]: {
+              type: "string",
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Querystring: {
+              ["address"]: string;
+            };
+          }>,
+          reply
+        ) => {
+          const { address } = request.query;
+          try {
+            const { data, error } = await blockAidService.scanAsset(address);
+            return reply.code(error ? 400 : 200).send({ data, error });
+          } catch (error) {
+            return reply.code(500).send(ERROR.SERVER_ERROR);
+          }
+        },
+      });
+
+      instance.route({
         method: "POST",
         url: "/subscription/token",
         schema: {
