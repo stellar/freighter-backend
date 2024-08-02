@@ -309,7 +309,11 @@ export async function initApiServer(
                 logger
               );
             } catch (e) {
-              console.error(e);
+              data.balances = data.balances.map((bal: {}) => ({
+                ...bal,
+                isMalicious: false,
+              }));
+              logger.error(e);
             }
 
             reply.code(200).send(data);
