@@ -109,9 +109,13 @@ export async function initApiServer(
         url: "/rpc-health",
         schema: {
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -150,9 +154,13 @@ export async function initApiServer(
         url: "/horizon-health",
         schema: {
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -215,9 +223,13 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -234,6 +246,7 @@ export async function initApiServer(
             const useMercury = await getUseMercury(mode, useMercuryConf, redis);
             const pubKey = request.params["pubKey"];
             const { network } = request.query;
+            console.log(request.query);
             const { data, error } = await mercuryClient.getAccountHistory(
               pubKey,
               network,
@@ -262,14 +275,18 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["contract_ids"]: {
-              type: "array",
-              validator: (qStr: Array<unknown>) =>
-                qStr.map((q) => String(q)).every(isContractId),
-            },
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network", "contract_ids"],
+            properties: {
+              ["contract_ids"]: {
+                type: "array",
+                validator: (qStr: Array<unknown>) =>
+                  qStr.map((q) => String(q)).every(isContractId),
+              },
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -318,13 +335,17 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["pub_key"]: {
-              type: "string",
-              validator: (qStr: string) => isPubKey(qStr),
-            },
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["pub_key", "network"],
+            properties: {
+              ["pub_key"]: {
+                type: "string",
+                validator: (qStr: string) => isPubKey(qStr),
+              },
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -370,9 +391,13 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -422,9 +447,13 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -470,9 +499,13 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -511,8 +544,12 @@ export async function initApiServer(
         url: "/scan-dapp",
         schema: {
           querystring: {
-            ["url"]: {
-              type: "string",
+            type: "object",
+            required: ["url"],
+            properties: {
+              ["url"]: {
+                type: "string",
+              },
             },
           },
         },
@@ -539,15 +576,19 @@ export async function initApiServer(
         url: "/scan-tx",
         schema: {
           querystring: {
-            ["tx_xdr"]: {
-              type: "string",
-            },
-            ["url"]: {
-              type: "string",
-            },
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["tx_xdr", "url", "network"],
+            properties: {
+              ["tx_xdr"]: {
+                type: "string",
+              },
+              ["url"]: {
+                type: "string",
+              },
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -580,8 +621,12 @@ export async function initApiServer(
         url: "/scan-asset",
         schema: {
           querystring: {
-            ["address"]: {
-              type: "string",
+            type: "object",
+            required: ["address"],
+            properties: {
+              ["address"]: {
+                type: "string",
+              },
             },
           },
         },
@@ -609,6 +654,7 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: ["contract_id", "pub_key", "network"],
             properties: {
               contract_id: { type: "string" },
               pub_key: { type: "string" },
@@ -640,15 +686,20 @@ export async function initApiServer(
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
-          const { data, error } = await mercuryClient.tokenSubscription(
-            contract_id,
-            pub_key,
-            network
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
-            reply.code(200).send(data);
+          try {
+            const { data, error } = await mercuryClient.tokenSubscription(
+              contract_id,
+              pub_key,
+              network
+            );
+            if (error) {
+              reply.code(400).send(JSON.stringify(error));
+            } else {
+              reply.code(200).send(data);
+            }
+          } catch (error) {
+            logger.error(error);
+            return reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
@@ -659,6 +710,7 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: ["pub_key", "network"],
             properties: {
               pub_key: { type: "string" },
               network: { type: "string" },
@@ -685,14 +737,19 @@ export async function initApiServer(
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
-          const { data, error } = await mercuryClient.accountSubscription(
-            pub_key,
-            network
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
-            reply.code(200).send(data);
+          try {
+            const { data, error } = await mercuryClient.accountSubscription(
+              pub_key,
+              network
+            );
+            if (error) {
+              reply.code(400).send(JSON.stringify(error));
+            } else {
+              reply.code(200).send(data);
+            }
+          } catch (error) {
+            logger.error(error);
+            return reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
@@ -703,6 +760,7 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: ["contract_id", "pub_key", "network"],
             properties: {
               contract_id: { type: "string" },
               pub_key: { type: "string" },
@@ -735,15 +793,21 @@ export async function initApiServer(
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
-          const { data, error } = await mercuryClient.tokenBalanceSubscription(
-            contract_id,
-            pub_key,
-            network
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
-            reply.code(200).send(data);
+          try {
+            const { data, error } =
+              await mercuryClient.tokenBalanceSubscription(
+                contract_id,
+                pub_key,
+                network
+              );
+            if (error) {
+              reply.code(400).send(JSON.stringify(error));
+            } else {
+              reply.code(200).send(data);
+            }
+          } catch (error) {
+            logger.error(error);
+            return reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
@@ -754,6 +818,7 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: ["signed_xdr", "network_url", "network_passphrase"],
             properties: {
               signed_xdr: { type: "string" },
               network_url: { type: "string" },
@@ -772,15 +837,20 @@ export async function initApiServer(
           reply
         ) => {
           const { signed_xdr, network_url, network_passphrase } = request.body;
-          const { data, error } = await submitTransaction(
-            signed_xdr,
-            network_url,
-            network_passphrase
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
-            reply.code(200).send(data);
+          try {
+            const { data, error } = await submitTransaction(
+              signed_xdr,
+              network_url,
+              network_passphrase
+            );
+            if (error) {
+              reply.code(400).send(JSON.stringify(error));
+            } else {
+              reply.code(200).send(data);
+            }
+          } catch (error) {
+            logger.error(error);
+            return reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
@@ -791,6 +861,7 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: ["signed_xdr", "network_url", "network_passphrase"],
             properties: {
               signed_xdr: { type: "string" },
               network_url: { type: "string" },
@@ -839,6 +910,14 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: [
+              "address",
+              "pub_key",
+              "memo",
+              "params",
+              "network_url",
+              "network_passphrase",
+            ],
             properties: {
               address: { type: "string" },
               pub_key: { type: "string" },
