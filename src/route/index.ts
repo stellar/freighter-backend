@@ -11,6 +11,7 @@ import * as StellarSdk from "stellar-sdk";
 
 import { MercuryClient } from "../service/mercury";
 import { BlockAidService } from "../service/blockaid";
+import { addScannedStatus } from "../service/blockaid/helpers/addScanResults";
 import { ajv } from "./validators";
 import {
   isContractId,
@@ -299,6 +300,17 @@ export async function initApiServer(
               network,
               useMercury
             );
+
+            try {
+              data.balances = await addScannedStatus(
+                data.balances,
+                blockAidService,
+                network,
+                logger
+              );
+            } catch (e) {
+              console.error(e);
+            }
 
             reply.code(200).send(data);
           } catch (error) {
