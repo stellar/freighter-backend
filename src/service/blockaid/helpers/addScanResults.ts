@@ -19,7 +19,6 @@ export const addScannedStatus = async (
       try {
         const splitKey = key.split(":");
         const blockaidKey = `${splitKey[0]}-${splitKey[1]}`;
-
         const res = await blockaidService.scanAsset(blockaidKey);
 
         data = res.data;
