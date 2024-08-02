@@ -95,16 +95,6 @@ function backendClientMaker(network: NetworkNames) {
           error: null,
         });
       }
-      // case query.getAccountBalances(pubKey, tokenBalanceLedgerKey, [
-      //   "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
-      //   "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
-      //   "CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ"
-      // ]): {
-      //   return Promise.resolve({
-      //     data: queryMockResponse["query.getAccountBalances"],
-      //     error: null,
-      //   });
-      // }
       case query.getAccountSubForPubKey(pubKey): {
         return Promise.resolve({
           data: {
