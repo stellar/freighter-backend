@@ -179,7 +179,7 @@ describe("API routes", () => {
       register.clear();
       await server.close();
     });
-    it("doesn't add scanned status on Testnet", async () => {
+    it("doesn't check scanned status on Testnet", async () => {
       const contractIds = [
         "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
         "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
