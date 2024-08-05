@@ -10,21 +10,33 @@ import { query } from "../service/mercury/queries";
 
 jest.mock("@blockaid/client", () => {
   return class Blockaid {
-    token = {
-      scan: (asset: { address: string; chain: string }) => {
-        if (
-          asset.address ===
-          "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
-        ) {
-          return Promise.resolve({ malicious_score: 1 });
-        }
-        if (
-          asset.address ===
-          "TST-CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ"
-        ) {
-          throw Error("ERROR");
-        }
-        return Promise.resolve({ malicious_score: 0 });
+    tokenBulk = {
+      scan: (asset: { tokens: string[]; chain: string }) => {
+        const res: { [key: string]: any } = {};
+        asset.tokens.forEach((address) => {
+          if (
+            address ===
+            "TST-CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ"
+          ) {
+            throw Error("ERROR");
+          }
+
+          if (
+            address ===
+            "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
+          ) {
+            res[address] = {
+              malicious_score: 1,
+            };
+            return;
+          }
+
+          res[address] = {
+            malicious_score: 0,
+          };
+        });
+
+        return Promise.resolve({ results: res });
       },
     };
   };
@@ -37,7 +49,7 @@ describe("API routes", () => {
       const response = await fetch(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-history/${pubKey}?network=TESTNET&soroban_rpc_url=rpc_url`
+        }/api/v1/account-history/${pubKey}?network=TESTNET&soroban_rpc_url=rpc_url`,
       );
       const data = await response.json();
       expect(response.status).toEqual(200);
@@ -46,8 +58,8 @@ describe("API routes", () => {
           {
             data: queryMockResponse[query.getAccountHistory],
           } as any,
-          "TESTNET"
-        )
+          "TESTNET",
+        ),
       );
       register.clear();
       await server.close();
@@ -59,7 +71,7 @@ describe("API routes", () => {
       const response = await fetch(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-history/${notPubkey}`
+        }/api/v1/account-history/${notPubkey}`,
       );
       expect(response.status).toEqual(400);
       register.clear();
@@ -73,7 +85,7 @@ describe("API routes", () => {
       const response = await fetch(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-balances/${pubKey}?contract_ids=CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP&network=TESTNET`
+        }/api/v1/account-balances/${pubKey}?contract_ids=CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP&network=TESTNET`,
       );
       expect(response.status).toEqual(200);
       register.clear();
@@ -89,7 +101,7 @@ describe("API routes", () => {
       const url = new URL(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-balances/${pubKey}`
+        }/api/v1/account-balances/${pubKey}`,
       );
       url.searchParams.append("network", "TESTNET");
       for (const id of contractIds) {
@@ -113,8 +125,8 @@ describe("API routes", () => {
         `http://localhost:${
           (server?.server?.address() as any).port
         }/api/v1/account-balances/${pubKey}?${new URLSearchParams(
-          params as any
-        )}`
+          params as any,
+        )}`,
       );
       expect(response.status).toEqual(400);
       register.clear();
@@ -127,7 +139,7 @@ describe("API routes", () => {
       const response = await fetch(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-balances/${notPubkey}?contract_ids=CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP`
+        }/api/v1/account-balances/${notPubkey}?contract_ids=CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP`,
       );
       expect(response.status).toEqual(400);
       register.clear();
@@ -140,7 +152,7 @@ describe("API routes", () => {
       const response = await fetch(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-balances/${pubKey}?contract_ids=${notContractId}`
+        }/api/v1/account-balances/${pubKey}?contract_ids=${notContractId}`,
       );
       expect(response.status).toEqual(400);
       register.clear();
@@ -156,7 +168,7 @@ describe("API routes", () => {
       const url = new URL(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-balances/${pubKey}`
+        }/api/v1/account-balances/${pubKey}`,
       );
       url.searchParams.append("network", "PUBLIC");
       for (const id of contractIds) {
@@ -169,12 +181,12 @@ describe("API routes", () => {
       expect(
         data.balances[
           "BLND:GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
-        ].isMalicious
+        ].isMalicious,
       ).toEqual(true);
       expect(
         data.balances[
           "TST:CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP"
-        ].isMalicious
+        ].isMalicious,
       ).toEqual(false);
       register.clear();
       await server.close();
@@ -188,7 +200,7 @@ describe("API routes", () => {
       const url = new URL(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-balances/${pubKey}`
+        }/api/v1/account-balances/${pubKey}`,
       );
       url.searchParams.append("network", "TESTNET");
       for (const id of contractIds) {
@@ -201,7 +213,7 @@ describe("API routes", () => {
       expect(
         data.balances[
           "BLND:GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
-        ].isMalicious
+        ].isMalicious,
       ).toEqual(false);
       register.clear();
       await server.close();
@@ -216,7 +228,7 @@ describe("API routes", () => {
       const url = new URL(
         `http://localhost:${
           (server?.server?.address() as any).port
-        }/api/v1/account-balances/${pubKey}`
+        }/api/v1/account-balances/${pubKey}`,
       );
       url.searchParams.append("network", "PUBLIC");
       for (const id of contractIds) {
@@ -229,7 +241,7 @@ describe("API routes", () => {
       expect(
         data.balances[
           "TST:CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ"
-        ].isMalicious
+        ].isMalicious,
       ).toEqual(false);
       register.clear();
       await server.close();
