@@ -139,6 +139,24 @@ function backendClientMaker(network: NetworkNames) {
           error: null,
         });
       }
+      case query.getTokenBalanceSub(
+        "CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ",
+        tokenBalanceLedgerKey
+      ): {
+        return Promise.resolve({
+          data: {
+            allEntryUpdates: {
+              nodes: [
+                {
+                  contractId:
+                    "CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ",
+                },
+              ],
+            },
+          },
+          error: null,
+        });
+      }
       case query.getCurrentDataAccountBalances(
         pubKey,
         tokenBalanceLedgerKey,
@@ -166,6 +184,18 @@ function backendClientMaker(network: NetworkNames) {
         return Promise.resolve({
           data: queryMockResponse[
             "query.getAccountBalancesCurrentDataWithBothContracts"
+          ],
+          error: null,
+        });
+      }
+      case query.getCurrentDataAccountBalances(pubKey, tokenBalanceLedgerKey, [
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+        "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+        "CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ",
+      ]): {
+        return Promise.resolve({
+          data: queryMockResponse[
+            "query.getAccountBalancesCurrentDataWithThreeContracts"
           ],
           error: null,
         });
@@ -307,6 +337,51 @@ const queryMockResponse = {
       },
     ],
   },
+  "query.getAccountBalancesCurrentDataWithThreeContracts": {
+    trustlinesByPublicKey: [
+      {
+        balance: 100019646386,
+        asset: "AAAAAUJMTkQAAAAAJgXM07IdPwaDCLLNw46HAu0Jy3Az9GJKesWnsk57zF4=",
+        limit: 1,
+        accountId: pubKey,
+      },
+    ],
+    accountByPublicKey: {
+      accountId: pubKey,
+      nativeBalance: "10",
+      numSubEntries: "1",
+      numSponsored: "1",
+      numSponsoring: "1",
+      sellingLiabilities: "1000000",
+    },
+    CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP: [
+      {
+        contractId: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+        keyXdr:
+          "AAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys",
+        valXdr: contractDataEntryValXdr,
+        durability: 1,
+      },
+    ],
+    CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG: [
+      {
+        contractId: "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+        keyXdr:
+          "AAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys",
+        valXdr: contractDataEntryValXdr,
+        durability: 1,
+      },
+    ],
+    CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ: [
+      {
+        contractId: "CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ",
+        keyXdr:
+          "AAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtys",
+        valXdr: contractDataEntryValXdr,
+        durability: 1,
+      },
+    ],
+  },
   "query.getAccountObject": {
     accountObjectByPublicKey: {
       nodes: [
@@ -342,6 +417,19 @@ const queryMockResponse = {
         {
           contractId:
             "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+          keyXdr: tokenBalanceLedgerKey,
+          valueXdr,
+          ledgerTimestamp: "timestamp",
+          ledger: "1",
+          entryDurability: "persistent",
+        },
+      ],
+    },
+    CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ: {
+      nodes: [
+        {
+          contractId:
+            "CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ",
           keyXdr: tokenBalanceLedgerKey,
           valueXdr,
           ledgerTimestamp: "timestamp",

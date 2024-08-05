@@ -11,6 +11,7 @@ import * as StellarSdk from "stellar-sdk";
 
 import { MercuryClient } from "../service/mercury";
 import { BlockAidService } from "../service/blockaid";
+import { addScannedStatus } from "../service/blockaid/helpers/addScanResults";
 import { ajv } from "./validators";
 import {
   isContractId,
@@ -43,7 +44,7 @@ export async function initApiServer(
   useSorobanPublic: boolean,
   register: Prometheus.Registry,
   mode: mode,
-  redis?: Redis
+  redis?: Redis,
 ) {
   const routeMetricsStore = new WeakMap<
     FastifyRequest,
@@ -78,7 +79,7 @@ export async function initApiServer(
   server.addHook("onRequest", (request, _, done) => {
     routeMetricsStore.set(
       request,
-      httpRequestDurationMicroseconds.startTimer()
+      httpRequestDurationMicroseconds.startTimer(),
     );
     return done();
   });
@@ -109,9 +110,13 @@ export async function initApiServer(
         url: "/rpc-health",
         schema: {
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -121,7 +126,7 @@ export async function initApiServer(
               ["network"]: NetworkNames;
             };
           }>,
-          reply
+          reply,
         ) => {
           const networkUrl = SOROBAN_RPC_URLS[request.query.network];
 
@@ -150,9 +155,13 @@ export async function initApiServer(
         url: "/horizon-health",
         schema: {
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -162,7 +171,7 @@ export async function initApiServer(
               ["network"]: NetworkNames;
             };
           }>,
-          reply
+          reply,
         ) => {
           const networkUrl = NETWORK_URLS[request.query.network];
 
@@ -215,9 +224,13 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -228,16 +241,17 @@ export async function initApiServer(
               ["network"]: NetworkNames;
             };
           }>,
-          reply
+          reply,
         ) => {
           try {
             const useMercury = await getUseMercury(mode, useMercuryConf, redis);
             const pubKey = request.params["pubKey"];
             const { network } = request.query;
+            console.log(request.query);
             const { data, error } = await mercuryClient.getAccountHistory(
               pubKey,
               network,
-              useMercury
+              useMercury,
             );
             if (error) {
               reply.code(400).send(JSON.stringify(error));
@@ -262,14 +276,18 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["contract_ids"]: {
-              type: "array",
-              validator: (qStr: Array<unknown>) =>
-                qStr.map((q) => String(q)).every(isContractId),
-            },
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network", "contract_ids"],
+            properties: {
+              ["contract_ids"]: {
+                type: "array",
+                validator: (qStr: Array<unknown>) =>
+                  qStr.map((q) => String(q)).every(isContractId),
+              },
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -281,7 +299,7 @@ export async function initApiServer(
               ["network"]: NetworkNames;
             };
           }>,
-          reply
+          reply,
         ) => {
           try {
             const useMercury = await getUseMercury(mode, useMercuryConf, redis);
@@ -297,8 +315,23 @@ export async function initApiServer(
               pubKey,
               skipSorobanPubnet ? [] : contractIds,
               network,
-              useMercury
+              useMercury,
             );
+
+            try {
+              data.balances = await addScannedStatus(
+                data.balances,
+                blockAidService,
+                network,
+                logger
+              );
+            } catch (e) {
+              data.balances = data.balances.map((bal: {}) => ({
+                ...bal,
+                isMalicious: false,
+              }));
+              logger.error(e);
+            }
 
             reply.code(200).send(data);
           } catch (error) {
@@ -318,13 +351,17 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["pub_key"]: {
-              type: "string",
-              validator: (qStr: string) => isPubKey(qStr),
-            },
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["pub_key", "network"],
+            properties: {
+              ["pub_key"]: {
+                type: "string",
+                validator: (qStr: string) => isPubKey(qStr),
+              },
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -336,7 +373,7 @@ export async function initApiServer(
               ["network"]: NetworkNames;
             };
           }>,
-          reply
+          reply,
         ) => {
           const contractId = request.params["contractId"];
           const { network, pub_key } = request.query;
@@ -350,7 +387,7 @@ export async function initApiServer(
             const data = await mercuryClient.tokenDetails(
               pub_key,
               contractId,
-              network
+              network,
             );
             reply.code(200).send(data);
           } catch (error) {
@@ -370,9 +407,13 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -383,7 +424,7 @@ export async function initApiServer(
               ["network"]: NetworkNames;
             };
           }>,
-          reply
+          reply,
         ) => {
           const contractId = request.params["contractId"];
           const { network } = request.query;
@@ -397,7 +438,7 @@ export async function initApiServer(
             const { result, error } = await getIsTokenSpec(
               contractId,
               network,
-              logger
+              logger,
             );
 
             if (error) {
@@ -422,9 +463,13 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -435,7 +480,7 @@ export async function initApiServer(
               ["network"]: NetworkNames;
             };
           }>,
-          reply
+          reply,
         ) => {
           const contractId = request.params["contractId"];
           const { network } = request.query;
@@ -449,7 +494,7 @@ export async function initApiServer(
             const { result, error } = await getContractSpec(
               contractId,
               network,
-              logger
+              logger,
             );
 
             reply.code(error ? 400 : 200).send({ data: result, error });
@@ -470,9 +515,13 @@ export async function initApiServer(
             },
           },
           querystring: {
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["network"],
+            properties: {
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -483,7 +532,7 @@ export async function initApiServer(
               ["network"]: NetworkNames;
             };
           }>,
-          reply
+          reply,
         ) => {
           const contractId = request.params["contractId"];
           const { network } = request.query;
@@ -496,7 +545,7 @@ export async function initApiServer(
           try {
             const isSacContract = await isSacContractExecutable(
               contractId,
-              network
+              network,
             );
 
             reply.code(200).send({ isSacContract });
@@ -511,8 +560,12 @@ export async function initApiServer(
         url: "/scan-dapp",
         schema: {
           querystring: {
-            ["url"]: {
-              type: "string",
+            type: "object",
+            required: ["url"],
+            properties: {
+              ["url"]: {
+                type: "string",
+              },
             },
           },
         },
@@ -522,7 +575,7 @@ export async function initApiServer(
               ["url"]: string;
             };
           }>,
-          reply
+          reply,
         ) => {
           const { url } = request.query;
           try {
@@ -539,15 +592,19 @@ export async function initApiServer(
         url: "/scan-tx",
         schema: {
           querystring: {
-            ["tx_xdr"]: {
-              type: "string",
-            },
-            ["url"]: {
-              type: "string",
-            },
-            ["network"]: {
-              type: "string",
-              validator: (qStr: string) => isNetwork(qStr),
+            type: "object",
+            required: ["tx_xdr", "url", "network"],
+            properties: {
+              ["tx_xdr"]: {
+                type: "string",
+              },
+              ["url"]: {
+                type: "string",
+              },
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
             },
           },
         },
@@ -559,14 +616,14 @@ export async function initApiServer(
               ["network"]: NetworkNames;
             };
           }>,
-          reply
+          reply,
         ) => {
           const { tx_xdr, url, network } = request.query;
           try {
             const { data, error } = await blockAidService.scanTx(
               tx_xdr,
               url,
-              network
+              network,
             );
             return reply.code(error ? 400 : 200).send({ data, error });
           } catch (error) {
@@ -580,8 +637,12 @@ export async function initApiServer(
         url: "/scan-asset",
         schema: {
           querystring: {
-            ["address"]: {
-              type: "string",
+            type: "object",
+            required: ["address"],
+            properties: {
+              ["address"]: {
+                type: "string",
+              },
             },
           },
         },
@@ -591,7 +652,7 @@ export async function initApiServer(
               ["address"]: string;
             };
           }>,
-          reply
+          reply,
         ) => {
           const { address } = request.query;
           try {
@@ -609,6 +670,7 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: ["contract_id", "pub_key", "network"],
             properties: {
               contract_id: { type: "string" },
               pub_key: { type: "string" },
@@ -632,7 +694,7 @@ export async function initApiServer(
               network: NetworkNames;
             };
           }>,
-          reply
+          reply,
         ) => {
           const { contract_id, pub_key, network } = request.body;
           const useMercury = await getUseMercury(mode, useMercuryConf, redis);
@@ -640,15 +702,20 @@ export async function initApiServer(
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
-          const { data, error } = await mercuryClient.tokenSubscription(
-            contract_id,
-            pub_key,
-            network
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
-            reply.code(200).send(data);
+          try {
+            const { data, error } = await mercuryClient.tokenSubscription(
+              contract_id,
+              pub_key,
+              network,
+            );
+            if (error) {
+              reply.code(400).send(JSON.stringify(error));
+            } else {
+              reply.code(200).send(data);
+            }
+          } catch (error) {
+            logger.error(error);
+            return reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
@@ -659,6 +726,7 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: ["pub_key", "network"],
             properties: {
               pub_key: { type: "string" },
               network: { type: "string" },
@@ -677,7 +745,7 @@ export async function initApiServer(
           request: FastifyRequest<{
             Body: { pub_key: string; network: NetworkNames };
           }>,
-          reply
+          reply,
         ) => {
           const { pub_key, network } = request.body;
           const useMercury = await getUseMercury(mode, useMercuryConf, redis);
@@ -685,14 +753,19 @@ export async function initApiServer(
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
-          const { data, error } = await mercuryClient.accountSubscription(
-            pub_key,
-            network
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
-            reply.code(200).send(data);
+          try {
+            const { data, error } = await mercuryClient.accountSubscription(
+              pub_key,
+              network,
+            );
+            if (error) {
+              reply.code(400).send(JSON.stringify(error));
+            } else {
+              reply.code(200).send(data);
+            }
+          } catch (error) {
+            logger.error(error);
+            return reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
@@ -703,6 +776,7 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: ["contract_id", "pub_key", "network"],
             properties: {
               contract_id: { type: "string" },
               pub_key: { type: "string" },
@@ -726,7 +800,7 @@ export async function initApiServer(
               network: NetworkNames;
             };
           }>,
-          reply
+          reply,
         ) => {
           const { pub_key, contract_id, network } = request.body;
 
@@ -735,15 +809,21 @@ export async function initApiServer(
             return reply.code(400).send(JSON.stringify("Mercury disabled"));
           }
 
-          const { data, error } = await mercuryClient.tokenBalanceSubscription(
-            contract_id,
-            pub_key,
-            network
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
-            reply.code(200).send(data);
+          try {
+            const { data, error } =
+              await mercuryClient.tokenBalanceSubscription(
+                contract_id,
+                pub_key,
+                network,
+              );
+            if (error) {
+              reply.code(400).send(JSON.stringify(error));
+            } else {
+              reply.code(200).send(data);
+            }
+          } catch (error) {
+            logger.error(error);
+            return reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
@@ -754,6 +834,7 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: ["signed_xdr", "network_url", "network_passphrase"],
             properties: {
               signed_xdr: { type: "string" },
               network_url: { type: "string" },
@@ -769,18 +850,23 @@ export async function initApiServer(
               network_passphrase: string;
             };
           }>,
-          reply
+          reply,
         ) => {
           const { signed_xdr, network_url, network_passphrase } = request.body;
-          const { data, error } = await submitTransaction(
-            signed_xdr,
-            network_url,
-            network_passphrase
-          );
-          if (error) {
-            reply.code(400).send(JSON.stringify(error));
-          } else {
-            reply.code(200).send(data);
+          try {
+            const { data, error } = await submitTransaction(
+              signed_xdr,
+              network_url,
+              network_passphrase,
+            );
+            if (error) {
+              reply.code(400).send(JSON.stringify(error));
+            } else {
+              reply.code(200).send(data);
+            }
+          } catch (error) {
+            logger.error(error);
+            return reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
@@ -791,6 +877,7 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: ["signed_xdr", "network_url", "network_passphrase"],
             properties: {
               signed_xdr: { type: "string" },
               network_url: { type: "string" },
@@ -806,7 +893,7 @@ export async function initApiServer(
               network_passphrase: string;
             };
           }>,
-          reply
+          reply,
         ) => {
           const { signed_xdr, network_url, network_passphrase } = request.body;
 
@@ -814,7 +901,7 @@ export async function initApiServer(
             const Sdk = getSdk(network_passphrase as Networks);
             const tx = Sdk.TransactionBuilder.fromXDR(
               signed_xdr,
-              network_passphrase
+              network_passphrase,
             );
             const server = new Sdk.SorobanRpc.Server(network_url);
 
@@ -824,7 +911,7 @@ export async function initApiServer(
                 StellarSdk.Operation[]
               >,
               server,
-              network_passphrase as Networks
+              network_passphrase as Networks,
             );
             reply.code(200).send(data);
           } catch (error) {
@@ -839,6 +926,14 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
+            required: [
+              "address",
+              "pub_key",
+              "memo",
+              "params",
+              "network_url",
+              "network_passphrase",
+            ],
             properties: {
               address: { type: "string" },
               pub_key: { type: "string" },
@@ -862,7 +957,7 @@ export async function initApiServer(
               network_passphrase: string;
             };
           }>,
-          reply
+          reply,
         ) => {
           const {
             address,
@@ -895,15 +990,15 @@ export async function initApiServer(
               _params,
               memo,
               builder,
-              network_passphrase as Networks
+              network_passphrase as Networks,
             );
             const simulationResponse = (await server.simulateTransaction(
-              tx
+              tx,
             )) as StellarSdk.SorobanRpc.Api.SimulateTransactionSuccessResponse;
 
             const preparedTransaction = Sdk.SorobanRpc.assembleTransaction(
               tx,
-              simulationResponse
+              simulationResponse,
             );
 
             const built = preparedTransaction.build();
@@ -941,7 +1036,7 @@ export async function initApiServer(
 
       next();
     },
-    { prefix: `/api/${API_VERSION}` }
+    { prefix: `/api/${API_VERSION}` },
   );
 
   return server;
