@@ -109,7 +109,6 @@ export class BlockAidService {
         tokens: addressList,
         chain: "stellar",
       });
-      console.log(data);
       return { data, error: null };
     } catch (error) {
       this.logger.error(error);
