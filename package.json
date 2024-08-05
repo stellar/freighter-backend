@@ -52,7 +52,7 @@
     "@babel/preset-typescript": "^7.24.7",
     "@stellar/tsconfig": "^1.0.2",
     "@types/jest": "^29.5.12",
-    "@types/node": "^22.8.2",
+    "@types/node": "^22.1.0",
     "@types/yargs": "^17.0.32",
     "babel-jest": "^29.7.0",
     "dotenv": "^16.4.5",
