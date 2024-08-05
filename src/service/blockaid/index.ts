@@ -21,7 +21,7 @@ export class BlockAidService {
   constructor(
     blockAidClient: Blockaid,
     logger: Logger,
-    register: Prometheus.Registry
+    register: Prometheus.Registry,
   ) {
     this.blockAidClient = blockAidClient;
     this.logger = logger;
@@ -34,7 +34,7 @@ export class BlockAidService {
   }
 
   scanDapp = async (
-    url: string
+    url: string,
   ): Promise<{
     data: Blockaid.Site.SiteScanResponse | null;
     error: string | null;
@@ -80,7 +80,7 @@ export class BlockAidService {
   };
 
   scanAsset = async (
-    address: string
+    address: string,
   ): Promise<{
     data: Blockaid.Token.TokenScanResponse | null;
     error: string | null;
@@ -90,6 +90,26 @@ export class BlockAidService {
         address,
         chain: "stellar",
       });
+      return { data, error: null };
+    } catch (error) {
+      this.logger.error(error);
+      this.scanMissCounter.inc();
+      return { data: null, error: ERROR.UNABLE_TO_SCAN_ASSET };
+    }
+  };
+
+  scanAssetBulk = async (
+    addressList: string[],
+  ): Promise<{
+    data: Blockaid.TokenBulk.TokenBulkScanResponse | null;
+    error: string | null;
+  }> => {
+    try {
+      const data = await this.blockAidClient.tokenBulk.scan({
+        tokens: addressList,
+        chain: "stellar",
+      });
+      console.log(data);
       return { data, error: null };
     } catch (error) {
       this.logger.error(error);
