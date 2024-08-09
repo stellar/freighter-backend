@@ -277,7 +277,7 @@ export async function initApiServer(
           },
           querystring: {
             type: "object",
-            required: ["network", "contract_ids"],
+            required: ["network"],
             properties: {
               ["contract_ids"]: {
                 type: "array",
@@ -323,7 +323,7 @@ export async function initApiServer(
                 data.balances,
                 blockAidService,
                 network,
-                logger
+                logger,
               );
             } catch (e) {
               data.balances = data.balances.map((bal: {}) => ({
