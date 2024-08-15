@@ -22,6 +22,7 @@ export const addScannedStatus = async (
         keyList.push(blockaidKey);
       } catch (e) {
         logger.error(e);
+        logger.error(`Failed to split key: ${key}`);
       }
     }
 
@@ -47,6 +48,7 @@ export const addScannedStatus = async (
       });
     } catch (e) {
       logger.error(e);
+      logger.error(`Failed to bulk scan assets: ${JSON.stringify(keyList)}`);
     }
   }
 
