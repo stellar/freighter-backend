@@ -247,7 +247,6 @@ export async function initApiServer(
             const useMercury = await getUseMercury(mode, useMercuryConf, redis);
             const pubKey = request.params["pubKey"];
             const { network } = request.query;
-            console.log(request.query);
             const { data, error } = await mercuryClient.getAccountHistory(
               pubKey,
               network,
