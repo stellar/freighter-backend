@@ -39,12 +39,17 @@ export const addScannedStatus = async (
       const bulkRes = await blockaidService.scanAssetBulk(keyList);
 
       Object.entries(bulkRes?.data?.results || {}).forEach(([key, val]) => {
-        const splitKey = key.split("-");
-        const balKey = `${splitKey[0]}:${splitKey[1]}`;
+        try {
+          const splitKey = key.split("-");
+          const balKey = `${splitKey[0]}:${splitKey[1]}`;
 
-        // overwrite the isMalicious default with the Blockaid scan result
-        scannedBalances[balKey].isMalicious =
-          Boolean(Number(val?.malicious_score)) || false;
+          // overwrite the isMalicious default with the Blockaid scan result
+          scannedBalances[balKey].isMalicious =
+            Boolean(Number(val?.malicious_score)) || false;
+        } catch (e) {
+          logger.error(e);
+          logger.error(`Failed to process Blockaid scan result: ${key}:${val}`);
+        }
       });
     } catch (e) {
       logger.error(e);
