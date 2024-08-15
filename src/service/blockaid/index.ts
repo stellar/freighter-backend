@@ -68,7 +68,7 @@ export class BlockAidService {
           type: "wallet" as "wallet",
           url,
         },
-        transactions: [txXdr],
+        transaction: txXdr,
         account_address: source,
       };
       const data = await this.blockAidClient.stellar.transaction.scan(body);
