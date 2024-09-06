@@ -249,4 +249,44 @@ describe("API routes", () => {
       await server.close();
     });
   });
+  describe("/scan-asset-bulk", () => {
+    it("can scan assets in bulk", async () => {
+      const asset_ids = [
+        "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
+        "FOO-CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ",
+      ];
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/scan-asset-bulk`,
+      );
+      url.searchParams.append("network", "PUBLIC");
+      for (const id of asset_ids) {
+        url.searchParams.append("asset_ids", id);
+      }
+      const response = await fetch(url.href);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(
+        data.data.results[
+          "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
+        ],
+      ).toEqual({
+        result_type: "Malicious",
+        malicious_score: 1,
+      });
+      expect(
+        data.data.results[
+          "FOO-CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ"
+        ],
+      ).toEqual({
+        result_type: "Benign",
+        malicious_score: 0,
+      });
+      register.clear();
+      await server.close();
+    });
+  });
 });
