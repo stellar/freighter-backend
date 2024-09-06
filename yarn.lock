@@ -358,10 +358,10 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@blockaid/client@^0.21.0":
-  version "0.21.0"
-  resolved "https://registry.yarnpkg.com/@blockaid/client/-/client-0.21.0.tgz#9c31f1eb79a07b7b37c7926c03b9ec085129c263"
-  integrity sha512-y0NNUDZoAwC+CZTfUpJbBqyVxcrgptUkvqhy+krWTg8qlMkpsoNZuTWdFzoJxXeYuj6wVYtGPHIgXoBvY1bntg==
+"@blockaid/client@^0.25.0":
+  version "0.25.0"
+  resolved "https://registry.yarnpkg.com/@blockaid/client/-/client-0.25.0.tgz#047edad9b4a2400b316041aa0932f53120b14448"
+  integrity sha512-QcFuurS6sAOFY8/d8rmWpmJAUJbYojSQlOAJ97eWSAW9WI9D1tjAC1JpEBvGUlfwLjO4/+kOqk4KvDXxEleIgA==
   dependencies:
     "@types/node" "^18.11.18"
     "@types/node-fetch" "^2.6.4"

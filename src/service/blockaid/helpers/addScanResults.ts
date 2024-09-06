@@ -1,3 +1,4 @@
+import Blockaid from "@blockaid/client";
 import { Logger } from "pino";
 import { BlockAidService } from "..";
 import { NetworkNames } from "../../../helper/validate";
@@ -8,7 +9,9 @@ export const addScannedStatus = async (
   network: NetworkNames,
   logger: Logger,
 ) => {
-  const scannedBalances = {} as { [key: string]: { isMalicious: boolean } };
+  const scannedBalances = {} as {
+    [key: string]: { blockaidData: Blockaid.Token.TokenScanResponse };
+  };
   const entries = Object.entries(balances);
   const keyList: string[] = [];
 
@@ -26,10 +29,23 @@ export const addScannedStatus = async (
       }
     }
 
-    // we set a default for isMalicious that, if we do scan with Blockaid, we will overwrite. Otherwise, we're done
+    // set a default as Benign. If we do scan with Blockaid, we will overwrite. Otherwise, we're done
     scannedBalances[key] = {
       ...balanceInfo,
-      isMalicious: false,
+      blockaidData: {
+        result_type: "Benign",
+        malicious_score: "0.0",
+        attack_types: {},
+        chain: "stellar",
+        address: "",
+        metadata: {
+          type: "",
+        },
+        fees: {},
+        features: [],
+        trading_limits: {},
+        financial_stats: {},
+      },
     };
   }
 
@@ -44,8 +60,7 @@ export const addScannedStatus = async (
           const balKey = `${splitKey[0]}:${splitKey[1]}`;
 
           // overwrite the isMalicious default with the Blockaid scan result
-          scannedBalances[balKey].isMalicious =
-            Boolean(Number(val?.malicious_score)) || false;
+          scannedBalances[balKey].blockaidData = val;
         } catch (e) {
           logger.error(e);
           logger.error(`Failed to process Blockaid scan result: ${key}:${val}`);
