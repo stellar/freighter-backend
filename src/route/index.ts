@@ -664,6 +664,43 @@ export async function initApiServer(
       });
 
       instance.route({
+        method: "GET",
+        url: "/scan-asset-bulk",
+        schema: {
+          querystring: {
+            type: "object",
+            required: ["asset_ids"],
+            properties: {
+              ["asset_ids"]: {
+                type: "array",
+                validator: (qStr: Array<unknown>) =>
+                  qStr
+                    .map((q) => String(q).split("-")[1])
+                    .every((k) => isContractId(k) || isPubKey(k)),
+              },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Querystring: {
+              ["asset_ids"]: string[];
+            };
+          }>,
+          reply,
+        ) => {
+          const { asset_ids } = request.query;
+          try {
+            const { data, error } =
+              await blockAidService.scanAssetBulk(asset_ids);
+            return reply.code(error ? 400 : 200).send({ data, error });
+          } catch (error) {
+            return reply.code(500).send(ERROR.SERVER_ERROR);
+          }
+        },
+      });
+
+      instance.route({
         method: "POST",
         url: "/subscription/token",
         schema: {

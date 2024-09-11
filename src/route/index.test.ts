@@ -26,12 +26,14 @@ jest.mock("@blockaid/client", () => {
             "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
           ) {
             res[address] = {
+              result_type: "Malicious",
               malicious_score: 1,
             };
             return;
           }
 
           res[address] = {
+            result_type: "Benign",
             malicious_score: 0,
           };
         });
@@ -181,13 +183,13 @@ describe("API routes", () => {
       expect(
         data.balances[
           "BLND:GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
-        ].isMalicious,
-      ).toEqual(true);
+        ].blockaidData.result_type,
+      ).toEqual("Malicious");
       expect(
         data.balances[
           "TST:CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP"
-        ].isMalicious,
-      ).toEqual(false);
+        ].blockaidData.result_type,
+      ).toEqual("Benign");
       register.clear();
       await server.close();
     });
@@ -213,8 +215,8 @@ describe("API routes", () => {
       expect(
         data.balances[
           "BLND:GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
-        ].isMalicious,
-      ).toEqual(false);
+        ].blockaidData.result_type,
+      ).toEqual("Benign");
       register.clear();
       await server.close();
     });
@@ -241,8 +243,48 @@ describe("API routes", () => {
       expect(
         data.balances[
           "TST:CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ"
-        ].isMalicious,
-      ).toEqual(false);
+        ].blockaidData.result_type,
+      ).toEqual("Benign");
+      register.clear();
+      await server.close();
+    });
+  });
+  describe("/scan-asset-bulk", () => {
+    it("can scan assets in bulk", async () => {
+      const asset_ids = [
+        "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
+        "FOO-CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ",
+      ];
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/scan-asset-bulk`,
+      );
+      url.searchParams.append("network", "PUBLIC");
+      for (const id of asset_ids) {
+        url.searchParams.append("asset_ids", id);
+      }
+      const response = await fetch(url.href);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(
+        data.data.results[
+          "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
+        ],
+      ).toEqual({
+        result_type: "Malicious",
+        malicious_score: 1,
+      });
+      expect(
+        data.data.results[
+          "FOO-CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ"
+        ],
+      ).toEqual({
+        result_type: "Benign",
+        malicious_score: 0,
+      });
       register.clear();
       await server.close();
     });
