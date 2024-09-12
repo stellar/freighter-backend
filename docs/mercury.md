@@ -3,7 +3,7 @@
 Freighter's backend relies on data that is ingested and indexed by Mercury in order to serve different wallet views.
 
 Mercury is an indexer and API built on Stellar, [see docs for more info.](https://www.mercurydata.app/)
-Mercury allows users to subscribe to data on the network and query indexed data using a GraphQL API.
+It allows users to subscribe to data on the network and query indexed data using a GraphQL API.
 
 ## Playground
 
@@ -38,6 +38,7 @@ query Test {
     edges {
       node {
         opId
+        ...
       }
     }
   }
@@ -56,3 +57,8 @@ Mercury queries can be added by adding a new key to the `query` map in the [quer
 Queries are stored as template strings that represent the GraphQL query. Arguments can be passed by writing the query as a function and interpolating the arguments into the template string.
 
 Queries can be imported into anything that accepts GraphQL documents.
+
+## Usage in public facing routes
+
+The account history and account balance queries are used to serve public facing routes, we use [transformers](../src/service/mercury/helpers/transformers.ts) to process this data from Mercury in order to maintain schema compatibility with Horizon/RPC responses.
+Any changes to these queries should be accompanied by an update to the corresponding transformer in order align with Horizon schemas used in the transformer.
