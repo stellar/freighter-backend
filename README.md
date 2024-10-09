@@ -25,3 +25,5 @@ For full runbook details, please reference [the runbook.](./docs/runbook.md)
 ## Mercury Details
 
 This project integrates with Mercury, an indexer for Stellar/Soroban. You can find general developer documentation (in their repo docs)[https://github.com/xycloo/merury-developers-documentation/blob/main/src/SUMMARY.md].
+
+For full integration details, see [the Mercury docs](./docs/mercury.md).
