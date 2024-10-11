@@ -599,7 +599,10 @@ export async function initApiServer(
           }
           return reply
             .code(200)
-            .send({ data: null, error: ERROR.SCAN_SITE_DISABLED });
+            .send({
+              data: { status: "miss" },
+              error: ERROR.SCAN_SITE_DISABLED,
+            });
         },
       });
 
@@ -685,12 +688,10 @@ export async function initApiServer(
               return reply.code(500).send(ERROR.SERVER_ERROR);
             }
           }
-          return reply
-            .code(200)
-            .send({
-              data: { ...defaultBenignResponse, address },
-              error: ERROR.SCAN_ASSET_DISABLED,
-            });
+          return reply.code(200).send({
+            data: { ...defaultBenignResponse, address },
+            error: ERROR.SCAN_ASSET_DISABLED,
+          });
         },
       });
 
