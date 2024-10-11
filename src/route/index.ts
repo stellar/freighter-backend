@@ -10,8 +10,14 @@ import { Networks } from "stellar-sdk-next";
 import * as StellarSdk from "stellar-sdk";
 
 import { MercuryClient } from "../service/mercury";
-import { BlockAidService } from "../service/blockaid";
-import { addScannedStatus } from "../service/blockaid/helpers/addScanResults";
+import {
+  BlockAidService,
+  BlockaidAssetScanResponse,
+} from "../service/blockaid";
+import {
+  addScannedStatus,
+  defaultBenignResponse,
+} from "../service/blockaid/helpers/addScanResults";
 import { ajv } from "./validators";
 import {
   isContractId,
@@ -44,6 +50,11 @@ export async function initApiServer(
   useSorobanPublic: boolean,
   register: Prometheus.Registry,
   mode: mode,
+  blockaidConfig: {
+    useBlockaidDappScanning: boolean;
+    useBlockaidTxScanning: boolean;
+    useBlockaidAssetScanning: boolean;
+  },
   redis?: Redis,
 ) {
   const routeMetricsStore = new WeakMap<
@@ -323,6 +334,7 @@ export async function initApiServer(
                 blockAidService,
                 network,
                 logger,
+                blockaidConfig.useBlockaidAssetScanning,
               );
             } catch (e) {
               data.balances = data.balances.map((bal: {}) => ({
@@ -577,12 +589,17 @@ export async function initApiServer(
           reply,
         ) => {
           const { url } = request.query;
-          try {
-            const { data, error } = await blockAidService.scanDapp(url);
-            return reply.code(error ? 400 : 200).send({ data, error });
-          } catch (error) {
-            return reply.code(500).send(ERROR.SERVER_ERROR);
+          if (blockaidConfig.useBlockaidDappScanning) {
+            try {
+              const { data, error } = await blockAidService.scanDapp(url);
+              return reply.code(error ? 400 : 200).send({ data, error });
+            } catch (error) {
+              return reply.code(500).send(ERROR.SERVER_ERROR);
+            }
           }
+          return reply
+            .code(200)
+            .send({ data: null, error: ERROR.SCAN_SITE_DISABLED });
         },
       });
 
@@ -618,16 +635,21 @@ export async function initApiServer(
           reply,
         ) => {
           const { tx_xdr, url, network } = request.query;
-          try {
-            const { data, error } = await blockAidService.scanTx(
-              tx_xdr,
-              url,
-              network,
-            );
-            return reply.code(error ? 400 : 200).send({ data, error });
-          } catch (error) {
-            return reply.code(500).send(ERROR.SERVER_ERROR);
+          if (blockaidConfig.useBlockaidTxScanning) {
+            try {
+              const { data, error } = await blockAidService.scanTx(
+                tx_xdr,
+                url,
+                network,
+              );
+              return reply.code(error ? 400 : 200).send({ data, error });
+            } catch (error) {
+              return reply.code(500).send(ERROR.SERVER_ERROR);
+            }
           }
+          return reply
+            .code(200)
+            .send({ data: null, error: ERROR.SCAN_TX_DISABLED });
         },
       });
 
@@ -654,12 +676,18 @@ export async function initApiServer(
           reply,
         ) => {
           const { address } = request.query;
-          try {
-            const { data, error } = await blockAidService.scanAsset(address);
-            return reply.code(error ? 400 : 200).send({ data, error });
-          } catch (error) {
-            return reply.code(500).send(ERROR.SERVER_ERROR);
+
+          if (blockaidConfig.useBlockaidAssetScanning) {
+            try {
+              const { data, error } = await blockAidService.scanAsset(address);
+              return reply.code(error ? 400 : 200).send({ data, error });
+            } catch (error) {
+              return reply.code(500).send(ERROR.SERVER_ERROR);
+            }
           }
+          return reply
+            .code(200)
+            .send({ data: null, error: ERROR.SCAN_ASSET_DISABLED });
         },
       });
 
@@ -690,13 +718,29 @@ export async function initApiServer(
           reply,
         ) => {
           const { asset_ids } = request.query;
-          try {
-            const { data, error } =
-              await blockAidService.scanAssetBulk(asset_ids);
-            return reply.code(error ? 400 : 200).send({ data, error });
-          } catch (error) {
-            return reply.code(500).send(ERROR.SERVER_ERROR);
+          if (blockaidConfig.useBlockaidAssetScanning) {
+            try {
+              const { data, error } =
+                await blockAidService.scanAssetBulk(asset_ids);
+              return reply.code(error ? 400 : 200).send({ data, error });
+            } catch (error) {
+              return reply.code(500).send(ERROR.SERVER_ERROR);
+            }
           }
+          const defaultResponse: {
+            [addres: string]: BlockaidAssetScanResponse;
+          } = {};
+          asset_ids.forEach((address) => {
+            defaultResponse[address] = {
+              ...defaultBenignResponse,
+            };
+          });
+          return reply
+            .code(200)
+            .send({
+              data: { results: defaultResponse },
+              error: ERROR.SCAN_ASSET_DISABLED,
+            });
         },
       });
 
