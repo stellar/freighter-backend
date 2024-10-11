@@ -615,7 +615,13 @@ jest
       };
     },
   );
-async function getDevServer() {
+async function getDevServer(
+  blockaidConfig = {
+    useBlockaidAssetScanning: true,
+    useBlockaidDappScanning: true,
+    useBlockaidTxScanning: true,
+  },
+) {
   const server = await initApiServer(
     mockMercuryClient,
     blockAidService,
@@ -624,11 +630,7 @@ async function getDevServer() {
     true,
     register,
     "development",
-    {
-      useBlockaidAssetScanning: true,
-      useBlockaidDappScanning: true,
-      useBlockaidTxScanning: true,
-    },
+    blockaidConfig,
   );
 
   await server.listen();
