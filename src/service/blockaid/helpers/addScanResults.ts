@@ -3,11 +3,27 @@ import { Logger } from "pino";
 import { BlockAidService } from "..";
 import { NetworkNames } from "../../../helper/validate";
 
+export const defaultBenignResponse: Blockaid.Token.TokenScanResponse = {
+  result_type: "Benign",
+  malicious_score: "0.0",
+  attack_types: {},
+  chain: "stellar",
+  address: "",
+  metadata: {
+    type: "",
+  },
+  fees: {},
+  features: [],
+  trading_limits: {},
+  financial_stats: {},
+};
+
 export const addScannedStatus = async (
   balances: { [key: string]: {} },
   blockaidService: BlockAidService,
   network: NetworkNames,
   logger: Logger,
+  useBlockaidAssetScanning: boolean,
 ) => {
   const scannedBalances = {} as {
     [key: string]: { blockaidData: Blockaid.Token.TokenScanResponse };
@@ -33,23 +49,12 @@ export const addScannedStatus = async (
     scannedBalances[key] = {
       ...balanceInfo,
       blockaidData: {
-        result_type: "Benign",
-        malicious_score: "0.0",
-        attack_types: {},
-        chain: "stellar",
-        address: "",
-        metadata: {
-          type: "",
-        },
-        fees: {},
-        features: [],
-        trading_limits: {},
-        financial_stats: {},
+        ...defaultBenignResponse,
       },
     };
   }
 
-  if (network === "PUBLIC") {
+  if (network === "PUBLIC" && useBlockaidAssetScanning) {
     // we only scan non-native assets on the public network
     try {
       const bulkRes = await blockaidService.scanAssetBulk(keyList);

@@ -7,6 +7,7 @@ import {
 } from "../helper/test-helper";
 import { transformAccountHistory } from "../service/mercury/helpers/transformers";
 import { query } from "../service/mercury/queries";
+import { defaultBenignResponse } from "../service/blockaid/helpers/addScanResults";
 
 jest.mock("@blockaid/client", () => {
   return class Blockaid {
@@ -39,6 +40,24 @@ jest.mock("@blockaid/client", () => {
         });
 
         return Promise.resolve({ results: res });
+      },
+    };
+    token = {
+      scan: ({ address }: { address: string }) => {
+        if (
+          address ===
+          "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
+        ) {
+          return Promise.resolve({
+            result_type: "Malicious",
+            malicious_score: 1,
+          });
+        }
+
+        return Promise.resolve({
+          result_type: "Benign",
+          malicious_score: 0,
+        });
       },
     };
   };
@@ -284,6 +303,97 @@ describe("API routes", () => {
       ).toEqual({
         result_type: "Benign",
         malicious_score: 0,
+      });
+      register.clear();
+      await server.close();
+    });
+    it("does not scan assets when config is disabled", async () => {
+      const asset_ids = [
+        "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
+        "FOO-CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ",
+      ];
+      const server = await getDevServer({
+        useBlockaidAssetScanning: false,
+        useBlockaidDappScanning: false,
+        useBlockaidTxScanning: false,
+      });
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/scan-asset-bulk`,
+      );
+      url.searchParams.append("network", "PUBLIC");
+      for (const id of asset_ids) {
+        url.searchParams.append("asset_ids", id);
+      }
+      const response = await fetch(url.href);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(
+        data.data.results[
+          "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
+        ],
+      ).toEqual({
+        ...defaultBenignResponse,
+      });
+      expect(
+        data.data.results[
+          "FOO-CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ"
+        ],
+      ).toEqual({
+        ...defaultBenignResponse,
+      });
+      register.clear();
+      await server.close();
+    });
+  });
+  describe("/scan-asset", () => {
+    it("can scan an asset", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/scan-asset`,
+      );
+      url.searchParams.append(
+        "address",
+        "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
+      );
+      const response = await fetch(url.href);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(data.data).toEqual({
+        result_type: "Malicious",
+        malicious_score: 1,
+      });
+      register.clear();
+      await server.close();
+    });
+    it("does not scan an asset when config is disabled", async () => {
+      const server = await getDevServer({
+        useBlockaidAssetScanning: false,
+        useBlockaidDappScanning: false,
+        useBlockaidTxScanning: false,
+      });
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/scan-asset`,
+      );
+      url.searchParams.append(
+        "address",
+        "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
+      );
+      const response = await fetch(url.href);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(data.data).toEqual({
+        ...defaultBenignResponse,
+        address:
+          "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
       });
       register.clear();
       await server.close();

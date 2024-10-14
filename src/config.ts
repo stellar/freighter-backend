@@ -61,6 +61,12 @@ export function buildConfig(config: Record<string, string | undefined>) {
       config.USE_MERCURY === "true" || process.env.USE_MERCURY === "true",
     useSorobanPublic: true,
     sentryKey: config.SENTRY_KEY || process.env.SENTRY_KEY,
+
+    blockaidConfig: {
+      useBlockaidDappScanning: true,
+      useBlockaidTxScanning: true,
+      useBlockaidAssetScanning: true,
+    },
   };
 }
 
