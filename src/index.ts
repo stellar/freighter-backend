@@ -82,7 +82,7 @@ async function main() {
     renewClientMaker: buildRenewClientMaker(graphQlEndpoints),
     backendClientMaker: buildBackendClientMaker(graphQlEndpoints),
     currentDataClientMaker: buildCurrentDataClientMaker(
-      graphQlCurrentDataEndpoints
+      graphQlCurrentDataEndpoints,
     ),
     backends,
     credentials: {
@@ -130,7 +130,7 @@ async function main() {
       rpcErrorCounter,
       criticalError,
     },
-    redis
+    redis,
   );
   const server = await initApiServer(
     mercuryClient,
@@ -140,7 +140,8 @@ async function main() {
     conf.useSorobanPublic,
     register,
     env as mode,
-    redis
+    conf.blockaidConfig,
+    redis,
   );
   const metricsServer = await initMetricsServer(register, redis);
 
