@@ -48,7 +48,7 @@ export class BlockAidService {
     } catch (error) {
       this.logger.error(error);
       this.scanMissCounter.inc();
-      return { data: null, error: ERROR.UNABLE_TO_SCAN_SITE };
+      return { data: { status: "miss" }, error: ERROR.UNABLE_TO_SCAN_SITE };
     }
   };
 
