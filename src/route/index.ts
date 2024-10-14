@@ -60,7 +60,7 @@ export async function initApiServer(
   register.registerMetric(httpRequestDurationMicroseconds);
 
   const server = Fastify({
-    logger,
+    loggerInstance: logger,
   });
   server.setValidatorCompiler(({ schema }) => {
     return ajv.compile(schema);
@@ -96,7 +96,7 @@ export async function initApiServer(
   });
 
   server.register(
-    (instance, _opts, next) => {
+    function (instance, _opts, next) {
       instance.route({
         method: "GET",
         url: "/ping",
@@ -218,9 +218,13 @@ export async function initApiServer(
         url: "/account-history/:pubKey",
         schema: {
           params: {
-            ["pubKey"]: {
-              type: "string",
-              validator: (qStr: string) => isPubKey(qStr),
+            type: "object",
+            required: ["pubKey"],
+            properties: {
+              ["pubKey"]: {
+                type: "string",
+                validator: (pubKey: string) => isPubKey(pubKey),
+              },
             },
           },
           querystring: {
@@ -269,9 +273,13 @@ export async function initApiServer(
         url: "/account-balances/:pubKey",
         schema: {
           params: {
-            ["pubKey"]: {
-              type: "string",
-              validator: (qStr: string) => isPubKey(qStr),
+            type: "object",
+            required: ["pubKey"],
+            properties: {
+              ["pubKey"]: {
+                type: "string",
+                validator: (pubKey: string) => isPubKey(pubKey),
+              },
             },
           },
           querystring: {
@@ -344,18 +352,22 @@ export async function initApiServer(
         url: "/token-details/:contractId",
         schema: {
           params: {
-            ["contractId"]: {
-              type: "string",
-              validator: (qStr: string) => isContractId(qStr),
+            type: "object",
+            required: ["contractId"],
+            properties: {
+              ["contractId"]: {
+                type: "string",
+                validator: (qStr: string) => isContractId(qStr),
+              },
             },
           },
           querystring: {
             type: "object",
             required: ["pub_key", "network"],
             properties: {
-              ["pub_key"]: {
+              ["pubKey"]: {
                 type: "string",
-                validator: (qStr: string) => isPubKey(qStr),
+                validator: (pubKey: string) => isPubKey(pubKey),
               },
               ["network"]: {
                 type: "string",
@@ -400,9 +412,13 @@ export async function initApiServer(
         url: "/token-spec/:contractId",
         schema: {
           params: {
-            ["contractId"]: {
-              type: "string",
-              validator: (qStr: string) => isContractId(qStr),
+            type: "object",
+            required: ["contractId"],
+            properties: {
+              ["contractId"]: {
+                type: "string",
+                validator: (qStr: string) => isContractId(qStr),
+              },
             },
           },
           querystring: {
@@ -456,9 +472,13 @@ export async function initApiServer(
         url: "/contract-spec/:contractId",
         schema: {
           params: {
-            ["contractId"]: {
-              type: "string",
-              validator: (qStr: string) => isContractId(qStr),
+            type: "object",
+            required: ["contractId"],
+            properties: {
+              ["contractId"]: {
+                type: "string",
+                validator: (qStr: string) => isContractId(qStr),
+              },
             },
           },
           querystring: {
@@ -508,9 +528,13 @@ export async function initApiServer(
         url: "/is-sac-contract/:contractId",
         schema: {
           params: {
-            ["contractId"]: {
-              type: "string",
-              validator: (qStr: string) => isContractId(qStr),
+            type: "object",
+            required: ["contractId"],
+            properties: {
+              ["contractId"]: {
+                type: "string",
+                validator: (qStr: string) => isContractId(qStr),
+              },
             },
           },
           querystring: {
