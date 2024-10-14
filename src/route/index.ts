@@ -365,7 +365,7 @@ export async function initApiServer(
             type: "object",
             required: ["pub_key", "network"],
             properties: {
-              ["pubKey"]: {
+              ["pub_key"]: {
                 type: "string",
                 validator: (pubKey: string) => isPubKey(pubKey),
               },
