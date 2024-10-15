@@ -71,7 +71,7 @@ export async function initApiServer(
   register.registerMetric(httpRequestDurationMicroseconds);
 
   const server = Fastify({
-    logger,
+    loggerInstance: logger,
   });
   server.setValidatorCompiler(({ schema }) => {
     return ajv.compile(schema);
@@ -107,7 +107,7 @@ export async function initApiServer(
   });
 
   server.register(
-    (instance, _opts, next) => {
+    function (instance, _opts, next) {
       instance.route({
         method: "GET",
         url: "/ping",
@@ -229,9 +229,13 @@ export async function initApiServer(
         url: "/account-history/:pubKey",
         schema: {
           params: {
-            ["pubKey"]: {
-              type: "string",
-              validator: (qStr: string) => isPubKey(qStr),
+            type: "object",
+            required: ["pubKey"],
+            properties: {
+              ["pubKey"]: {
+                type: "string",
+                validator: (pubKey: string) => isPubKey(pubKey),
+              },
             },
           },
           querystring: {
@@ -280,9 +284,13 @@ export async function initApiServer(
         url: "/account-balances/:pubKey",
         schema: {
           params: {
-            ["pubKey"]: {
-              type: "string",
-              validator: (qStr: string) => isPubKey(qStr),
+            type: "object",
+            required: ["pubKey"],
+            properties: {
+              ["pubKey"]: {
+                type: "string",
+                validator: (pubKey: string) => isPubKey(pubKey),
+              },
             },
           },
           querystring: {
@@ -337,9 +345,12 @@ export async function initApiServer(
                 blockaidConfig.useBlockaidAssetScanning,
               );
             } catch (e) {
-              data.balances = data.balances.map((bal: {}) => ({
-                ...bal,
+              data.balances = Object.keys(data.balances).map((key: string) => ({
+                ...data.balances[key],
                 isMalicious: false,
+                blockaidData: {
+                  ...defaultBenignResponse,
+                },
               }));
               logger.error(e);
             }
@@ -356,9 +367,13 @@ export async function initApiServer(
         url: "/token-details/:contractId",
         schema: {
           params: {
-            ["contractId"]: {
-              type: "string",
-              validator: (qStr: string) => isContractId(qStr),
+            type: "object",
+            required: ["contractId"],
+            properties: {
+              ["contractId"]: {
+                type: "string",
+                validator: (qStr: string) => isContractId(qStr),
+              },
             },
           },
           querystring: {
@@ -367,7 +382,7 @@ export async function initApiServer(
             properties: {
               ["pub_key"]: {
                 type: "string",
-                validator: (qStr: string) => isPubKey(qStr),
+                validator: (pubKey: string) => isPubKey(pubKey),
               },
               ["network"]: {
                 type: "string",
@@ -412,9 +427,13 @@ export async function initApiServer(
         url: "/token-spec/:contractId",
         schema: {
           params: {
-            ["contractId"]: {
-              type: "string",
-              validator: (qStr: string) => isContractId(qStr),
+            type: "object",
+            required: ["contractId"],
+            properties: {
+              ["contractId"]: {
+                type: "string",
+                validator: (qStr: string) => isContractId(qStr),
+              },
             },
           },
           querystring: {
@@ -468,9 +487,13 @@ export async function initApiServer(
         url: "/contract-spec/:contractId",
         schema: {
           params: {
-            ["contractId"]: {
-              type: "string",
-              validator: (qStr: string) => isContractId(qStr),
+            type: "object",
+            required: ["contractId"],
+            properties: {
+              ["contractId"]: {
+                type: "string",
+                validator: (qStr: string) => isContractId(qStr),
+              },
             },
           },
           querystring: {
@@ -520,9 +543,13 @@ export async function initApiServer(
         url: "/is-sac-contract/:contractId",
         schema: {
           params: {
-            ["contractId"]: {
-              type: "string",
-              validator: (qStr: string) => isContractId(qStr),
+            type: "object",
+            required: ["contractId"],
+            properties: {
+              ["contractId"]: {
+                type: "string",
+                validator: (qStr: string) => isContractId(qStr),
+              },
             },
           },
           querystring: {
@@ -597,12 +624,10 @@ export async function initApiServer(
               return reply.code(500).send(ERROR.SERVER_ERROR);
             }
           }
-          return reply
-            .code(200)
-            .send({
-              data: { status: "miss" },
-              error: ERROR.SCAN_SITE_DISABLED,
-            });
+          return reply.code(200).send({
+            data: { status: "miss" },
+            error: ERROR.SCAN_SITE_DISABLED,
+          });
         },
       });
 

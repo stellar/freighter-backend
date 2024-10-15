@@ -11,7 +11,8 @@ const ajv = new Ajv({
   coerceTypes: "array",
 });
 
-ajv.addKeyword("validator", {
+ajv.addKeyword({
+  keyword: ["pubKey", "contractId", "validator"],
   compile: (schema: any, parentSchema: AnySchemaObject) => {
     return function validate(data: ValidateFunction) {
       if (typeof schema === "function") {
@@ -49,6 +50,6 @@ ajv.addKeyword("validator", {
     };
   },
   errors: true,
-} as any);
+});
 
 export { ajv };
