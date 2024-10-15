@@ -105,7 +105,7 @@ function backendClientMaker(network: NetworkNames) {
       }
       case query.getTokenBalanceSub(
         "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
-        tokenBalanceLedgerKey
+        tokenBalanceLedgerKey,
       ): {
         return Promise.resolve({
           data: {
@@ -123,7 +123,7 @@ function backendClientMaker(network: NetworkNames) {
       }
       case query.getTokenBalanceSub(
         "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
-        tokenBalanceLedgerKey
+        tokenBalanceLedgerKey,
       ): {
         return Promise.resolve({
           data: {
@@ -141,7 +141,7 @@ function backendClientMaker(network: NetworkNames) {
       }
       case query.getTokenBalanceSub(
         "CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ",
-        tokenBalanceLedgerKey
+        tokenBalanceLedgerKey,
       ): {
         return Promise.resolve({
           data: {
@@ -160,7 +160,7 @@ function backendClientMaker(network: NetworkNames) {
       case query.getCurrentDataAccountBalances(
         pubKey,
         tokenBalanceLedgerKey,
-        []
+        [],
       ): {
         return Promise.resolve({
           data: queryMockResponse["query.getAccountBalancesCurrentData"],
@@ -592,7 +592,7 @@ const mockMercuryClient = new MercuryClient(
     mercuryErrorCounter,
     rpcErrorCounter,
     criticalError,
-  }
+  },
 );
 jest.mock("@blockaid/client", () => {
   return class Blockaid {};
@@ -601,7 +601,7 @@ const blockAidClient = new Blockaid();
 const blockAidService = new BlockAidService(
   blockAidClient,
   testLogger,
-  register
+  register,
 );
 
 jest
@@ -613,9 +613,15 @@ jest
         decimals: 7,
         symbol: "TST",
       };
-    }
+    },
   );
-async function getDevServer() {
+async function getDevServer(
+  blockaidConfig = {
+    useBlockaidAssetScanning: true,
+    useBlockaidDappScanning: true,
+    useBlockaidTxScanning: true,
+  },
+) {
   const server = await initApiServer(
     mockMercuryClient,
     blockAidService,
@@ -623,7 +629,8 @@ async function getDevServer() {
     true,
     true,
     register,
-    "development"
+    "development",
+    blockaidConfig,
   );
 
   await server.listen();

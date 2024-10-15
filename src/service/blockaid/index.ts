@@ -3,6 +3,7 @@ import Prometheus from "prom-client";
 import { Logger } from "pino";
 import { Networks, TransactionBuilder } from "stellar-sdk";
 
+import { defaultBenignResponse } from "./helpers/addScanResults";
 import { ERROR } from "../../helper/error";
 import { NetworkNames } from "../../helper/validate";
 
@@ -13,6 +14,8 @@ const NetworkNameBlockaid: {
   FUTURENET: "futurenet",
   TESTNET: "testnet",
 };
+
+export type BlockaidAssetScanResponse = Blockaid.Token.TokenScanResponse;
 
 export class BlockAidService {
   blockAidClient: Blockaid;
@@ -45,7 +48,7 @@ export class BlockAidService {
     } catch (error) {
       this.logger.error(error);
       this.scanMissCounter.inc();
-      return { data: null, error: ERROR.UNABLE_TO_SCAN_SITE };
+      return { data: { status: "miss" }, error: ERROR.UNABLE_TO_SCAN_SITE };
     }
   };
 
@@ -113,7 +116,19 @@ export class BlockAidService {
     } catch (error) {
       this.logger.error(error);
       this.scanMissCounter.inc();
-      return { data: null, error: ERROR.UNABLE_TO_SCAN_ASSET };
+      const defaultResponse: {
+        [addres: string]: Blockaid.Token.TokenScanResponse;
+      } = {};
+      addressList.forEach((address) => {
+        defaultResponse[address] = {
+          ...defaultBenignResponse,
+        };
+      });
+
+      return {
+        data: { results: defaultResponse },
+        error: ERROR.UNABLE_TO_SCAN_ASSET,
+      };
     }
   };
 }

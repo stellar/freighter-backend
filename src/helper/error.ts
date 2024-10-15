@@ -22,4 +22,7 @@ export const ERROR = {
   UNABLE_TO_SCAN_SITE: "unable to scan site using blockaid",
   UNABLE_TO_SCAN_TX: "unable to scan tx using blockaid",
   UNABLE_TO_SCAN_ASSET: "unable to scan asset using blockaid",
+  SCAN_SITE_DISABLED: "scanning site using blockaid is disabled",
+  SCAN_TX_DISABLED: "scanning tx using blockaid is disabled",
+  SCAN_ASSET_DISABLED: "scanning asset using blockaid is disabled",
 };
