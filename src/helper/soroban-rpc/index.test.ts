@@ -1,12 +1,11 @@
 import { xdr } from "stellar-sdk";
 
-import { base64regex } from "../test-helper";
-import {
-  getLedgerKeyContractCode,
-  getLedgerKeyWasmId,
-  isTokenSpec,
-  parseWasmXdr,
-} from ".";
+import { base64regex, testLogger } from "../test-helper";
+import * as networkHelpers from "./network";
+import { getIsTokenSpec, isTokenSpec } from "./token";
+
+const { getLedgerKeyContractCode, getLedgerKeyWasmId, parseWasmXdr } =
+  networkHelpers;
 
 describe("Soroban RPC helpers", () => {
   const CONTRACT_ID =
@@ -26,7 +25,7 @@ describe("Soroban RPC helpers", () => {
     });
     it("will throw when it fails to get ledger key", () => {
       expect(() =>
-        getLedgerKeyContractCode("not contract ID", "TESTNET")
+        getLedgerKeyContractCode("not contract ID", "TESTNET"),
       ).toThrowError();
     });
   });
@@ -62,6 +61,21 @@ describe("Soroban RPC helpers", () => {
 
     it("will return false when the spec does match sep41", async () => {
       const isSep41 = isTokenSpec({ definitions: {} });
+
+      expect(isSep41).toBeFalsy();
+    });
+  });
+
+  describe("getIsTokenSpec", () => {
+    afterAll(() => {
+      jest.resetModules();
+    });
+    it("will return false when the spec cannot be parsed", async () => {
+      jest.spyOn(networkHelpers, "getContractSpec").mockImplementation(() => {
+        return Promise.resolve({ result: { notDefinitions: {} }, error: null });
+      });
+
+      const isSep41 = await getIsTokenSpec("contractId", "TESTNET", testLogger);
 
       expect(isSep41).toBeFalsy();
     });
