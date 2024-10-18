@@ -11,7 +11,7 @@ import {
 import { transformAccountBalancesCurrentData } from "./helpers/transformers";
 import { ERROR_MESSAGES } from ".";
 import { ERROR } from "../../helper/error";
-import * as SorobanRpcHelper from "../../helper/soroban-rpc";
+import * as SorobanRpcHelper from "../../helper/soroban-rpc/token";
 
 describe("Mercury Service", () => {
   afterEach(() => {
@@ -22,7 +22,7 @@ describe("Mercury Service", () => {
     const { data } = await mockMercuryClient.getAccountHistory(
       pubKey,
       "TESTNET",
-      true
+      true,
     );
     const payment = (data || []).find((d) => {
       if ("asset_code" in d && d.asset_code === "DT") {
@@ -36,7 +36,7 @@ describe("Mercury Service", () => {
   it("can build a balance ledger key for a pub key", async () => {
     const ledgerKey = mockMercuryClient.tokenBalanceKey(pubKey, "TESTNET");
     const scVal = xdr.ScVal.fromXDR(
-      Buffer.from(ledgerKey, "base64")
+      Buffer.from(ledgerKey, "base64"),
     ).value() as xdr.ScVal[];
 
     const [scValBalance, scValAddress] = scVal;
@@ -54,7 +54,7 @@ describe("Mercury Service", () => {
       pubKey,
       contracts,
       "TESTNET",
-      true
+      true,
     );
     const tokenDetails = {
       CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP: {
@@ -80,7 +80,7 @@ describe("Mercury Service", () => {
         "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
         "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
       ],
-      Networks.TESTNET
+      Networks.TESTNET,
     );
     const expected = {
       ...transformedData,
@@ -100,7 +100,7 @@ describe("Mercury Service", () => {
     };
     expect(response).toEqual(expected);
     expect(mockMercuryClient.tokens["TESTNET"]).toEqual(
-      queryMockResponse[mutation.authenticate].authenticate?.jwtToken
+      queryMockResponse[mutation.authenticate].authenticate?.jwtToken,
     );
   });
 
@@ -144,7 +144,7 @@ describe("Mercury Service", () => {
     mockRetryable.mockRejectedValue(new Error(err));
 
     await expect(
-      mockMercuryClient.renewAndRetry(mockRetryable, "TESTNET")
+      mockMercuryClient.renewAndRetry(mockRetryable, "TESTNET"),
     ).rejects.toThrowError(err);
     expect(mockRetryable).toHaveBeenCalledTimes(1);
     expect(spyRenewToken).not.toHaveBeenCalled();
@@ -177,7 +177,7 @@ describe("Mercury Service", () => {
           ..._args: Parameters<typeof mockMercuryClient.getAccountSubForPubKey>
         ): ReturnType<typeof mockMercuryClient.getAccountSubForPubKey> => {
           return Promise.resolve([{ publickey: "nope" }]);
-        }
+        },
       );
 
     jest
@@ -187,12 +187,12 @@ describe("Mercury Service", () => {
           ..._args: Parameters<typeof mockMercuryClient.accountSubscription>
         ): ReturnType<typeof mockMercuryClient.accountSubscription> => {
           return Promise.resolve({ data: {}, error: null });
-        }
+        },
       );
 
     const response = await mockMercuryClient.getAccountHistoryMercury(
       pubKey,
-      "TESTNET"
+      "TESTNET",
     );
     expect(response).toHaveProperty("error");
     expect(response.error).toBeInstanceOf(Error);
@@ -219,7 +219,7 @@ describe("Mercury Service", () => {
         name: "wBTC:GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
         symbol: "wBTC",
         decimals: "5",
-      })
+      }),
     );
     //second contract
     jest.spyOn(mockMercuryClient, "tokenDetails").mockReturnValueOnce(
@@ -227,13 +227,13 @@ describe("Mercury Service", () => {
         name: "baz",
         symbol: "BAZ",
         decimals: "5",
-      })
+      }),
     );
 
     const data = await mockMercuryClient.getTokenBalancesSorobanRPC(
       pubKey,
       contracts,
-      "TESTNET"
+      "TESTNET",
     );
 
     const expected = {
@@ -305,7 +305,7 @@ describe("Mercury Service", () => {
             sponsoringCount: 0,
             sponsor: "",
           });
-        }
+        },
       );
     jest
       .spyOn(mockMercuryClient, "getTokenBalancesSorobanRPC")
@@ -335,14 +335,14 @@ describe("Mercury Service", () => {
               },
             },
           });
-        }
+        },
       );
 
     const data = await mockMercuryClient.getAccountBalances(
       pubKey,
       contracts,
       "TESTNET",
-      false
+      false,
     );
 
     const expected = {
@@ -433,10 +433,10 @@ describe("Mercury Service", () => {
       rawResponse as any,
       tokenDetails,
       contracts,
-      Networks.TESTNET
+      Networks.TESTNET,
     );
     const wBtcBalances = Object.keys(transformedResponse.balances).filter(
-      (key) => key.includes("wBTC")
+      (key) => key.includes("wBTC"),
     );
     expect(wBtcBalances).toHaveLength(1);
   });
