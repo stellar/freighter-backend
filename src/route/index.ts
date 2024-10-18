@@ -474,17 +474,9 @@ export async function initApiServer(
           }
 
           try {
-            const { result, error } = await getIsTokenSpec(
-              contractId,
-              network,
-              logger,
-            );
+            const isToken = await getIsTokenSpec(contractId, network, logger);
 
-            if (error) {
-              reply.code(400).send({ error, result: null });
-            } else {
-              reply.code(200).send({ data: result, error: null });
-            }
+            reply.code(200).send({ data: isToken, error: null });
           } catch (error) {
             reply.code(500).send("Unexpected Server Error");
           }
