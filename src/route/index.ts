@@ -39,6 +39,7 @@ import { getSdk } from "../helper/stellar";
 import { getUseMercury } from "../helper/mercury";
 import { getHttpRequestDurationLabels } from "../helper/metrics";
 import { mode } from "../helper/env";
+import Blockaid from "@blockaid/client";
 
 const API_VERSION = "v1";
 
@@ -345,18 +346,26 @@ export async function initApiServer(
                 blockaidConfig.useBlockaidAssetScanning,
               );
             } catch (e) {
-              data.balances = Object.keys(data.balances).map((key: string) => ({
-                ...data.balances[key],
-                isMalicious: false,
-                blockaidData: {
-                  ...defaultBenignResponse,
-                },
-              }));
+              const scannedBalances = {} as {
+                [key: string]: {
+                  blockaidData: Blockaid.Token.TokenScanResponse;
+                };
+              };
+              for (const balanceKey of Object.keys(data.balances)) {
+                scannedBalances[balanceKey] = {
+                  ...data.balances[balanceKey],
+                  blockaidData: {
+                    ...defaultBenignResponse,
+                  },
+                };
+              }
+              data.balances = scannedBalances;
               logger.error(e);
             }
 
             reply.code(200).send(data);
           } catch (error) {
+            logger.error(error);
             reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
