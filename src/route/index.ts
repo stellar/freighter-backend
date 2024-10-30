@@ -345,9 +345,12 @@ export async function initApiServer(
                 blockaidConfig.useBlockaidAssetScanning,
               );
             } catch (e) {
-              data.balances = data.balances.map((bal: {}) => ({
-                ...bal,
+              data.balances = Object.keys(data.balances).map((key: string) => ({
+                ...data.balances[key],
                 isMalicious: false,
+                blockaidData: {
+                  ...defaultBenignResponse,
+                },
               }));
               logger.error(e);
             }
@@ -621,12 +624,10 @@ export async function initApiServer(
               return reply.code(500).send(ERROR.SERVER_ERROR);
             }
           }
-          return reply
-            .code(200)
-            .send({
-              data: { status: "miss" },
-              error: ERROR.SCAN_SITE_DISABLED,
-            });
+          return reply.code(200).send({
+            data: { status: "miss" },
+            error: ERROR.SCAN_SITE_DISABLED,
+          });
         },
       });
 
