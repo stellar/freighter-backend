@@ -540,10 +540,10 @@
   dependencies:
     fast-deep-equal "^3.1.3"
 
-"@fastify/rate-limit@^10.1.1":
-  version "10.1.1"
-  resolved "https://registry.yarnpkg.com/@fastify/rate-limit/-/rate-limit-10.1.1.tgz#78f2c1eb602fb5f48d1d2dbac807183260210698"
-  integrity sha512-v6ZrDhWVjmDHWYdW2vbALyTCPz9W6Jqvf0QXbl9/atMXlZeFQw4XJkHUm5GGbJReCxaj5dHKbD+P32kkI3xzCA==
+"@fastify/rate-limit@^10.2.0":
+  version "10.2.0"
+  resolved "https://registry.yarnpkg.com/@fastify/rate-limit/-/rate-limit-10.2.0.tgz#c823b3fe84292d2d6df166938eecd395586fa09e"
+  integrity sha512-o012oXtc1kOozyk8ogwNzIRbWaNgAhYGJcbiW84+SPafTD8NEU43D/iTYkJgDNamfk4z4AYyQZJbfT2bpzRh5A==
   dependencies:
     "@lukeed/ms" "^2.0.2"
     fastify-plugin "^5.0.0"
