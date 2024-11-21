@@ -31,7 +31,6 @@ import {
   buildTransfer,
   getContractSpec,
   getIsTokenSpec,
-  simulateTx,
   isSacContractExecutable,
 } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
@@ -985,9 +984,9 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
-            required: ["signed_xdr", "network_url", "network_passphrase"],
+            required: ["xdr", "network_url", "network_passphrase"],
             properties: {
-              signed_xdr: { type: "string" },
+              xdr: { type: "string" },
               network_url: { type: "string" },
               network_passphrase: { type: "string" },
             },
@@ -996,33 +995,34 @@ export async function initApiServer(
         handler: async (
           request: FastifyRequest<{
             Body: {
-              signed_xdr: string;
+              xdr: string;
               network_url: string;
               network_passphrase: string;
             };
           }>,
           reply,
         ) => {
-          const { signed_xdr, network_url, network_passphrase } = request.body;
+          const { xdr, network_url, network_passphrase } = request.body;
 
           try {
             const Sdk = getSdk(network_passphrase as Networks);
-            const tx = Sdk.TransactionBuilder.fromXDR(
-              signed_xdr,
-              network_passphrase,
-            );
+            const tx = Sdk.TransactionBuilder.fromXDR(xdr, network_passphrase);
             const server = new Sdk.SorobanRpc.Server(network_url);
+            const simulationResponse = await server.simulateTransaction(tx);
+            const preparedTransaction = Sdk.SorobanRpc.assembleTransaction(
+              tx,
+              simulationResponse,
+            )
+              .build()
+              .toXDR();
 
-            const data = await simulateTx<unknown>(
-              tx as StellarSdk.Transaction<
-                StellarSdk.Memo<StellarSdk.MemoType>,
-                StellarSdk.Operation[]
-              >,
-              server,
-              network_passphrase as Networks,
-            );
+            const data = {
+              simulationResponse,
+              preparedTransaction,
+            };
             reply.code(200).send(data);
           } catch (error) {
+            logger.error(JSON.stringify(error));
             reply.code(400).send(JSON.stringify(error));
           }
         },
