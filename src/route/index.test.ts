@@ -1,13 +1,18 @@
+import * as StellarSdk from "stellar-sdk";
 import "@blockaid/client";
 import {
   getDevServer,
   queryMockResponse,
   pubKey,
   register,
+  TEST_SOROBAN_TX,
 } from "../helper/test-helper";
 import { transformAccountHistory } from "../service/mercury/helpers/transformers";
 import { query } from "../service/mercury/queries";
 import { defaultBenignResponse } from "../service/blockaid/helpers/addScanResults";
+import { Networks } from "stellar-sdk-next";
+import { SOROBAN_RPC_URLS } from "../helper/soroban-rpc";
+import * as StellarHelpers from "../helper/stellar";
 
 jest.mock("@blockaid/client", () => {
   return class Blockaid {
@@ -99,7 +104,6 @@ describe("API routes", () => {
       await server.close();
     });
   });
-
   describe("/account-balances/:pubKey", () => {
     it("can fetch account balances for a pub key & contract IDs", async () => {
       const server = await getDevServer();
@@ -395,6 +399,73 @@ describe("API routes", () => {
         address:
           "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
       });
+      register.clear();
+      await server.close();
+    });
+  });
+  describe("/simulate-tx", () => {
+    const simResponse = "simulated xdr";
+    const preparedTransaction = "assembled tx xdr";
+    let spy: any;
+
+    beforeEach(() => {
+      spy = jest
+        .spyOn(StellarHelpers, "getSdk")
+        .mockImplementation((_networkPassphrase: Networks) => {
+          return {
+            TransactionBuilder: {
+              fromXDR: (_xdr: string, _networkPassphrase: string) => "",
+            },
+            SorobanRpc: {
+              Server: class Server {
+                constructor(_url: string) {}
+                simulateTransaction = (_tx: string) => simResponse;
+              },
+              assembleTransaction: (
+                _tx: string,
+                _simulateTransaction: StellarSdk.rpc.Api.SimulateTransactionResponse,
+              ) => {
+                return {
+                  build: () => {
+                    return {
+                      toXDR: () => preparedTransaction,
+                    };
+                  },
+                };
+              },
+            },
+          } as any;
+        });
+    });
+
+    afterEach(() => {
+      spy.mockRestore(); // Restore original implementation for the other tests
+    });
+
+    it("can simulate a transaction", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/simulate-tx`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          xdr: TEST_SOROBAN_TX,
+          network_url: SOROBAN_RPC_URLS.TESTNET,
+          network_passphrase: Networks.TESTNET,
+        }),
+      };
+      const response = await fetch(url.href, options);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(data.simulationResponse).toEqual(simResponse);
+      expect(data.preparedTransaction).toEqual(preparedTransaction);
       register.clear();
       await server.close();
     });
