@@ -13,6 +13,7 @@ import { MercuryClient } from "../service/mercury";
 import {
   BlockAidService,
   BlockaidAssetScanResponse,
+  ReportTransactionWarningEvent,
 } from "../service/blockaid";
 import {
   addScannedStatus,
@@ -843,7 +844,7 @@ export async function initApiServer(
             Querystring: {
               ["details"]: string;
               ["request_id"]: string;
-              ["event"]: "should_be_benign" | "wrong_simulation_result";
+              ["event"]: ReportTransactionWarningEvent;
             };
           }>,
           reply,

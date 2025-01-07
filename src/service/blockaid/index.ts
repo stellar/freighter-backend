@@ -17,6 +17,9 @@ const NetworkNameBlockaid: {
 
 export type BlockaidAssetScanResponse = Blockaid.Token.TokenScanResponse;
 
+export type ReportTransactionWarningEvent =
+  Blockaid.Stellar.TransactionReportParams["event"];
+
 export class BlockAidService {
   blockAidClient: Blockaid;
   logger: Logger;
@@ -160,7 +163,7 @@ export class BlockAidService {
   reportTransactionWarning = async (
     details: string,
     id: string,
-    event: "should_be_benign" | "wrong_simulation_result",
+    event: ReportTransactionWarningEvent,
   ) => {
     try {
       const data = await this.blockAidClient.stellar.transaction.report({
