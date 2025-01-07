@@ -74,8 +74,16 @@ export class BlockAidService {
         transaction: txXdr,
         account_address: source,
       };
-      const data = await this.blockAidClient.stellar.transaction.scan(body);
-      return { data, error: null };
+      const response = await this.blockAidClient.stellar.transaction
+        .scan(body)
+        .withResponse();
+      const request_id = response.response.headers.get("x-request-id");
+
+      const txData = {
+        ...response.data,
+        request_id,
+      };
+      return { data: txData, error: null };
     } catch (error) {
       this.logger.error(error);
       return { data: null, error: ERROR.UNABLE_TO_SCAN_TX };
@@ -129,6 +137,44 @@ export class BlockAidService {
         data: { results: defaultResponse },
         error: ERROR.UNABLE_TO_SCAN_ASSET,
       };
+    }
+  };
+
+  reportAssetWarning = async (details: string, address: string) => {
+    try {
+      const data = await this.blockAidClient.token.report({
+        event: "FALSE_POSITIVE",
+        details,
+        report: {
+          type: "params",
+          params: { address, chain: "stellar" },
+        },
+      });
+      return { data, error: null };
+    } catch (error) {
+      this.logger.error(error);
+      return { error: ERROR.UNABLE_TO_REPORT_ASSET };
+    }
+  };
+
+  reportTransactionWarning = async (
+    details: string,
+    id: string,
+    event: "should_be_benign" | "wrong_simulation_result",
+  ) => {
+    try {
+      const data = await this.blockAidClient.stellar.transaction.report({
+        details,
+        event,
+        report: {
+          id,
+          type: "request_id",
+        },
+      });
+      return { data, error: null };
+    } catch (error) {
+      this.logger.error(error);
+      return { error: ERROR.UNABLE_TO_REPORT_TRANSACTION };
     }
   };
 }
