@@ -623,6 +623,8 @@ async function getDevServer(
     useBlockaidAssetScanning: true,
     useBlockaidDappScanning: true,
     useBlockaidTxScanning: true,
+    useBlockaidAssetWarningReporting: true,
+    useBlockaidTransactionWarningReporting: true,
   },
 ) {
   const server = await initApiServer(
