@@ -68,7 +68,7 @@ export interface BalanceMap {
 }
 
 export function getBalanceIdentifier(
-  balance: StellarSdk.Horizon.HorizonApi.BalanceLine
+  balance: StellarSdk.Horizon.HorizonApi.BalanceLine,
 ): string {
   if ("asset_issuer" in balance && !balance.asset_issuer) {
     return "native";
@@ -97,7 +97,7 @@ export function getAssetType(code?: string) {
 }
 
 export const makeDisplayableBalances = (
-  accountDetails: StellarSdk.Horizon.ServerApi.AccountRecord
+  accountDetails: StellarSdk.Horizon.ServerApi.AccountRecord,
 ) => {
   const { balances, subentry_count, num_sponsored, num_sponsoring } =
     accountDetails;
@@ -186,7 +186,7 @@ export const makeDisplayableBalances = (
         },
       };
     },
-    {}
+    {},
   );
 
   return displayableBalances as BalanceMap;
@@ -194,7 +194,7 @@ export const makeDisplayableBalances = (
 
 export const fetchAccountDetails = async (
   pubKey: string,
-  server: StellarSdkNext.Horizon.Server | StellarSdk.Horizon.Server
+  server: StellarSdkNext.Horizon.Server | StellarSdk.Horizon.Server,
 ) => {
   try {
     const accountSummary = await server.accounts().accountId(pubKey).call();
@@ -224,13 +224,14 @@ export const fetchAccountDetails = async (
 
 export const fetchAccountHistory = async (
   pubKey: string,
-  server: StellarSdkNext.Horizon.Server | StellarSdk.Horizon.Server
+  server: StellarSdkNext.Horizon.Server | StellarSdk.Horizon.Server,
 ) => {
   try {
     const operationsData = await server
       .operations()
       .forAccount(pubKey)
       .order("desc")
+      .includeFailed(true)
       .join("transactions")
       .limit(TRANSACTIONS_LIMIT)
       .call();
@@ -244,7 +245,7 @@ export const fetchAccountHistory = async (
 export const submitTransaction = async (
   signedXDR: string,
   networkUrl: string,
-  networkPassphrase: string
+  networkPassphrase: string,
 ): Promise<{
   data: StellarSdk.Horizon.HorizonApi.SubmitTransactionResponse | null;
   error: unknown;
