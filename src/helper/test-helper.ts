@@ -610,12 +610,26 @@ const blockAidService = new BlockAidService(
 jest
   .spyOn(mockMercuryClient, "tokenDetails")
   .mockImplementation(
-    (..._args: Parameters<MercuryClient["tokenDetails"]>): any => {
-      return {
+    (
+      _pubKey: string,
+      _contractId: string,
+      _network: NetworkNames,
+      fetchBalance?: boolean,
+    ): any => {
+      const baseResponse = {
         name: "Test Contract",
         decimals: 7,
         symbol: "TST",
       };
+
+      if (fetchBalance) {
+        return {
+          ...baseResponse,
+          balance: 1000000,
+        };
+      }
+
+      return baseResponse;
     },
   );
 async function getDevServer(

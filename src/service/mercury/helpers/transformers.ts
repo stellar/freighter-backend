@@ -94,6 +94,7 @@ interface TokenDetails {
     name: string;
     symbol: string;
     decimals: string;
+    balance?: number;
   };
 }
 
@@ -101,7 +102,7 @@ const transformAccountBalancesCurrentData = async (
   rawResponseCurrentData: OperationResult<MercuryAccountBalancesCurrentData>,
   tokenDetails: TokenDetails,
   contractIds: string[],
-  networkpassPhrase: StellarSdk.Networks
+  networkpassPhrase: StellarSdk.Networks,
 ) => {
   const Sdk = getSdk(networkpassPhrase);
   const { xdr } = Sdk;
@@ -114,11 +115,11 @@ const transformAccountBalancesCurrentData = async (
   const numSponsored = accountObject?.numSponsored || "0";
   const sellingLiabilities = formatTokenAmount(
     new BigNumber(accountObject?.sellingLiabilities || "0"),
-    7
+    7,
   );
   const buyingLiabilities = formatTokenAmount(
     new BigNumber(accountObject?.buyingLiabilities || "0"),
-    7
+    7,
   );
   const nativeBalance = accountObject?.nativeBalance || "0";
 
@@ -128,9 +129,9 @@ const transformAccountBalancesCurrentData = async (
       total: formatTokenAmount(new BigNumber(nativeBalance), 7),
       available: formatTokenAmount(
         new BigNumber(nativeBalance).minus(
-          new BigNumber(accountObject?.sellingLiabilities || "0")
+          new BigNumber(accountObject?.sellingLiabilities || "0"),
         ),
-        7
+        7,
       ),
       buyingLiabilities,
       sellingLiabilities,
@@ -140,65 +141,70 @@ const transformAccountBalancesCurrentData = async (
         .minus(new BigNumber(numSponsored))
         .times(new BigNumber(BASE_RESERVE))
         .plus(
-          new BigNumber(formatTokenAmount(new BigNumber(sellingLiabilities), 7))
+          new BigNumber(
+            formatTokenAmount(new BigNumber(sellingLiabilities), 7),
+          ),
         ),
     },
   };
 
-  const classicBalances = accountCurrentTrustlines.reduce((prev, curr) => {
-    const tl = curr;
-    const trustline = xdr.Asset.fromXDR(tl.asset, "base64");
-    switch (trustline.switch().name) {
-      case "assetTypeNative": {
-        // not in this query, in account object query
-        return prev;
-      }
+  const classicBalances = accountCurrentTrustlines.reduce(
+    (prev, curr) => {
+      const tl = curr;
+      const trustline = xdr.Asset.fromXDR(tl.asset, "base64");
+      switch (trustline.switch().name) {
+        case "assetTypeNative": {
+          // not in this query, in account object query
+          return prev;
+        }
 
-      case "assetTypeCreditAlphanum4": {
-        const code = trustline.alphaNum4().assetCode().toString();
-        const issuer = Sdk.StrKey.encodeEd25519PublicKey(
-          trustline.alphaNum4().issuer().ed25519()
-        );
-        prev[`${code}:${issuer}`] = {
-          token: {
-            code,
-            issuer: {
-              key: issuer,
+        case "assetTypeCreditAlphanum4": {
+          const code = trustline.alphaNum4().assetCode().toString();
+          const issuer = Sdk.StrKey.encodeEd25519PublicKey(
+            trustline.alphaNum4().issuer().ed25519(),
+          );
+          prev[`${code}:${issuer}`] = {
+            token: {
+              code,
+              issuer: {
+                key: issuer,
+              },
             },
-          },
-          total: formatTokenAmount(new BigNumber(tl.balance), 7),
-          available: formatTokenAmount(new BigNumber(tl.balance), 7),
-        };
-        return prev;
-      }
+            total: formatTokenAmount(new BigNumber(tl.balance), 7),
+            available: formatTokenAmount(new BigNumber(tl.balance), 7),
+          };
+          return prev;
+        }
 
-      case "assetTypeCreditAlphanum12": {
-        const code = trustline.alphaNum12().assetCode().toString();
-        const issuer = Sdk.StrKey.encodeEd25519PublicKey(
-          trustline.alphaNum12().issuer().ed25519()
-        );
-        prev[`${code}:${issuer}`] = {
-          token: {
-            code,
-            issuer: {
-              key: issuer,
+        case "assetTypeCreditAlphanum12": {
+          const code = trustline.alphaNum12().assetCode().toString();
+          const issuer = Sdk.StrKey.encodeEd25519PublicKey(
+            trustline.alphaNum12().issuer().ed25519(),
+          );
+          prev[`${code}:${issuer}`] = {
+            token: {
+              code,
+              issuer: {
+                key: issuer,
+              },
             },
-          },
-          total: formatTokenAmount(new BigNumber(tl.balance), 7),
-          available: formatTokenAmount(new BigNumber(tl.balance), 7),
-        };
-        return prev;
-      }
+            total: formatTokenAmount(new BigNumber(tl.balance), 7),
+            available: formatTokenAmount(new BigNumber(tl.balance), 7),
+          };
+          return prev;
+        }
 
-      case "assetTypePoolShare": {
-        // Should pool shares be decoded here?
-        return prev;
-      }
+        case "assetTypePoolShare": {
+          // Should pool shares be decoded here?
+          return prev;
+        }
 
-      default:
-        throw new Error("Asset type not suppported");
-    }
-  }, {} as NonNullable<AccountBalancesInterface["balances"]>);
+        default:
+          throw new Error("Asset type not suppported");
+      }
+    },
+    {} as NonNullable<AccountBalancesInterface["balances"]>,
+  );
 
   const tokenBalanceData = contractIds.map((id) => {
     const resData = rawResponseCurrentData?.data || ({} as any);
@@ -219,22 +225,25 @@ const transformAccountBalancesCurrentData = async (
 
   const balances = formattedBalances
     .filter(
-      (bal) => !isSacContract(bal.name, bal.contractId, networkpassPhrase)
+      (bal) => !isSacContract(bal.name, bal.contractId, networkpassPhrase),
     )
-    .reduce((prev, curr) => {
-      prev[`${curr.symbol}:${curr.contractId}`] = {
-        token: {
-          code: curr.symbol,
-          issuer: {
-            key: curr.contractId,
+    .reduce(
+      (prev, curr) => {
+        prev[`${curr.symbol}:${curr.contractId}`] = {
+          token: {
+            code: curr.symbol,
+            issuer: {
+              key: curr.contractId,
+            },
           },
-        },
-        decimals: curr.decimals,
-        total: new BigNumber(curr.total),
-        available: new BigNumber(curr.total),
-      };
-      return prev;
-    }, {} as NonNullable<AccountBalancesInterface["balances"]>);
+          decimals: curr.decimals,
+          total: new BigNumber(curr.total),
+          available: new BigNumber(curr.total),
+        };
+        return prev;
+      },
+      {} as NonNullable<AccountBalancesInterface["balances"]>,
+    );
 
   return {
     balances: {
@@ -251,7 +260,7 @@ const transformAccountBalances = async (
   rawResponse: OperationResult<MercuryAccountBalancesData>,
   tokenDetails: TokenDetails,
   contractIds: string[],
-  network: StellarSdk.Networks
+  network: StellarSdk.Networks,
 ) => {
   const Sdk = getSdk(network);
   const accountObjectData =
@@ -288,7 +297,7 @@ const transformAccountBalances = async (
   const formattedBalances = tokenBalanceData.map(([entry]) => {
     const details = tokenDetails[entry.contractId];
     const totalScVal = Sdk.xdr.ScVal.fromXDR(
-      Buffer.from(entry.valueXdr, "base64")
+      Buffer.from(entry.valueXdr, "base64"),
     );
     return {
       ...entry,
@@ -297,35 +306,41 @@ const transformAccountBalances = async (
     };
   });
 
-  const balances = formattedBalances.reduce((prev, curr) => {
-    prev[`${curr.symbol}:${curr.contractId}`] = {
-      token: {
-        code: curr.symbol,
-        issuer: {
-          key: curr.contractId,
+  const balances = formattedBalances.reduce(
+    (prev, curr) => {
+      prev[`${curr.symbol}:${curr.contractId}`] = {
+        token: {
+          code: curr.symbol,
+          issuer: {
+            key: curr.contractId,
+          },
         },
-      },
-      decimals: curr.decimals,
-      total: new BigNumber(curr.total),
-      available: new BigNumber(curr.total),
-    };
-    return prev;
-  }, {} as NonNullable<AccountBalancesInterface["balances"]>);
+        decimals: curr.decimals,
+        total: new BigNumber(curr.total),
+        available: new BigNumber(curr.total),
+      };
+      return prev;
+    },
+    {} as NonNullable<AccountBalancesInterface["balances"]>,
+  );
 
-  const classicBalances = classicBalanceData.reduce((prev, curr) => {
-    const codeAscii = atob(curr.assetByAsset.code);
-    prev[`${codeAscii}:${curr.assetByAsset.issuer}`] = {
-      token: {
-        code: codeAscii,
-        issuer: {
-          key: curr.assetByAsset.issuer,
+  const classicBalances = classicBalanceData.reduce(
+    (prev, curr) => {
+      const codeAscii = atob(curr.assetByAsset.code);
+      prev[`${codeAscii}:${curr.assetByAsset.issuer}`] = {
+        token: {
+          code: codeAscii,
+          issuer: {
+            key: curr.assetByAsset.issuer,
+          },
         },
-      },
-      total: formatTokenAmount(new BigNumber(curr.balance), 7),
-      available: formatTokenAmount(new BigNumber(curr.balance), 7),
-    };
-    return prev;
-  }, {} as NonNullable<AccountBalancesInterface["balances"]>);
+        total: formatTokenAmount(new BigNumber(curr.balance), 7),
+        available: formatTokenAmount(new BigNumber(curr.balance), 7),
+      };
+      return prev;
+    },
+    {} as NonNullable<AccountBalancesInterface["balances"]>,
+  );
 
   return {
     balances: {
@@ -340,14 +355,14 @@ const transformAccountBalances = async (
 
 const transformBaseOperation = (
   operation: BaseOperation,
-  network: NetworkNames
+  network: NetworkNames,
 ) => {
   const Sdk = getSdk(StellarSdk.Networks[network]);
   let isTxSuccessful = true;
   if (operation.txInfoByTx.resultXdr) {
     const { name } = Sdk.xdr.TransactionResult.fromXDR(
       operation.txInfoByTx.resultXdr,
-      "base64"
+      "base64",
     )
       .result()
       .switch();
@@ -357,7 +372,7 @@ const transformBaseOperation = (
   }
   return {
     created_at: new Date(
-      operation.txInfoByTx.ledgerByLedger.closeTime * 1000
+      operation.txInfoByTx.ledgerByLedger.closeTime * 1000,
     ).toISOString(),
     source_account: operation.source,
     transaction_hash: operation.tx,
@@ -755,7 +770,7 @@ type MercuryAccountHistory = {
 
 const transformAccountHistory = async (
   rawResponse: OperationResult<MercuryAccountHistory>,
-  network: NetworkNames
+  network: NetworkNames,
 ): Promise<Partial<StellarSdk.Horizon.ServerApi.OperationRecord>[]> => {
   const Sdk = getSdk(StellarSdk.Networks[network]);
   const invokeHostFnEdges =
@@ -766,7 +781,7 @@ const transformAccountHistory = async (
       // for invoking a contract, we dont show contract create or wasm upload in wallet history right now.
       try {
         const hostFn = Sdk.xdr.HostFunction.fromXDR(
-          Buffer.from(edge.node.hostFunction, "base64")
+          Buffer.from(edge.node.hostFunction, "base64"),
         );
         hostFn.invokeContract();
         return true;
@@ -777,7 +792,7 @@ const transformAccountHistory = async (
     .map((edge) => {
       const baseFields = transformBaseOperation(edge.node, network);
       const hostFn = Sdk.xdr.HostFunction.fromXDR(
-        Buffer.from(edge.node.hostFunction, "base64")
+        Buffer.from(edge.node.hostFunction, "base64"),
       );
 
       const invocation = hostFn.invokeContract();
@@ -790,7 +805,7 @@ const transformAccountHistory = async (
         transaction_attr: {
           ...baseFields.transaction_attr,
           contractId: Sdk.StrKey.encodeContract(
-            invocation.contractAddress().contractId()
+            invocation.contractAddress().contractId(),
           ),
           fnName,
           args: getOpArgs(fnName, invocation.args(), network),
@@ -808,7 +823,7 @@ const transformAccountHistory = async (
       account: edge.node.destination,
       starting_balance: formatTokenAmount(
         new BigNumber(edge.node.startingBalance),
-        7
+        7,
       ),
       type: "create_account",
       type_i: 0,
@@ -824,7 +839,7 @@ const transformAccountHistory = async (
       account: edge.node.destination,
       starting_balance: formatTokenAmount(
         new BigNumber(edge.node.startingBalance),
-        7
+        7,
       ),
       type: "create_account",
       type_i: 0,
@@ -893,7 +908,7 @@ const transformAccountHistory = async (
       const transformedFields = {
         ...baseFields,
         created_at: new Date(
-          edge.txInfoByTx.ledgerByLedger.closeTime * 1000
+          edge.txInfoByTx.ledgerByLedger.closeTime * 1000,
         ).toISOString(),
         type: "path_payment_strict_receive",
         type_i: 2,
@@ -921,7 +936,7 @@ const transformAccountHistory = async (
         type: "manage_sell_offer",
         type_i: 4,
       } as Partial<StellarSdk.Horizon.ServerApi.ManageOfferOperationRecord>;
-    }
+    },
   );
 
   const manageSellOfferByPublicKeyEdges =
@@ -934,7 +949,7 @@ const transformAccountHistory = async (
         type: "manage_sell_offer",
         type_i: 4,
       } as Partial<StellarSdk.Horizon.ServerApi.ManageOfferOperationRecord>;
-    }
+    },
   );
 
   const createPassiveSellOfferByPublicKeyEdges =
@@ -1062,7 +1077,7 @@ const transformAccountHistory = async (
         type: "revoke_sponsorship",
         type_i: 18,
       } as Partial<StellarSdk.Horizon.ServerApi.RevokeSponsorshipOperationRecord>;
-    }
+    },
   );
 
   const clawbackByPublicKeyEdges =
@@ -1086,7 +1101,7 @@ const transformAccountHistory = async (
         type: "set_trust_line_flags",
         type_i: 21,
       } as Partial<StellarSdk.Horizon.ServerApi.SetTrustLineFlagsOperationRecord>;
-    }
+    },
   );
 
   const liquidityPoolDepositByPublicKeyEdges =
