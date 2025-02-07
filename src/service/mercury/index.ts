@@ -428,7 +428,7 @@ export class MercuryClient {
     name: string;
     symbol: string;
     decimals: string;
-    balance?: number;
+    balance?: string;
   }> => {
     try {
       const compositeKey = `${network}__${contractId}`;
@@ -460,18 +460,19 @@ export class MercuryClient {
         network,
       );
 
-      let balance: number | undefined;
+      let balance: string | undefined;
       if (shouldFetchBalance) {
         const balanceBuilder = await getTxBuilder(pubKey, network, server);
         const Sdk = getSdk(StellarSdkNext.Networks[network]);
         const params = [new Sdk.Address(pubKey).toScVal()];
-        balance = await getTokenBalance(
+        const rawBalance = await getTokenBalance(
           contractId,
           params,
           server,
           balanceBuilder,
           network,
         );
+        balance = rawBalance.toString();
       }
 
       const tokenDetails = {

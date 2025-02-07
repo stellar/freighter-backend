@@ -60,12 +60,12 @@ describe("Mercury Service", () => {
       CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP: {
         name: "Test Token",
         symbol: "TST",
-        decimals: 7,
+        decimals: "7",
       },
       CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG: {
         name: "Test Token 2",
         symbol: "TST",
-        decimals: 7,
+        decimals: "7",
       },
     };
 
@@ -460,9 +460,9 @@ describe("Mercury Service", () => {
 
     expect(response).toEqual({
       name: "Test Contract",
-      decimals: 7,
+      decimals: "7",
       symbol: "TST",
-      balance: 1000000,
+      balance: "1000000",
     });
   });
 
@@ -482,7 +482,7 @@ describe("Mercury Service", () => {
 
     expect(response).toEqual({
       name: "Test Contract",
-      decimals: 7,
+      decimals: "7",
       symbol: "TST",
     });
   });
@@ -502,7 +502,7 @@ describe("Mercury Service", () => {
 
     expect(response).toEqual({
       name: "Test Contract",
-      decimals: 7,
+      decimals: "7",
       symbol: "TST",
     });
   });
@@ -523,9 +523,9 @@ describe("Mercury Service", () => {
 
     expect(response).toEqual({
       name: "Test Contract",
-      decimals: 7,
+      decimals: "7",
       symbol: "TST",
-      balance: 1000000,
+      balance: "1000000",
     });
   });
 });

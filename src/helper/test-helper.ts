@@ -618,14 +618,14 @@ jest
     ): any => {
       const baseResponse = {
         name: "Test Contract",
-        decimals: 7,
+        decimals: "7",
         symbol: "TST",
       };
 
       if (shouldFetchBalance) {
         return {
           ...baseResponse,
-          balance: 1000000,
+          balance: "1000000",
         };
       }
 

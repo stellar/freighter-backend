@@ -94,7 +94,7 @@ interface TokenDetails {
     name: string;
     symbol: string;
     decimals: string;
-    balance?: number;
+    balance?: string;
   };
 }
 
