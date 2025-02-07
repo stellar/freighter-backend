@@ -399,6 +399,7 @@ export async function initApiServer(
                 type: "string",
                 validator: (qStr: string) => isNetwork(qStr),
               },
+              ["should_fetch_balance"]: { type: "string" },
             },
           },
         },
@@ -408,12 +409,13 @@ export async function initApiServer(
             Querystring: {
               ["pub_key"]: string;
               ["network"]: NetworkNames;
+              ["should_fetch_balance"]: string;
             };
           }>,
           reply,
         ) => {
           const contractId = request.params["contractId"];
-          const { network, pub_key } = request.query;
+          const { network, pub_key, should_fetch_balance } = request.query;
 
           const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
           if (skipSorobanPubnet) {
@@ -425,6 +427,7 @@ export async function initApiServer(
               pub_key,
               contractId,
               network,
+              should_fetch_balance === "true",
             );
             reply.code(200).send(data);
           } catch (error) {

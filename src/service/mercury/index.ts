@@ -121,7 +121,7 @@ export class MercuryClient {
       rpcErrorCounter: Prometheus.Counter<"rpc">;
       criticalError: Prometheus.Counter<"message">;
     },
-    redisClient?: Redis
+    redisClient?: Redis,
   ) {
     this.mercurySession = mercurySession;
     this.logger = logger;
@@ -161,7 +161,7 @@ export class MercuryClient {
       const creds = this.mercurySession.credentials[network];
       const { data, error } = await renewClient.mutation(
         mutation.authenticate,
-        creds
+        creds,
       );
 
       if (error) {
@@ -184,7 +184,7 @@ export class MercuryClient {
   renewAndRetry = async <T>(
     method: () => Promise<T>,
     network: NetworkNames,
-    retryCount?: number
+    retryCount?: number,
   ): Promise<T> => {
     try {
       return await method();
@@ -212,7 +212,7 @@ export class MercuryClient {
   tokenSubscription = async (
     contractId: string,
     pubKey: string,
-    network: NetworkNames
+    network: NetworkNames,
   ) => {
     const Sdk = getSdk(StellarSdkNext.Networks[network]);
     if (!hasIndexerSupport(network)) {
@@ -258,12 +258,12 @@ export class MercuryClient {
         const { data: transferFromRes } = await axios.post(
           eventsURL,
           transferToSub,
-          config
+          config,
         );
         const { data: transferToRes } = await axios.post(
           eventsURL,
           transferFromSub,
-          config
+          config,
         );
         const { data: mintRes } = await axios.post(eventsURL, mintSub, config);
 
@@ -302,7 +302,7 @@ export class MercuryClient {
   accountSubscription = async (
     pubKey: string,
     network: NetworkNames,
-    epochs: number = 6
+    epochs: number = 6,
   ) => {
     if (!hasIndexerSupport(network)) {
       return {
@@ -328,7 +328,7 @@ export class MercuryClient {
             this.mercurySession.backends[network as MercurySupportedNetworks]
           }/account`,
           { publickey: pubKey, hydrate: true, epochs },
-          config
+          config,
         );
         return data;
       };
@@ -336,7 +336,7 @@ export class MercuryClient {
       const data = await this.renewAndRetry(
         subscribe,
         network,
-        DEFAULT_RETRY_AMOUNT
+        DEFAULT_RETRY_AMOUNT,
       );
 
       return {
@@ -360,7 +360,7 @@ export class MercuryClient {
   tokenBalanceSubscription = async (
     contractId: string,
     pubKey: string,
-    network: NetworkNames
+    network: NetworkNames,
   ) => {
     if (!hasIndexerSupport(network)) {
       throw new Error(`network not currently supported: ${network}`);
@@ -394,7 +394,7 @@ export class MercuryClient {
       const data = await this.renewAndRetry(
         getData,
         network,
-        DEFAULT_RETRY_AMOUNT
+        DEFAULT_RETRY_AMOUNT,
       );
 
       if (this.redisClient) {
@@ -422,8 +422,14 @@ export class MercuryClient {
   tokenDetails = async (
     pubKey: string,
     contractId: string,
-    network: NetworkNames
-  ): Promise<{ name: string; symbol: string; decimals: string }> => {
+    network: NetworkNames,
+    shouldFetchBalance: boolean = false,
+  ): Promise<{
+    name: string;
+    symbol: string;
+    decimals: string;
+    balance?: string;
+  }> => {
     try {
       const compositeKey = `${network}__${contractId}`;
       // get from cache if we have them, otherwise go to ledger and cache
@@ -440,7 +446,7 @@ export class MercuryClient {
         contractId,
         server,
         decimalsBuilder,
-        network
+        network,
       );
 
       const nameBuilder = await getTxBuilder(pubKey, network, server);
@@ -451,23 +457,36 @@ export class MercuryClient {
         contractId,
         server,
         symbolsBuilder,
-        network
+        network,
       );
+
+      let balance: string | undefined;
+      if (shouldFetchBalance) {
+        const balanceBuilder = await getTxBuilder(pubKey, network, server);
+        const Sdk = getSdk(StellarSdkNext.Networks[network]);
+        const params = [new Sdk.Address(pubKey).toScVal()];
+        const rawBalance = await getTokenBalance(
+          contractId,
+          params,
+          server,
+          balanceBuilder,
+          network,
+        );
+        balance = rawBalance.toString();
+      }
+
       const tokenDetails = {
         name,
         decimals,
         symbol,
+        ...(balance !== undefined && { balance }),
       };
 
       if (this.redisClient) {
         await this.redisClient.set(compositeKey, JSON.stringify(tokenDetails));
       }
 
-      return {
-        name,
-        decimals,
-        symbol,
-      };
+      return tokenDetails;
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -526,7 +545,7 @@ export class MercuryClient {
         const { error } = await this.accountSubscription(pubKey, network);
         if (!error) {
           this.logger.info(
-            `Subscribed to missing account sub - ${pubKey} - ${network}`
+            `Subscribed to missing account sub - ${pubKey} - ${network}`,
           );
         }
         throw new Error(ERROR.MISSING_SUB_FOR_PUBKEY);
@@ -538,7 +557,7 @@ export class MercuryClient {
 
       const urqlClient = this.mercurySession.backendClientMaker(
         network,
-        this.tokens[network]
+        this.tokens[network],
       );
       const getData = async () => {
         const data = await urqlClient.query(query.getAccountHistory, {
@@ -568,7 +587,7 @@ export class MercuryClient {
   getAccountHistory = async (
     pubKey: string,
     network: NetworkNames,
-    useMercury: boolean
+    useMercury: boolean,
   ) => {
     if (hasIndexerSupport(network) && useMercury) {
       const response = await this.getAccountHistoryMercury(pubKey, network);
@@ -587,7 +606,7 @@ export class MercuryClient {
 
     const horizonResponse = await this.getAccountHistoryHorizon(
       pubKey,
-      network
+      network,
     );
     return horizonResponse;
   };
@@ -595,7 +614,7 @@ export class MercuryClient {
   getTokenBalancesSorobanRPC = async (
     pubKey: string,
     contractIds: string[],
-    network: NetworkNames
+    network: NetworkNames,
   ) => {
     const Sdk = getSdk(StellarSdk.Networks[network]);
     const networkUrl = SOROBAN_RPC_URLS[network];
@@ -616,7 +635,7 @@ export class MercuryClient {
           params,
           server,
           builder,
-          network
+          network,
         );
         const tokenDetails = await this.tokenDetails(pubKey, id, network);
         balances.push({
@@ -634,7 +653,7 @@ export class MercuryClient {
       const isSac = isSacContract(
         balance.name,
         balance.id,
-        StellarSdk.Networks[network]
+        StellarSdk.Networks[network],
       );
       const issuerKey = isSac ? balance.name.split(":")[1] : balance.id;
 
@@ -697,7 +716,7 @@ export class MercuryClient {
   getAccountBalancesMercury = async (
     pubKey: string,
     contractIds: string[],
-    network: NetworkNames
+    network: NetworkNames,
   ) => {
     try {
       if (!hasIndexerSupport(network)) {
@@ -720,20 +739,20 @@ export class MercuryClient {
         const urqlClientCurrentData =
           this.mercurySession.currentDataClientMaker(
             network,
-            this.tokens[network]
+            this.tokens[network],
           );
 
         const responseCurrentData = await urqlClientCurrentData.query(
           query.getCurrentDataAccountBalances(
             pubKey,
             this.tokenBalanceKey(pubKey, network),
-            contractIds
+            contractIds,
           ),
-          {}
+          {},
         );
 
         const errorMessageCurrentData = getGraphQlError(
-          responseCurrentData.error
+          responseCurrentData.error,
         );
         if (errorMessageCurrentData) {
           throw new Error(errorMessageCurrentData);
@@ -746,7 +765,7 @@ export class MercuryClient {
         responseCurrentData,
         tokenDetails,
         contractIds,
-        StellarSdk.Networks[network]
+        StellarSdk.Networks[network],
       );
 
       return {
@@ -765,13 +784,13 @@ export class MercuryClient {
     pubKey: string,
     contractIds: string[],
     network: NetworkNames,
-    useMercury: boolean
+    useMercury: boolean,
   ) => {
     if (hasIndexerSupport(network) && useMercury) {
       const response = await this.getAccountBalancesMercury(
         pubKey,
         contractIds,
-        network
+        network,
       );
 
       // if Mercury returns an error, fallback to the RPCs
@@ -811,7 +830,7 @@ export class MercuryClient {
     } catch (error) {
       this.logger.error(error);
       this.logger.error(
-        `failed to fetch classic balances from Horizon: ${pubKey}, ${network}`
+        `failed to fetch classic balances from Horizon: ${pubKey}, ${network}`,
       );
       if (error && typeof error === "object" && "message" in error) {
         const err = JSON.parse(error.message as string);
@@ -831,13 +850,13 @@ export class MercuryClient {
       tokenBalances = await this.getTokenBalancesSorobanRPC(
         pubKey,
         contractIds,
-        network
+        network,
       );
     } catch (error) {
       rpcError = error;
       this.logger.error(error);
       this.logger.error(
-        `failed to fetch token balances from Soroban RPC: ${pubKey}, ${network}`
+        `failed to fetch token balances from Soroban RPC: ${pubKey}, ${network}`,
       );
       this.rpcErrorCounter
         .labels({
@@ -874,7 +893,7 @@ export class MercuryClient {
 
   getAccountSubForPubKey = async (
     publicKey: string,
-    network: NetworkNames
+    network: NetworkNames,
   ): Promise<{ publickey: string }[]> => {
     if (!hasIndexerSupport(network)) {
       throw new Error(`network not currently supported: ${network}`);
@@ -887,11 +906,11 @@ export class MercuryClient {
       const getData = async () => {
         const urqlClient = this.mercurySession.backendClientMaker(
           network,
-          this.tokens[network]
+          this.tokens[network],
         );
         const response = await urqlClient.query(
           query.getAccountSubForPubKey(publicKey),
-          {}
+          {},
         );
 
         const errorMessage = getGraphQlError(response.error);
@@ -912,7 +931,7 @@ export class MercuryClient {
   getTokenBalanceSub = async (
     publicKey: string,
     contractId: string,
-    network: NetworkNames
+    network: NetworkNames,
   ) => {
     if (!hasIndexerSupport(network)) {
       throw new Error(`network not currently supported: ${network}`);
@@ -924,14 +943,14 @@ export class MercuryClient {
       const getData = async () => {
         const urqlClient = this.mercurySession.backendClientMaker(
           network,
-          this.tokens[network]
+          this.tokens[network],
         );
         const response = await urqlClient.query(
           query.getTokenBalanceSub(
             contractId,
-            this.tokenBalanceKey(publicKey, network)
+            this.tokenBalanceKey(publicKey, network),
           ),
-          {}
+          {},
         );
 
         const errorMessage = getGraphQlError(response.error);
@@ -966,7 +985,7 @@ export class MercuryClient {
           `${
             this.mercurySession.backends[network as MercurySupportedNetworks]
           }/hydrations/${hydrationId}`,
-          config
+          config,
         );
         return data;
       };
@@ -974,7 +993,7 @@ export class MercuryClient {
       const data = await this.renewAndRetry(
         subscribe,
         network,
-        DEFAULT_RETRY_AMOUNT
+        DEFAULT_RETRY_AMOUNT,
       );
       return data;
     } catch (error) {

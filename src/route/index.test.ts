@@ -111,6 +111,63 @@ describe("API routes", () => {
       await server.close();
     });
   });
+  describe("/token-details/:contractId", () => {
+    it("can fetch token details for a contract ID with pub_key", async () => {
+      const contractId =
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP";
+      const server = await getDevServer();
+      const response = await fetch(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/token-details/${contractId}?network=TESTNET&pub_key=${pubKey}`,
+      );
+      expect(response.status).toEqual(200);
+      register.clear();
+      await server.close();
+    });
+
+    it("can fetch token details with balance when should_fetch_balance=true", async () => {
+      const contractId =
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP";
+      const server = await getDevServer();
+      const response = await fetch(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/token-details/${contractId}?network=TESTNET&pub_key=${pubKey}&should_fetch_balance=true`,
+      );
+      expect(response.status).toEqual(200);
+      register.clear();
+      await server.close();
+    });
+
+    it("rejects requests for invalid contract IDs", async () => {
+      const invalidContractId = "invalid";
+      const server = await getDevServer();
+      const response = await fetch(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/token-details/${invalidContractId}?network=TESTNET&pub_key=${pubKey}`,
+      );
+      expect(response.status).toEqual(400);
+      register.clear();
+      await server.close();
+    });
+
+    it("rejects requests without pub_key parameter", async () => {
+      const contractId =
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP";
+      const server = await getDevServer();
+      const response = await fetch(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/token-details/${contractId}?network=TESTNET`,
+      );
+      expect(response.status).toEqual(400);
+      register.clear();
+      await server.close();
+    });
+  });
+
   describe("/account-balances/:pubKey", () => {
     it("can fetch account balances for a pub key & contract IDs", async () => {
       const server = await getDevServer();
