@@ -614,7 +614,7 @@ jest
       _pubKey: string,
       _contractId: string,
       _network: NetworkNames,
-      fetchBalance?: boolean,
+      shouldFetchBalance?: boolean,
     ): any => {
       const baseResponse = {
         name: "Test Contract",
@@ -622,7 +622,7 @@ jest
         symbol: "TST",
       };
 
-      if (fetchBalance) {
+      if (shouldFetchBalance) {
         return {
           ...baseResponse,
           balance: 1000000,

@@ -466,7 +466,7 @@ describe("Mercury Service", () => {
     });
   });
 
-  it("can get token details without balance when fetchBalance is false", async () => {
+  it("can get token details without balance when shouldFetchBalance is false", async () => {
     const testPubKey =
       "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
     const testContractId =
@@ -487,7 +487,7 @@ describe("Mercury Service", () => {
     });
   });
 
-  it("can get token details without balance when fetchBalance is undefined", async () => {
+  it("can get token details without balance when shouldFetchBalance is undefined", async () => {
     const testPubKey =
       "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
     const testContractId =
@@ -504,6 +504,28 @@ describe("Mercury Service", () => {
       name: "Test Contract",
       decimals: 7,
       symbol: "TST",
+    });
+  });
+
+  it("returns token details with balance when shouldFetchBalance is true", async () => {
+    const testPubKey =
+      "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
+    const testContractId =
+      "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP";
+    const testNetwork = "TESTNET" as const;
+
+    const response = await mockMercuryClient.tokenDetails(
+      testPubKey,
+      testContractId,
+      testNetwork,
+      true,
+    );
+
+    expect(response).toEqual({
+      name: "Test Contract",
+      decimals: 7,
+      symbol: "TST",
+      balance: 1000000,
     });
   });
 });

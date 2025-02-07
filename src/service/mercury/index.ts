@@ -423,7 +423,7 @@ export class MercuryClient {
     pubKey: string,
     contractId: string,
     network: NetworkNames,
-    fetchBalance: boolean = false,
+    shouldFetchBalance: boolean = false,
   ): Promise<{
     name: string;
     symbol: string;
@@ -461,7 +461,7 @@ export class MercuryClient {
       );
 
       let balance: number | undefined;
-      if (fetchBalance) {
+      if (shouldFetchBalance) {
         const balanceBuilder = await getTxBuilder(pubKey, network, server);
         const Sdk = getSdk(StellarSdkNext.Networks[network]);
         const params = [new Sdk.Address(pubKey).toScVal()];
