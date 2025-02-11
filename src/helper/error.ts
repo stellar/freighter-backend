@@ -25,4 +25,8 @@ export const ERROR = {
   SCAN_SITE_DISABLED: "scanning site using blockaid is disabled",
   SCAN_TX_DISABLED: "scanning tx using blockaid is disabled",
   SCAN_ASSET_DISABLED: "scanning asset using blockaid is disabled",
+  REPORT_ASSET_DISABLED: "reporting asset is disabled",
+  UNABLE_TO_REPORT_ASSET: "unable to report asset to blockaid",
+  REPORT_TRANSACTION_DISABLED: "reporting transaction is disabled",
+  UNABLE_TO_REPORT_TRANSACTION: "unable to report transaction to blockaid",
 };

@@ -66,6 +66,8 @@ export function buildConfig(config: Record<string, string | undefined>) {
       useBlockaidDappScanning: true,
       useBlockaidTxScanning: true,
       useBlockaidAssetScanning: true,
+      useBlockaidAssetWarningReporting: true,
+      useBlockaidTransactionWarningReporting: true,
     },
   };
 }

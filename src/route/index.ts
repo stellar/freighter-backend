@@ -13,6 +13,7 @@ import { MercuryClient } from "../service/mercury";
 import {
   BlockAidService,
   BlockaidAssetScanResponse,
+  ReportTransactionWarningEvent,
 } from "../service/blockaid";
 import {
   addScannedStatus,
@@ -54,6 +55,8 @@ export async function initApiServer(
     useBlockaidDappScanning: boolean;
     useBlockaidTxScanning: boolean;
     useBlockaidAssetScanning: boolean;
+    useBlockaidAssetWarningReporting: boolean;
+    useBlockaidTransactionWarningReporting: boolean;
   },
   redis?: Redis,
 ) {
@@ -396,6 +399,7 @@ export async function initApiServer(
                 type: "string",
                 validator: (qStr: string) => isNetwork(qStr),
               },
+              ["should_fetch_balance"]: { type: "string" },
             },
           },
         },
@@ -405,12 +409,13 @@ export async function initApiServer(
             Querystring: {
               ["pub_key"]: string;
               ["network"]: NetworkNames;
+              ["should_fetch_balance"]: string;
             };
           }>,
           reply,
         ) => {
           const contractId = request.params["contractId"];
-          const { network, pub_key } = request.query;
+          const { network, pub_key, should_fetch_balance } = request.query;
 
           const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
           if (skipSorobanPubnet) {
@@ -422,6 +427,7 @@ export async function initApiServer(
               pub_key,
               contractId,
               network,
+              should_fetch_balance === "true",
             );
             reply.code(200).send(data);
           } catch (error) {
@@ -767,6 +773,102 @@ export async function initApiServer(
           return reply.code(200).send({
             data: { results: defaultResponse },
             error: ERROR.SCAN_ASSET_DISABLED,
+          });
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/report-asset-warning",
+        schema: {
+          querystring: {
+            type: "object",
+            required: ["details", "address"],
+            properties: {
+              ["details"]: {
+                type: "string",
+              },
+              ["address"]: {
+                type: "string",
+              },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Querystring: {
+              ["details"]: string;
+              ["address"]: string;
+            };
+          }>,
+          reply,
+        ) => {
+          const { details, address } = request.query;
+
+          if (blockaidConfig.useBlockaidAssetWarningReporting) {
+            try {
+              const { data, error } = await blockAidService.reportAssetWarning(
+                details,
+                address,
+              );
+              return reply.code(error ? 400 : 200).send({ data, error });
+            } catch (error) {
+              return reply.code(500).send({ error: ERROR.SERVER_ERROR });
+            }
+          }
+          return reply.code(200).send({
+            error: ERROR.REPORT_ASSET_DISABLED,
+          });
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/report-transaction-warning",
+        schema: {
+          querystring: {
+            type: "object",
+            required: ["details", "request_id", "event"],
+            properties: {
+              ["details"]: {
+                type: "string",
+              },
+              ["request_id"]: {
+                type: "string",
+              },
+              ["event"]: {
+                type: "string",
+              },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Querystring: {
+              ["details"]: string;
+              ["request_id"]: string;
+              ["event"]: ReportTransactionWarningEvent;
+            };
+          }>,
+          reply,
+        ) => {
+          const { details, request_id, event } = request.query;
+
+          if (blockaidConfig.useBlockaidTransactionWarningReporting) {
+            try {
+              const { data, error } =
+                await blockAidService.reportTransactionWarning(
+                  details,
+                  request_id,
+                  event,
+                );
+              return reply.code(error ? 400 : 200).send({ data, error });
+            } catch (error) {
+              return reply.code(500).send({ error: ERROR.SERVER_ERROR });
+            }
+          }
+          return reply.code(200).send({
+            error: ERROR.REPORT_TRANSACTION_DISABLED,
           });
         },
       });
