@@ -14,6 +14,7 @@ import { Networks } from "stellar-sdk-next";
 import { SOROBAN_RPC_URLS } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
 import * as StellarHelpers from "../helper/stellar";
+import * as SorobanRpcHelper from "../helper/soroban-rpc/token";
 
 jest.mock("@blockaid/client", () => {
   return class Blockaid {
@@ -136,6 +137,77 @@ describe("API routes", () => {
         }/api/v1/token-details/${contractId}?network=TESTNET&pub_key=${pubKey}&should_fetch_balance=true`,
       );
       expect(response.status).toEqual(200);
+      register.clear();
+      await server.close();
+    });
+
+    it("uses redis cache for static token details when should_fetch_balance=false", async () => {
+      const contractId =
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP";
+      const server = await getDevServer();
+
+      // First request should cache the static details
+      const response1 = await fetch(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/token-details/${contractId}?network=TESTNET&pub_key=${pubKey}`,
+      );
+      const data1 = await response1.json();
+      expect(response1.status).toEqual(200);
+
+      // Second request should use cached data
+      const response2 = await fetch(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/token-details/${contractId}?network=TESTNET&pub_key=${pubKey}`,
+      );
+      const data2 = await response2.json();
+      expect(response2.status).toEqual(200);
+
+      // Both responses should match
+      expect(data1).toEqual(data2);
+
+      register.clear();
+      await server.close();
+    });
+
+    it("uses redis cache for static token details but fetches fresh balance when should_fetch_balance=true", async () => {
+      const contractId =
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP";
+      const server = await getDevServer();
+
+      // First request should cache the static details
+      const response1 = await fetch(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/token-details/${contractId}?network=TESTNET&pub_key=${pubKey}&should_fetch_balance=true`,
+      );
+      const data1 = await response1.json();
+      expect(response1.status).toEqual(200);
+
+      // Mock a payment that changes the balance
+      jest
+        .spyOn(SorobanRpcHelper, "getTokenBalance")
+        .mockReturnValueOnce(Promise.resolve(2000000));
+
+      // Second request should use cached static data but fetch fresh balance
+      const response2 = await fetch(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/token-details/${contractId}?network=TESTNET&pub_key=${pubKey}&should_fetch_balance=true`,
+      );
+      const data2 = await response2.json();
+      expect(response2.status).toEqual(200);
+
+      // Static details should match
+      expect(data1.name).toEqual(data2.name);
+      expect(data1.symbol).toEqual(data2.symbol);
+      expect(data1.decimals).toEqual(data2.decimals);
+
+      // Balance should be different after payment
+      expect(data1.balance).toBe("1000000"); // Initial balance from mock
+      expect(data2.balance).toBe("2000000"); // New balance after payment
+
       register.clear();
       await server.close();
     });
