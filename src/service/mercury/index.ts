@@ -431,15 +431,38 @@ export class MercuryClient {
     balance?: string;
   }> => {
     try {
+      const server = await getServer(network);
       const compositeKey = `${network}__${contractId}`;
-      // get from cache if we have them, otherwise go to ledger and cache
+
+      let balance: string | undefined;
+
+      // balance can change over time, so we need to fetch it fresh each time
+      if (shouldFetchBalance) {
+        const balanceBuilder = await getTxBuilder(pubKey, network, server);
+        const Sdk = getSdk(StellarSdkNext.Networks[network]);
+        const params = [new Sdk.Address(pubKey).toScVal()];
+        const rawBalance = await getTokenBalance(
+          contractId,
+          params,
+          server,
+          balanceBuilder,
+          network,
+        );
+        balance = rawBalance.toString();
+      }
+
+      // get static token details from cache if we have them, otherwise go to ledger and cache
       if (this.redisClient) {
-        const tokenDetails = await this.redisClient.get(compositeKey);
-        if (tokenDetails) {
-          return JSON.parse(tokenDetails);
+        const cachedStaticTokenDetails =
+          await this.redisClient.get(compositeKey);
+        if (cachedStaticTokenDetails) {
+          return {
+            ...JSON.parse(cachedStaticTokenDetails),
+            ...(balance !== undefined && { balance }),
+          };
         }
       }
-      const server = await getServer(network);
+
       // we need a builder per operation, 1 op per tx in Soroban
       const decimalsBuilder = await getTxBuilder(pubKey, network, server);
       const decimals = await getTokenDecimals(
@@ -460,33 +483,24 @@ export class MercuryClient {
         network,
       );
 
-      let balance: string | undefined;
-      if (shouldFetchBalance) {
-        const balanceBuilder = await getTxBuilder(pubKey, network, server);
-        const Sdk = getSdk(StellarSdkNext.Networks[network]);
-        const params = [new Sdk.Address(pubKey).toScVal()];
-        const rawBalance = await getTokenBalance(
-          contractId,
-          params,
-          server,
-          balanceBuilder,
-          network,
-        );
-        balance = rawBalance.toString();
-      }
-
-      const tokenDetails = {
+      const staticTokenDetails = {
         name,
         decimals,
         symbol,
-        ...(balance !== undefined && { balance }),
       };
 
+      // Only cache the static token details, not the balance since it changes over time
       if (this.redisClient) {
-        await this.redisClient.set(compositeKey, JSON.stringify(tokenDetails));
+        await this.redisClient.set(
+          compositeKey,
+          JSON.stringify(staticTokenDetails),
+        );
       }
 
-      return tokenDetails;
+      return {
+        ...staticTokenDetails,
+        ...(balance !== undefined && { balance }),
+      };
     } catch (error) {
       if (error instanceof Error) {
         throw error;
