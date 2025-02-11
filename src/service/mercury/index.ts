@@ -431,13 +431,13 @@ export class MercuryClient {
     balance?: string;
   }> => {
     try {
-      let balance: string | undefined;
-      let server: StellarSdkNext.rpc.Server | undefined;
+      const server = await getServer(network);
       const compositeKey = `${network}__${contractId}`;
+
+      let balance: string | undefined;
 
       // balance can change over time, so we need to fetch it fresh each time
       if (shouldFetchBalance) {
-        server = await getServer(network);
         const balanceBuilder = await getTxBuilder(pubKey, network, server);
         const Sdk = getSdk(StellarSdkNext.Networks[network]);
         const params = [new Sdk.Address(pubKey).toScVal()];
@@ -461,10 +461,6 @@ export class MercuryClient {
             ...(balance !== undefined && { balance }),
           };
         }
-      }
-
-      if (!server) {
-        server = await getServer(network);
       }
 
       // we need a builder per operation, 1 op per tx in Soroban
