@@ -493,11 +493,6 @@ export class MercuryClient {
         symbol,
       };
 
-      const tokenDetails = {
-        ...staticTokenDetails,
-        ...(balance !== undefined && { balance }),
-      };
-
       // Only cache the static token details, not the balance since it changes over time
       if (this.redisClient) {
         await this.redisClient.set(
@@ -506,7 +501,10 @@ export class MercuryClient {
         );
       }
 
-      return tokenDetails;
+      return {
+        ...staticTokenDetails,
+        ...(balance !== undefined && { balance }),
+      };
     } catch (error) {
       if (error instanceof Error) {
         throw error;
