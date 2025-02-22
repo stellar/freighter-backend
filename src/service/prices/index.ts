@@ -37,4 +37,14 @@ export class PriceClient {
     const priceStr = new BigNumber(price).toFixed(8);
     await this.redisClient.set(`${token}-${network}`, priceStr);
   };
+
+  initPriceCache = async (): Promise<void> => {
+    const response = await fetch(
+      "https://api.stellar.expert/explorer/public/asset-list/top50",
+    );
+    const data = await response.json();
+    for (const asset of data.assets) {
+      await this.setPrice(`${asset.code}:${asset.issuer}`, "PUBLIC", 0.1);
+    }
+  };
 }
