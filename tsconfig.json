@@ -7,10 +7,15 @@
     "module": "commonjs",
     "jsx": "react",
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "inlineSources": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true
   },
   "include": ["src/**/*"],
-  "exclude": ["build", "node_modules"],
+  "exclude": ["dist", "node_modules"],
   "ts-node": {
     "transpileOnly": true,
     "files": true,
