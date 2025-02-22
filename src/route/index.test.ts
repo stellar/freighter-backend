@@ -15,6 +15,7 @@ import { SOROBAN_RPC_URLS } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
 import * as StellarHelpers from "../helper/stellar";
 import * as SorobanRpcHelper from "../helper/soroban-rpc/token";
+import * as OnrampHelpers from "../helper/onramp";
 
 jest.mock("@blockaid/client", () => {
   return class Blockaid {
@@ -702,6 +703,108 @@ describe("API routes", () => {
       expect(response.status).toEqual(200);
       expect(data.simulationResponse).toEqual(simResponse);
       expect(data.preparedTransaction).toEqual(preparedTransaction);
+      register.clear();
+      await server.close();
+    });
+
+    it("can fetch an onramp token", async () => {
+      jest.spyOn(OnrampHelpers, "fetchOnrampSessionToken").mockReturnValueOnce(
+        Promise.resolve({
+          data: {
+            token: "token",
+          },
+          error: null,
+        }),
+      );
+
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/onramp/token`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: "GFOO",
+        }),
+      };
+      const response = await fetch(url.href, options);
+      const resJson = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(resJson.data.token).toEqual("token");
+      register.clear();
+      await server.close();
+    });
+    it("does not fetch a token without Coinbase config", async () => {
+      jest.spyOn(OnrampHelpers, "fetchOnrampSessionToken").mockReturnValueOnce(
+        Promise.resolve({
+          data: {
+            token: "token",
+          },
+          error: null,
+        }),
+      );
+
+      const server = await getDevServer(undefined, {
+        coinbaseApiKey: "",
+        coinbaseApiSecret: "",
+      });
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/onramp/token`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: "GFOO",
+        }),
+      };
+      const response = await fetch(url.href, options);
+      const resJson = await response.json();
+
+      expect(response.status).toEqual(400);
+      expect(resJson.data).toEqual(undefined);
+      expect(resJson.error).toEqual("Coinbase config not set");
+      register.clear();
+      await server.close();
+    });
+    it("does not fetch a token if it is unable to generate the token", async () => {
+      jest.spyOn(OnrampHelpers, "generateJWT").mockImplementation(() => {
+        throw new Error("JWT generation failed");
+      });
+
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/onramp/token`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: "GFOO",
+        }),
+      };
+      const response = await fetch(url.href, options);
+      const resJson = await response.json();
+
+      expect(response.status).toEqual(400);
+      expect(resJson.data).toEqual(undefined);
+      expect(resJson.error).toEqual(
+        "Unable to retrieve token: Error: JWT generation failed",
+      );
       register.clear();
       await server.close();
     });
