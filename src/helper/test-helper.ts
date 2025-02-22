@@ -640,6 +640,10 @@ async function getDevServer(
     useBlockaidAssetWarningReporting: true,
     useBlockaidTransactionWarningReporting: true,
   },
+  coinbaseConfig = {
+    coinbaseApiKey: "coinbaseApiKey",
+    coinbaseApiSecret: "coinbaseApiSecret",
+  },
 ) {
   const server = await initApiServer(
     mockMercuryClient,
@@ -650,6 +654,7 @@ async function getDevServer(
     register,
     "development",
     blockaidConfig,
+    coinbaseConfig,
   );
 
   await server.listen();
