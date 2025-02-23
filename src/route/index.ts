@@ -25,7 +25,11 @@ import {
   isNetwork,
   NetworkNames,
 } from "../helper/validate";
-import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
+import {
+  Balance,
+  NETWORK_URLS,
+  submitTransaction,
+} from "../helper/horizon-rpc";
 import {
   SOROBAN_RPC_URLS,
   buildTransfer,
@@ -39,12 +43,14 @@ import { getUseMercury } from "../helper/mercury";
 import { getHttpRequestDurationLabels } from "../helper/metrics";
 import { mode } from "../helper/env";
 import Blockaid from "@blockaid/client";
+import { PriceClient } from "../service/prices";
 
 const API_VERSION = "v1";
 
 export async function initApiServer(
   mercuryClient: MercuryClient,
   blockAidService: BlockAidService,
+  priceClient: PriceClient,
   logger: Logger,
   useMercuryConf: boolean,
   useSorobanPublic: boolean,
@@ -335,6 +341,26 @@ export async function initApiServer(
               network,
               useMercury,
             );
+
+            // calculate the USD balance for each token
+            try {
+              for (const [balanceKey, balance] of Object.entries(
+                data.balances,
+              ) as [string, Balance][]) {
+                const priceUSD = await priceClient.getPrice(
+                  balanceKey,
+                  network,
+                );
+                if (priceUSD) {
+                  data.balances[balanceKey] = {
+                    ...balance,
+                    availableUSD: balance.available.times(priceUSD),
+                  };
+                }
+              }
+            } catch (e) {
+              logger.error("Error calculating USD balance", e);
+            }
 
             try {
               data.balances = await addScannedStatus(
