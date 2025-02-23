@@ -30,6 +30,7 @@ import {
 } from "./helper/metrics";
 import { fetchWithTimeout } from "./helper/fetch";
 import { BlockAidService } from "./service/blockaid";
+import { PriceClient } from "./service/prices";
 
 interface CliArgs {
   env: string;
@@ -132,9 +133,12 @@ async function main() {
     },
     redis,
   );
+
+  const priceClient = new PriceClient(logger, redis);
   const server = await initApiServer(
     mercuryClient,
     blockAidService,
+    priceClient,
     logger,
     conf.useMercury,
     conf.useSorobanPublic,
@@ -156,6 +160,30 @@ async function main() {
   }
 
   try {
+    // Start price update worker
+    if (env !== "development" && redis) {
+      const priceWorkerData = {
+        workerData: {
+          hostname: conf.hostname,
+          redisConnectionName: conf.redisConnectionName,
+          redisPort: conf.redisPort,
+        },
+      };
+      const priceWorker = new Worker(
+        "./build/price-worker.js",
+        priceWorkerData,
+      );
+
+      priceWorker.on("error", (e) => {
+        logger.error("Price worker error:", e);
+        priceWorker.terminate();
+      });
+
+      priceWorker.on("exit", () => {
+        logger.info("Price worker exited");
+      });
+    }
+
     // the worker is not properly instantiated when running this app with ts-node
     // if you need to test this, build the app with webpack and run the build with node manually
     if (conf.useMercury && env !== "development") {
