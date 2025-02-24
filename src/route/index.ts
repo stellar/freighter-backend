@@ -347,10 +347,7 @@ export async function initApiServer(
               for (const [balanceKey, balance] of Object.entries(
                 data.balances,
               ) as [string, Balance][]) {
-                const priceUSD = await priceClient.getPrice(
-                  balanceKey,
-                  network,
-                );
+                const priceUSD = await priceClient.getPrice(balanceKey);
                 if (priceUSD) {
                   data.balances[balanceKey] = {
                     ...balance,

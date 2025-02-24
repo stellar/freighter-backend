@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "npx ts-node --project tsconfig.json src/index.ts",
-    "build:prod": "webpack --mode production --config ./webpack.prod.js",
+    "clean": "rm -rf build",
+    "build:prod": "yarn clean && webpack --mode production --config ./webpack.prod.js",
     "prepare": "husky install",
     "test": "jest",
     "test:ci": "jest --ci"

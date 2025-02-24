@@ -5,10 +5,11 @@ module.exports = [
     entry: "./src/index.ts",
     mode: "production",
     target: "node",
-    devtool: "inline-source-map",
+    devtool: "source-map",
     output: {
       path: path.resolve(__dirname, "build"),
       filename: "index.js",
+      devtoolModuleFilenameTemplate: "[absolute-resource-path]",
     },
     resolve: {
       extensions: [".ts", ".js"],
@@ -18,7 +19,16 @@ module.exports = [
       rules: [
         {
           test: /\.([cm]?ts)$/,
-          use: ["ts-loader"],
+          use: [
+            {
+              loader: "ts-loader",
+              options: {
+                compilerOptions: {
+                  sourceMap: true,
+                },
+              },
+            },
+          ],
         },
       ],
     },
@@ -27,10 +37,11 @@ module.exports = [
     entry: "./src/service/integrity-checker/worker.ts",
     mode: "production",
     target: "node",
-    devtool: "inline-source-map",
+    devtool: "source-map",
     output: {
       path: path.resolve(__dirname, "build"),
       filename: "worker.js",
+      devtoolModuleFilenameTemplate: "[absolute-resource-path]",
     },
     resolve: {
       extensions: [".ts", ".js"],
@@ -40,7 +51,16 @@ module.exports = [
       rules: [
         {
           test: /\.([cm]?ts)$/,
-          use: ["ts-loader"],
+          use: [
+            {
+              loader: "ts-loader",
+              options: {
+                compilerOptions: {
+                  sourceMap: true,
+                },
+              },
+            },
+          ],
         },
       ],
     },
@@ -49,10 +69,11 @@ module.exports = [
     entry: "./src/service/prices/worker.ts",
     mode: "production",
     target: "node",
-    devtool: "inline-source-map",
+    devtool: "source-map",
     output: {
       path: path.resolve(__dirname, "build"),
       filename: "price-worker.js",
+      devtoolModuleFilenameTemplate: "[absolute-resource-path]",
     },
     resolve: {
       extensions: [".ts", ".js"],
@@ -62,7 +83,16 @@ module.exports = [
       rules: [
         {
           test: /\.([cm]?ts)$/,
-          use: ["ts-loader"],
+          use: [
+            {
+              loader: "ts-loader",
+              options: {
+                compilerOptions: {
+                  sourceMap: true,
+                },
+              },
+            },
+          ],
         },
       ],
     },

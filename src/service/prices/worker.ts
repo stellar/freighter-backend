@@ -23,7 +23,9 @@ const main = async () => {
   const priceClient = new PriceClient(logger, redis);
 
   // Initialize cache with top 50 assets
+  logger.info("Initializing price cache");
   await priceClient.initPriceCache();
+  logger.info("Price cache initialized");
 
   // Update prices periodically
   setInterval(async () => {
