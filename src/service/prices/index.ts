@@ -14,6 +14,8 @@ const USDCAsset = new StellarSdk.Asset(
   "USDC",
   "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
 );
+const PRICE_HASH_KEY = "prices";
+const PRICE_DECIMALS = 5;
 
 export class PriceClient {
   redisClient?: Redis;
@@ -32,19 +34,11 @@ export class PriceClient {
       redisKey = "XLM";
     }
 
-    const price = await this.redisClient.get(redisKey);
+    const price = await this.redisClient.hget(PRICE_HASH_KEY, redisKey);
     if (!price) {
       return await this.addNewTokenToCache(token);
     }
     return new BigNumber(price);
-  };
-
-  setPrice = async (token: string, price: number | string): Promise<void> => {
-    if (!this.redisClient) {
-      return;
-    }
-    const priceStr = new BigNumber(price).toFixed(8);
-    await this.redisClient.set(token, priceStr);
   };
 
   initPriceCache = async (): Promise<void> => {
@@ -55,9 +49,31 @@ export class PriceClient {
     // Use the top 50 assets by volume to initialize the price cache
     const response = await fetch(STELLAR_EXPERT_TOP_ASSETS_URL);
     const data = await response.json();
-    for (const asset of data.assets) {
-      await this.addNewTokenToCache(`${asset.code}:${asset.issuer}`);
+    const pricePromises = data.assets.map((asset: any) =>
+      this.calculatePriceInUSD(`${asset.code}:${asset.issuer}`, "PUBLIC")
+        .then((price) => ({
+          token: `${asset.code}:${asset.issuer}`,
+          price: price.toFixed(PRICE_DECIMALS),
+        }))
+        .catch((error) => {
+          this.logger.error(
+            { token: `${asset.code}:${asset.issuer}` },
+            "Error calculating price",
+            error,
+          );
+          return null;
+        }),
+    );
+    const prices = (await Promise.all(pricePromises)).filter(
+      (price): price is { token: string; price: string } => price !== null,
+    );
+
+    const pipeline = this.redisClient.pipeline();
+    for (const { token, price } of prices) {
+      pipeline.hset(PRICE_HASH_KEY, token, price);
     }
+    await pipeline.exec();
+
     await this.addNewTokenToCache("XLM");
   };
 
@@ -66,8 +82,11 @@ export class PriceClient {
       return new BigNumber(0);
     }
     const price = await this.calculatePriceInUSD(token, "PUBLIC");
-    await this.redisClient.sadd("trackedTokens", token);
-    await this.setPrice(token, price.toFixed(8));
+    await this.redisClient.hset(
+      PRICE_HASH_KEY,
+      token,
+      price.toFixed(PRICE_DECIMALS),
+    );
     return price;
   };
 
@@ -75,14 +94,33 @@ export class PriceClient {
     if (!this.redisClient) {
       return;
     }
-    const trackedTokens = await this.redisClient.smembers("trackedTokens");
+    const trackedTokens = await this.redisClient.hkeys(PRICE_HASH_KEY);
     if (!trackedTokens) {
       return;
     }
-    for (const token of trackedTokens) {
-      const price = await this.calculatePriceInUSD(token, "PUBLIC");
-      await this.setPrice(token, price.toFixed(8));
+
+    // Calculate new prices for all tracked tokens
+    const pricePromises = trackedTokens.map((token) =>
+      this.calculatePriceInUSD(token, "PUBLIC")
+        .then((price) => ({
+          token,
+          price: price.toFixed(PRICE_DECIMALS),
+        }))
+        .catch((error) => {
+          this.logger.error({ token }, "Error calculating price", error);
+          return null;
+        }),
+    );
+    const newPrices = (await Promise.all(pricePromises)).filter(
+      (price): price is { token: string; price: string } => price !== null,
+    );
+
+    // Do a bulk update of prices using Redis pipeline
+    const pipeline = this.redisClient.pipeline();
+    for (const { token, price } of newPrices) {
+      pipeline.hset(PRICE_HASH_KEY, token, price);
     }
+    await pipeline.exec();
   };
 
   calculatePriceInUSD = async (
