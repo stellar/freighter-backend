@@ -344,17 +344,21 @@ export async function initApiServer(
 
             // calculate the USD balance for each token
             try {
-              for (const [balanceKey, balance] of Object.entries(
-                data.balances,
-              ) as [string, Balance][]) {
-                const priceUSD = await priceClient.getPrice(balanceKey);
-                if (priceUSD) {
-                  data.balances[balanceKey] = {
-                    ...balance,
-                    availableUSD: balance.available.times(priceUSD),
-                  };
-                }
-              }
+              await Promise.all(
+                Object.entries(data.balances).map(
+                  async ([balanceKey, balance]) => {
+                    const priceUSD = await priceClient.getPrice(balanceKey);
+                    if (priceUSD) {
+                      data.balances[balanceKey] = {
+                        ...(balance as Balance),
+                        availableUSD: (balance as Balance).available.times(
+                          priceUSD,
+                        ),
+                      };
+                    }
+                  },
+                ),
+              );
             } catch (e) {
               logger.error("Error calculating USD balance", e);
             }
