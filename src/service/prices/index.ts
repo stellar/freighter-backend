@@ -189,12 +189,12 @@ export class PriceClient {
     }
 
     try {
-      const maddEntries = prices.map(({ token, price }) => ({
+      const mAddEntries = prices.map(({ token, price }) => ({
         key: this.getTimeSeriesKey(token),
         timestamp,
         value: price.toNumber(),
       }));
-      await this.redisClient.ts.mAdd(maddEntries);
+      await this.redisClient.ts.mAdd(mAddEntries);
     } catch (error) {
       this.logger.error("Error updating prices with TS.MADD", error);
     }
@@ -283,8 +283,8 @@ export class PriceClient {
       }
 
       const tokenUnit = new BigNumber(paths.records[0].source_amount);
-      const tokenPrice = USD_RECIEIVE_VALUE.dividedBy(tokenUnit);
-      return tokenPrice;
+      const unitTokenPrice = USD_RECIEIVE_VALUE.dividedBy(tokenUnit);
+      return unitTokenPrice;
     } catch (error) {
       this.logger.error({ token }, "Error calculating price:", error);
       return new BigNumber(0);
