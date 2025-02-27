@@ -43,7 +43,7 @@ import { getUseMercury } from "../helper/mercury";
 import { getHttpRequestDurationLabels } from "../helper/metrics";
 import { mode } from "../helper/env";
 import Blockaid from "@blockaid/client";
-import { PriceClient } from "../service/prices";
+import { PriceClient, TokenPriceData } from "../service/prices";
 
 const API_VERSION = "v1";
 
@@ -795,6 +795,48 @@ export async function initApiServer(
             data: { results: defaultResponse },
             error: ERROR.SCAN_ASSET_DISABLED,
           });
+        },
+      });
+
+      instance.route({
+        method: "GET",
+        url: "/token-prices",
+        schema: {
+          querystring: {
+            type: "object",
+            required: ["tokens"],
+            properties: {
+              ["tokens"]: {
+                type: "array",
+                items: { type: "string" },
+              },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Querystring: {
+              ["tokens"]: string[];
+            };
+          }>,
+          reply,
+        ) => {
+          try {
+            const { tokens } = request.query;
+            const prices: { [key: string]: TokenPriceData | null } = {};
+
+            // Get prices for all tokens in parallel
+            await Promise.all(
+              tokens.map(async (token) => {
+                prices[token] = await priceClient.getPrice(token);
+              }),
+            );
+
+            reply.code(200).send({ data: prices });
+          } catch (error) {
+            logger.error("Error getting token prices:", error);
+            reply.code(500).send(ERROR.SERVER_ERROR);
+          }
         },
       });
 
