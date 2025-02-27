@@ -43,14 +43,6 @@ export class PriceClient {
     this.logger = logger;
   }
 
-  private getTimeSeriesKey(token: string): string {
-    let key = token;
-    if (token === "native") {
-      key = "XLM";
-    }
-    return `${PRICE_TS_KEY_PREFIX}${key}`;
-  }
-
   getPrice = async (token: string): Promise<TokenPriceData | null> => {
     if (!this.redisClient) {
       return null;
@@ -154,6 +146,14 @@ export class PriceClient {
       this.logger.error("Error updating prices", error);
     }
   };
+
+  private getTimeSeriesKey(token: string): string {
+    let key = token;
+    if (token === "native") {
+      key = "XLM";
+    }
+    return `${PRICE_TS_KEY_PREFIX}${key}`;
+  }
 
   private async batchUpdatePrices(tokens: string[]): Promise<void> {
     if (!this.redisClient) return;
