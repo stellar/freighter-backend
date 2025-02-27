@@ -15,10 +15,14 @@ import TimeSeriesCommands from "@redis/time-series";
 import { TimeSeriesDuplicatePolicies } from "@redis/time-series";
 const STELLAR_EXPERT_TOP_ASSETS_URL =
   "https://api.stellar.expert/explorer/public/asset-list/top50";
-const PRICE_DECIMALS = 5;
 const PRICE_TS_KEY_PREFIX = "ts:price:";
 const ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 const RETENTION_PERIOD = 24 * 60 * 60 * 1000; // 1 day retention period
+const USDCAsset = new StellarSdk.Asset(
+  "USDC",
+  "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+);
+const USD_RECIEIVE_VALUE = new BigNumber(100);
 
 export interface TokenPriceData {
   currentPrice: BigNumber;
@@ -167,7 +171,7 @@ export class PriceClient {
       this.calculatePriceInUSD(token, server)
         .then((price) => ({
           token,
-          price: price.toFixed(PRICE_DECIMALS),
+          price: price,
         }))
         .catch((error) => {
           this.logger.error({ token }, "Error calculating price", error);
@@ -176,7 +180,7 @@ export class PriceClient {
     );
 
     const prices = (await Promise.all(pricePromises)).filter(
-      (price): price is { token: string; price: string } => price !== null,
+      (price): price is { token: string; price: BigNumber } => price !== null,
     );
 
     if (prices.length === 0) {
@@ -188,7 +192,7 @@ export class PriceClient {
       const maddEntries = prices.map(({ token, price }) => ({
         key: this.getTimeSeriesKey(token),
         timestamp,
-        value: parseFloat(price),
+        value: price.toNumber(),
       }));
       await this.redisClient.ts.mAdd(maddEntries);
     } catch (error) {
@@ -254,10 +258,33 @@ export class PriceClient {
 
   private calculatePriceInUSD = async (
     token: string,
-    _server: StellarSdk.Horizon.Server,
+    server: StellarSdk.Horizon.Server,
   ): Promise<BigNumber> => {
     try {
-      return new BigNumber(Math.random() * 1000);
+      let stellarAsset = undefined;
+      if (token === "XLM") {
+        stellarAsset = StellarSdk.Asset.native();
+      } else {
+        const [code, issuer] = token.split(":");
+        stellarAsset = new StellarSdk.Asset(code, issuer);
+      }
+
+      const paths = await server
+        .strictReceivePaths(
+          [stellarAsset],
+          USDCAsset,
+          USD_RECIEIVE_VALUE.toString(),
+        )
+        .call();
+
+      if (!paths.records.length) {
+        this.logger.warn({ token }, "No path found");
+        return new BigNumber(0);
+      }
+
+      const tokenUnit = new BigNumber(paths.records[0].source_amount);
+      const tokenPrice = USD_RECIEIVE_VALUE.dividedBy(tokenUnit);
+      return tokenPrice;
     } catch (error) {
       this.logger.error({ token }, "Error calculating price:", error);
       return new BigNumber(0);
