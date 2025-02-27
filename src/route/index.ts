@@ -352,7 +352,7 @@ export async function initApiServer(
                       data.balances[balanceKey] = {
                         ...(balance as Balance),
                         availableUSD: (balance as Balance).available.times(
-                          priceUSD,
+                          priceUSD.currentPrice,
                         ),
                       };
                     }

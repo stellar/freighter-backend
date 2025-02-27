@@ -2,6 +2,7 @@ import * as dotEnv from "dotenv";
 import { expand } from "dotenv-expand";
 import yargs from "yargs";
 import Redis from "ioredis";
+import { createClient } from "redis";
 import Prometheus from "prom-client";
 import { Worker } from "worker_threads";
 import Blockaid from "@blockaid/client";
@@ -99,6 +100,8 @@ async function main() {
   };
 
   let redis = undefined;
+  let timeSeriesRedis = undefined;
+
   // use in-memory store in dev
   if (env !== "development") {
     redis = new Redis({
@@ -114,6 +117,21 @@ async function main() {
     });
 
     await redis.set(REDIS_USE_MERCURY_KEY, String(conf.useMercury));
+
+    // Separate Redis client for time series operations
+    timeSeriesRedis = createClient({
+      socket: {
+        host: conf.hostname,
+        port: conf.redisPort,
+      },
+      name: conf.redisConnectionName,
+    });
+    await timeSeriesRedis.connect();
+
+    timeSeriesRedis.on("error", (error: any) => {
+      logger.info("redis time series connection error", error);
+      throw new Error(error);
+    });
   }
 
   const blockAidClient = new Blockaid({
@@ -134,7 +152,7 @@ async function main() {
     redis,
   );
 
-  const priceClient = new PriceClient(logger, redis);
+  const priceClient = new PriceClient(logger, timeSeriesRedis);
   const server = await initApiServer(
     mercuryClient,
     blockAidService,
