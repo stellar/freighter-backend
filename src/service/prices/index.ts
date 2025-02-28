@@ -23,6 +23,7 @@ const USDCAsset = new StellarSdk.Asset(
   "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
 );
 const USD_RECIEIVE_VALUE = new BigNumber(100);
+const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
 
 export interface TokenPriceData {
   currentPrice: BigNumber;
@@ -118,6 +119,7 @@ export class PriceClient {
 
       // Update prices for all tokens
       await this.batchUpdatePrices(tokens);
+      await this.redisClient.set(PRICE_CACHE_INITIALIZED_KEY, "true");
     } catch (error) {
       this.logger.error("Error initializing price cache", error);
     }

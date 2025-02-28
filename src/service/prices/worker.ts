@@ -7,7 +7,7 @@ import { PriceClient } from ".";
 const { hostname, redisConnectionName, redisPort } = workerData;
 
 const PRICE_UPDATE_INTERVAL = 1 * 60 * 1000; // 1 minute in milliseconds
-
+const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
 const main = async () => {
   // Create Redis client with time series module enabled
   const redisClient = createClient({
@@ -27,11 +27,18 @@ const main = async () => {
 
   // Initialize cache with top 50 assets
   logger.info("Initializing price cache");
-  try {
-    await priceClient.initPriceCache();
-    logger.info("Price cache initialized");
-  } catch (e) {
-    logger.error("Failed to initialize price cache:", e);
+  const priceCacheInitialized = await redisClient.get(
+    PRICE_CACHE_INITIALIZED_KEY,
+  );
+  if (!priceCacheInitialized) {
+    try {
+      await priceClient.initPriceCache();
+      logger.info("Price cache initialized");
+    } catch (e) {
+      logger.error("Failed to initialize price cache:", e);
+    }
+  } else {
+    logger.info("Price cache already initialized");
   }
 
   // Update prices periodically
