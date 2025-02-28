@@ -61,6 +61,13 @@ export const fetchOnrampSessionToken = async ({
     };
     const res = await fetch(`https://${requestHost}${requestPath}`, options);
 
+    if (!res.ok) {
+      if (res.status >= 500 && res.status < 600) {
+        throw new Error("Server error when requesting token");
+      }
+      return { data: { token: "", error: "Error fetching token request" } };
+    }
+
     const resJson = await res.json();
 
     const { token } = resJson;
