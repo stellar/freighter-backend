@@ -16,7 +16,8 @@ import { TimeSeriesDuplicatePolicies } from "@redis/time-series";
 const STELLAR_EXPERT_TOP_ASSETS_URL =
   "https://api.stellar.expert/explorer/public/asset-list/top50";
 const PRICE_TS_KEY_PREFIX = "ts:price:";
-const ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+const ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds]
+const ONE_HOUR = 60 * 60 * 1000; // 1 hour in milliseconds
 const RETENTION_PERIOD = 24 * 60 * 60 * 1000; // 1 day retention period
 const USDCAsset = new StellarSdk.Asset(
   "USDC",
@@ -28,7 +29,7 @@ const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
 
 export interface TokenPriceData {
   currentPrice: BigNumber;
-  priceChange24h?: BigNumber;
+  percentagePriceChange24h: BigNumber | null;
 }
 
 type RedisClientWithTS = RedisClientType<
@@ -67,28 +68,29 @@ export class PriceClient {
         return newPrice
           ? {
               currentPrice: newPrice,
+              percentagePriceChange24h: null,
             }
           : null;
       }
 
-      // Get 24h ago price using TS.RANGE
+      // Get 24h ago price using TS.RANGE. Use a 1 hr offset as the end time.
       const dayAgo = Date.now() - ONE_DAY;
       const oldPrices = await this.redisClient.ts.range(
         tsKey,
         dayAgo,
-        Date.now(),
+        dayAgo + ONE_HOUR,
         {
           COUNT: 1,
         },
       );
 
       const currentPrice = new BigNumber(latestPrice.value);
-      let priceChange24h: BigNumber | undefined;
+      let percentagePriceChange24h: BigNumber | null = null;
 
       if (oldPrices && oldPrices.length > 0) {
         const oldPriceBN = new BigNumber(oldPrices[0].value);
         if (!oldPriceBN.isZero()) {
-          priceChange24h = currentPrice
+          percentagePriceChange24h = currentPrice
             .minus(oldPriceBN)
             .dividedBy(oldPriceBN)
             .times(100);
@@ -97,7 +99,7 @@ export class PriceClient {
 
       return {
         currentPrice,
-        priceChange24h,
+        percentagePriceChange24h,
       };
     } catch (error) {
       this.logger.error(
