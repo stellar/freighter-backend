@@ -22,6 +22,7 @@ const USDCAsset = new StellarSdk.Asset(
   "USDC",
   "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
 );
+const NativeAsset = StellarSdk.Asset.native();
 const USD_RECIEIVE_VALUE = new BigNumber(100);
 const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
 
@@ -166,14 +167,13 @@ export class PriceClient {
       allowHttp: !NETWORK_URLS.PUBLIC.includes("https"),
     });
 
-    const timestamp = Date.now();
-
     // Calculate all prices in parallel
     const pricePromises = tokens.map((token) =>
       this.calculatePriceInUSD(token, server)
         .then((price) => ({
           token,
-          price: price,
+          timestamp: price.timestamp,
+          price: price.price,
         }))
         .catch((error) => {
           this.logger.error({ token }, "Error calculating price", error);
@@ -182,7 +182,10 @@ export class PriceClient {
     );
 
     const prices = (await Promise.all(pricePromises)).filter(
-      (price): price is { token: string; price: BigNumber } => price !== null,
+      (
+        price,
+      ): price is { token: string; timestamp: number; price: BigNumber } =>
+        price !== null,
     );
 
     if (prices.length === 0) {
@@ -191,7 +194,7 @@ export class PriceClient {
     }
 
     try {
-      const mAddEntries = prices.map(({ token, price }) => ({
+      const mAddEntries = prices.map(({ token, timestamp, price }) => ({
         key: this.getTimeSeriesKey(token),
         timestamp,
         value: price.toNumber(),
@@ -204,12 +207,12 @@ export class PriceClient {
 
   private async addPriceToTimeSeries(
     token: string,
+    timestamp: number,
     price: BigNumber,
   ): Promise<void> {
     if (!this.redisClient) return;
 
     const tsKey = this.getTimeSeriesKey(token);
-    const timestamp = Date.now();
 
     try {
       await this.createTimeSeries(tsKey);
@@ -253,46 +256,57 @@ export class PriceClient {
       allowHttp: !NETWORK_URLS.PUBLIC.includes("https"),
     });
 
-    const price = await this.calculatePriceInUSD(token, server);
-    await this.addPriceToTimeSeries(token, price);
+    const { timestamp, price } = await this.calculatePriceInUSD(token, server);
+    await this.addPriceToTimeSeries(token, timestamp, price);
     return price;
   };
 
   private calculatePriceInUSD = async (
     token: string,
     server: StellarSdk.Horizon.Server,
-  ): Promise<BigNumber> => {
+  ): Promise<{ timestamp: number; price: BigNumber }> => {
     try {
-      let stellarAsset = undefined;
-      if (token === "XLM") {
-        stellarAsset = StellarSdk.Asset.native();
-      } else {
-        const [code, issuer] = token.split(":");
-        stellarAsset = new StellarSdk.Asset(code, issuer);
-      }
-
-      const paths = await server
-        .strictReceivePaths(
-          [stellarAsset],
-          USDCAsset,
-          USD_RECIEIVE_VALUE.toString(),
-        )
-        .call();
-
-      if (!paths.records.length) {
-        this.logger.warn({ token }, "No path found");
-        return new BigNumber(0);
-      }
-
-      const tokenUnit = new BigNumber(paths.records[0].source_amount);
-      const unitTokenPrice = USD_RECIEIVE_VALUE.dividedBy(tokenUnit);
-      return unitTokenPrice;
+      return await this.calculatePriceUsingPaths(token, server);
     } catch (error) {
       this.logger.error({ token }, "Error calculating price:", error);
-      return new BigNumber(0);
+      return { timestamp: 0, price: new BigNumber(0) };
     }
   };
 
+  private calculatePriceUsingPaths = async (
+    token: string,
+    server: StellarSdk.Horizon.Server,
+  ): Promise<{ timestamp: number; price: BigNumber }> => {
+    let sourceAssets = undefined;
+    if (token === "XLM") {
+      sourceAssets = [NativeAsset];
+    } else {
+      const [code, issuer] = token.split(":");
+      sourceAssets = [new StellarSdk.Asset(code, issuer), NativeAsset];
+    }
+
+    const latestLedger = await server.ledgers().order("desc").limit(1).call();
+    const latestLedgerTimestamp = new Date(
+      latestLedger.records[0].closed_at,
+    ).getTime();
+
+    const paths = await server
+      .strictReceivePaths(
+        sourceAssets,
+        USDCAsset,
+        USD_RECIEIVE_VALUE.toString(),
+      )
+      .call();
+
+    if (!paths.records.length) {
+      this.logger.warn({ token }, "No path found");
+      return { timestamp: latestLedgerTimestamp, price: new BigNumber(0) };
+    }
+
+    const tokenUnit = new BigNumber(paths.records[0].source_amount);
+    const unitTokenPrice = USD_RECIEIVE_VALUE.dividedBy(tokenUnit);
+    return { timestamp: latestLedgerTimestamp, price: unitTokenPrice };
+  };
   //   private calculateTokenPriceUsingTradeAggregations = async (
   //     token: string,
   //     server: StellarSdk.Horizon.Server,
