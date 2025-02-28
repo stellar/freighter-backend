@@ -205,27 +205,6 @@ export class PriceClient {
     }
   }
 
-  private async addPriceToTimeSeries(
-    token: string,
-    timestamp: number,
-    price: BigNumber,
-  ): Promise<void> {
-    if (!this.redisClient) return;
-
-    const tsKey = this.getTimeSeriesKey(token);
-
-    try {
-      await this.createTimeSeries(tsKey);
-      await this.redisClient.ts.add(tsKey, timestamp, price.toNumber());
-    } catch (error) {
-      this.logger.error(
-        { token, price: price.toString() },
-        "Error adding price to time series",
-        error,
-      );
-    }
-  }
-
   private async createTimeSeries(key: string): Promise<void> {
     if (!this.redisClient) return;
 
@@ -255,9 +234,19 @@ export class PriceClient {
     const server = new Horizon.Server(NETWORK_URLS.PUBLIC, {
       allowHttp: !NETWORK_URLS.PUBLIC.includes("https"),
     });
-
     const { timestamp, price } = await this.calculatePriceInUSD(token, server);
-    await this.addPriceToTimeSeries(token, timestamp, price);
+    const tsKey = this.getTimeSeriesKey(token);
+
+    try {
+      await this.createTimeSeries(tsKey);
+      await this.redisClient.ts.add(tsKey, timestamp, price.toNumber());
+    } catch (error) {
+      this.logger.error(
+        { token, price: price.toString() },
+        "Error adding price to time series",
+        error,
+      );
+    }
     return price;
   };
 
