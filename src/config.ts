@@ -69,6 +69,11 @@ export function buildConfig(config: Record<string, string | undefined>) {
       useBlockaidAssetWarningReporting: true,
       useBlockaidTransactionWarningReporting: true,
     },
+    coinbaseConfig: {
+      coinbaseApiKey: config.COINBASE_API_KEY || process.env.COINBASE_API_KEY!,
+      coinbaseApiSecret:
+        config.COINBASE_API_SECRET || process.env.COINBASE_API_SECRET!,
+    },
   };
 }
 
