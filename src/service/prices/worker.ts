@@ -5,9 +5,9 @@ import { logger } from "../../logger";
 import { PriceClient } from ".";
 
 const { hostname, redisConnectionName, redisPort } = workerData;
-
 const PRICE_UPDATE_INTERVAL = 1 * 60 * 1000; // 1 minute in milliseconds
 const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
+
 const main = async () => {
   // Create Redis client with time series module enabled
   const redisClient = createClient({
