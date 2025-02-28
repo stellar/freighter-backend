@@ -40,9 +40,15 @@ type RedisClientWithTS = RedisClientType<
 export class PriceClient {
   redisClient?: RedisClientWithTS;
   logger: Logger;
+  server: StellarSdk.Horizon.Server;
   constructor(logger: Logger, redisClient?: RedisClientWithTS) {
     this.redisClient = redisClient;
     this.logger = logger;
+    const Sdk = getSdk(StellarSdkNext.Networks.PUBLIC);
+    const { Horizon } = Sdk;
+    this.server = new Horizon.Server(NETWORK_URLS.PUBLIC, {
+      allowHttp: true,
+    });
   }
 
   getPrice = async (token: string): Promise<TokenPriceData | null> => {
@@ -161,15 +167,9 @@ export class PriceClient {
   private async batchUpdatePrices(tokens: string[]): Promise<void> {
     if (!this.redisClient) return;
 
-    const Sdk = getSdk(StellarSdkNext.Networks.PUBLIC);
-    const { Horizon } = Sdk;
-    const server = new Horizon.Server(NETWORK_URLS.PUBLIC, {
-      allowHttp: !NETWORK_URLS.PUBLIC.includes("https"),
-    });
-
     // Calculate all prices in parallel
     const pricePromises = tokens.map((token) =>
-      this.calculatePriceInUSD(token, server)
+      this.calculatePriceInUSD(token)
         .then((price) => ({
           token,
           timestamp: price.timestamp,
@@ -229,12 +229,7 @@ export class PriceClient {
     if (!this.redisClient) {
       return new BigNumber(0);
     }
-    const Sdk = getSdk(StellarSdkNext.Networks.PUBLIC);
-    const { Horizon } = Sdk;
-    const server = new Horizon.Server(NETWORK_URLS.PUBLIC, {
-      allowHttp: !NETWORK_URLS.PUBLIC.includes("https"),
-    });
-    const { timestamp, price } = await this.calculatePriceInUSD(token, server);
+    const { timestamp, price } = await this.calculatePriceInUSD(token);
     const tsKey = this.getTimeSeriesKey(token);
 
     try {
@@ -252,10 +247,9 @@ export class PriceClient {
 
   private calculatePriceInUSD = async (
     token: string,
-    server: StellarSdk.Horizon.Server,
   ): Promise<{ timestamp: number; price: BigNumber }> => {
     try {
-      return await this.calculatePriceUsingPaths(token, server);
+      return await this.calculatePriceUsingPaths(token);
     } catch (error) {
       this.logger.error({ token }, "Error calculating price:", error);
       return { timestamp: 0, price: new BigNumber(0) };
@@ -264,7 +258,6 @@ export class PriceClient {
 
   private calculatePriceUsingPaths = async (
     token: string,
-    server: StellarSdk.Horizon.Server,
   ): Promise<{ timestamp: number; price: BigNumber }> => {
     let sourceAssets = undefined;
     if (token === "XLM") {
@@ -274,12 +267,16 @@ export class PriceClient {
       sourceAssets = [new StellarSdk.Asset(code, issuer), NativeAsset];
     }
 
-    const latestLedger = await server.ledgers().order("desc").limit(1).call();
+    const latestLedger = await this.server
+      .ledgers()
+      .order("desc")
+      .limit(1)
+      .call();
     const latestLedgerTimestamp = new Date(
       latestLedger.records[0].closed_at,
     ).getTime();
 
-    const paths = await server
+    const paths = await this.server
       .strictReceivePaths(
         sourceAssets,
         USDCAsset,
@@ -362,78 +359,5 @@ export class PriceClient {
   //       .call();
 
   //     return new BigNumber(xlmUsdcAggregations.records[0].avg);
-  //   };
-
-  //   private calculatePriceUsingOrderbook = async (
-  //     token: string,
-  //     network: NetworkNames,
-  //   ): Promise<BigNumber> => {
-  //     const networkUrl = NETWORK_URLS[network];
-  //     if (!networkUrl) {
-  //       throw new Error(ERROR.UNSUPPORTED_NETWORK);
-  //     }
-
-  //     const Sdk = getSdk(StellarSdkNext.Networks[network]);
-  //     const { Horizon } = Sdk;
-  //     const server = new Horizon.Server(networkUrl, {
-  //       allowHttp: !networkUrl.includes("https"),
-  //     });
-
-  //     try {
-  //       const [code, issuer] = token.split(":");
-  //       if (!code || !issuer) {
-  //         throw new Error("Invalid token format. Expected 'code:issuer'");
-  //       }
-
-  //       // Get the cached XLM price first
-  //       let xlmPrice = await this.getPrice("XLM");
-  //       if (!xlmPrice || xlmPrice.isZero()) {
-  //         xlmPrice = await this.calculateXLMPriceUsingOrderbook(server);
-  //       }
-
-  //       const tokenAsset = new StellarSdk.Asset(code, issuer);
-  //       const orderbook = await server
-  //         .orderbook(tokenAsset, NativeAsset)
-  //         .limit(1)
-  //         .call();
-
-  //       if (!orderbook.bids.length || !orderbook.asks.length) {
-  //         this.logger.warn({ token }, "No orders found in orderbook");
-  //         return new BigNumber(0);
-  //       }
-
-  //       // Calculate mid price from best bid and ask
-  //       const bestBid = new BigNumber(orderbook.bids[0].price);
-  //       const bestAsk = new BigNumber(orderbook.asks[0].price);
-  //       const tokenXlmPrice = bestBid.plus(bestAsk).dividedBy(2);
-
-  //       return tokenXlmPrice.times(xlmPrice);
-  //     } catch (error) {
-  //       this.logger.error(
-  //         { token },
-  //         "Error calculating price using orderbook",
-  //         error,
-  //       );
-  //       return new BigNumber(0);
-  //     }
-  //   };
-
-  //   private calculateXLMPriceUsingOrderbook = async (
-  //     server: StellarSdk.Horizon.Server,
-  //   ): Promise<BigNumber> => {
-  //     const orderbook = await server
-  //       .orderbook(NativeAsset, USDCAsset)
-  //       .limit(1)
-  //       .call();
-
-  //     if (!orderbook.bids.length || !orderbook.asks.length) {
-  //       this.logger.warn("No orders found in XLM/USDC orderbook");
-  //       return new BigNumber(0);
-  //     }
-
-  //     // Calculate mid price from best bid and ask
-  //     const bestBid = new BigNumber(orderbook.bids[0].price);
-  //     const bestAsk = new BigNumber(orderbook.asks[0].price);
-  //     return bestBid.plus(bestAsk).dividedBy(2);
   //   };
 }
