@@ -25,11 +25,7 @@ import {
   isNetwork,
   NetworkNames,
 } from "../helper/validate";
-import {
-  Balance,
-  NETWORK_URLS,
-  submitTransaction,
-} from "../helper/horizon-rpc";
+import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
 import {
   SOROBAN_RPC_URLS,
   buildTransfer,
@@ -343,25 +339,25 @@ export async function initApiServer(
             );
 
             // calculate the USD balance for each token
-            try {
-              await Promise.all(
-                Object.entries(data.balances).map(
-                  async ([balanceKey, balance]) => {
-                    const priceUSD = await priceClient.getPrice(balanceKey);
-                    if (priceUSD) {
-                      data.balances[balanceKey] = {
-                        ...(balance as Balance),
-                        availableUSD: (balance as Balance).available.times(
-                          priceUSD.currentPrice,
-                        ),
-                      };
-                    }
-                  },
-                ),
-              );
-            } catch (e) {
-              logger.error("Error calculating USD balance", e);
-            }
+            // try {
+            //   await Promise.all(
+            //     Object.entries(data.balances).map(
+            //       async ([balanceKey, balance]) => {
+            //         const priceUSD = await priceClient.getPrice(balanceKey);
+            //         if (priceUSD) {
+            //           data.balances[balanceKey] = {
+            //             ...(balance as Balance),
+            //             availableUSD: (balance as Balance).available.times(
+            //               priceUSD.currentPrice,
+            //             ),
+            //           };
+            //         }
+            //       },
+            //     ),
+            //   );
+            // } catch (e) {
+            //   logger.error("Error calculating USD balance", e);
+            // }
 
             try {
               data.balances = await addScannedStatus(
