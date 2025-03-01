@@ -15,7 +15,7 @@ import TimeSeriesCommands from "@redis/time-series";
 import { TimeSeriesDuplicatePolicies } from "@redis/time-series";
 const STELLAR_EXPERT_TOP_ASSETS_URL =
   "https://api.stellar.expert/explorer/public/asset-list/top50";
-const PRICE_TS_KEY_PREFIX = "ts:price:";
+const PRICE_TS_KEY_PREFIX = "ts:price";
 const ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 const ONE_MINUTE = 60 * 1000; // 1 minute in milliseconds
 const RETENTION_PERIOD = 24 * 60 * 60 * 1000; // 1 day retention period
@@ -26,7 +26,6 @@ const USDCAsset = new StellarSdk.Asset(
 const NativeAsset = StellarSdk.Asset.native();
 const USD_RECIEIVE_VALUE = new BigNumber(100);
 const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
-
 export interface TokenPriceData {
   currentPrice: BigNumber;
   percentagePriceChange24h: BigNumber | null;
@@ -142,12 +141,9 @@ export class PriceClient {
 
     try {
       // Get all existing time series keys
-      const keys = (await this.redisClient.keys(
-        `${PRICE_TS_KEY_PREFIX}*`,
-      )) as string[];
-
-      // Extract token identifiers from keys
-      const tokens = keys.map((key) => key.replace(PRICE_TS_KEY_PREFIX, ""));
+      const tokens = await this.redisClient.ts.queryIndex([
+        `PRICE_CACHE_LABEL=${PRICE_TS_KEY_PREFIX}`,
+      ]);
 
       if (tokens.length === 0) {
         this.logger.warn("No tokens found for price update");
@@ -166,7 +162,7 @@ export class PriceClient {
     if (token === "native") {
       key = "XLM";
     }
-    return `${PRICE_TS_KEY_PREFIX}${key}`;
+    return key;
   }
 
   private async batchUpdatePrices(tokens: string[]): Promise<void> {
@@ -217,6 +213,9 @@ export class PriceClient {
       const created = await this.redisClient.ts.create(key, {
         RETENTION: RETENTION_PERIOD,
         DUPLICATE_POLICY: TimeSeriesDuplicatePolicies.LAST,
+        LABELS: {
+          PRICE_CACHE_LABEL: PRICE_TS_KEY_PREFIX,
+        },
       });
       this.logger.info(`Created time series ${key}`, created);
     } catch (error) {
