@@ -26,6 +26,7 @@ const USDCAsset = new StellarSdk.Asset(
 const NativeAsset = StellarSdk.Asset.native();
 const USD_RECIEIVE_VALUE = new BigNumber(100);
 const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
+const TOKEN_UPDATE_BATCH_SIZE = 10; // Process 10 tokens at a time
 export interface TokenPriceData {
   currentPrice: BigNumber;
   percentagePriceChange24h: BigNumber | null;
@@ -150,8 +151,15 @@ export class PriceClient {
         return;
       }
 
-      // Update prices for all tokens
-      await this.batchUpdatePrices(tokens);
+      for (let i = 0; i < tokens.length; i += TOKEN_UPDATE_BATCH_SIZE) {
+        const tokenBatch = tokens.slice(i, i + TOKEN_UPDATE_BATCH_SIZE);
+        this.logger.info(
+          `Processing batch ${i / TOKEN_UPDATE_BATCH_SIZE + 1} of ${Math.ceil(
+            tokens.length / TOKEN_UPDATE_BATCH_SIZE,
+          )}`,
+        );
+        await this.batchUpdatePrices(tokenBatch);
+      }
     } catch (error) {
       this.logger.error("Error updating prices", error);
     }
