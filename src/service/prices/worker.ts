@@ -1,12 +1,59 @@
-// import { Redis } from "ioredis";
 import { createClient } from "redis";
 import { workerData } from "worker_threads";
 import { logger } from "../../logger";
 import { PriceClient } from ".";
-
+import {
+  RedisClientType,
+  RedisModules,
+  RedisFunctions,
+  RedisScripts,
+} from "redis";
+import TimeSeriesCommands from "@redis/time-series";
 const { hostname, redisConnectionName, redisPort } = workerData;
 const PRICE_UPDATE_INTERVAL = 1 * 60 * 1000; // 1 minute in milliseconds
 const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
+const NUM_RETRIES_CACHE_INITIALIZATION = 3;
+const RETRY_DELAY_MS = 30000; // 30 seconds in milliseconds
+type RedisClientWithTS = RedisClientType<
+  RedisModules & { ts: typeof TimeSeriesCommands },
+  RedisFunctions,
+  RedisScripts
+>;
+
+const initializePriceCache = async (
+  priceClient: PriceClient,
+  redisClient: RedisClientWithTS,
+): Promise<void> => {
+  let lastError: string | undefined;
+
+  for (
+    let attempt = 1;
+    attempt <= NUM_RETRIES_CACHE_INITIALIZATION;
+    attempt++
+  ) {
+    try {
+      logger.info(
+        `Attempting price cache initialization (attempt ${attempt}/${NUM_RETRIES_CACHE_INITIALIZATION})`,
+      );
+      await priceClient.initPriceCache();
+      await redisClient.set(PRICE_CACHE_INITIALIZED_KEY, "true");
+      return;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : "Unknown error";
+      if (attempt < NUM_RETRIES_CACHE_INITIALIZATION) {
+        logger.warn(
+          { error: lastError },
+          `Price cache initialization attempt: ${attempt} failed, retrying in ${RETRY_DELAY_MS / 1000} seconds`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+      }
+    }
+  }
+
+  throw new Error(
+    `Failed to initialize price cache after ${NUM_RETRIES_CACHE_INITIALIZATION} attempts. Last error: ${lastError}`,
+  );
+};
 
 const main = async () => {
   // Create Redis client with time series module enabled
@@ -19,23 +66,23 @@ const main = async () => {
   });
   await redisClient.connect();
 
-  redisClient.on("error", (error: any) => {
-    logger.error("redis connection error", error);
+  redisClient.on("error", (error: Error) => {
+    logger.error({ error: error.message }, "Redis connection error");
   });
 
   const priceClient = new PriceClient(logger, redisClient);
 
   // Initialize cache with top 50 assets
-  logger.info("Initializing price cache");
   const priceCacheInitialized = await redisClient.get(
     PRICE_CACHE_INITIALIZED_KEY,
   );
+
   if (!priceCacheInitialized) {
     try {
-      await priceClient.initPriceCache();
-      logger.info("Price cache initialized");
-    } catch (e) {
-      logger.error("Failed to initialize price cache:", e);
+      await initializePriceCache(priceClient, redisClient);
+    } catch (error) {
+      logger.error("Fatal error during price cache initialization");
+      process.exit(1);
     }
   } else {
     logger.info("Price cache already initialized");

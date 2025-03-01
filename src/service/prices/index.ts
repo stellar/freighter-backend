@@ -16,8 +16,8 @@ import { TimeSeriesDuplicatePolicies } from "@redis/time-series";
 const STELLAR_EXPERT_TOP_ASSETS_URL =
   "https://api.stellar.expert/explorer/public/asset-list/top50";
 const PRICE_TS_KEY_PREFIX = "ts:price:";
-const ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds]
-const ONE_HOUR = 60 * 60 * 1000; // 1 hour in milliseconds
+const ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+const ONE_MINUTE = 60 * 1000; // 1 minute in milliseconds
 const RETENTION_PERIOD = 24 * 60 * 60 * 1000; // 1 day retention period
 const USDCAsset = new StellarSdk.Asset(
   "USDC",
@@ -60,7 +60,6 @@ export class PriceClient {
     const tsKey = this.getTimeSeriesKey(token);
 
     try {
-      // Get latest price using TS.GET
       const latestPrice = await this.redisClient.ts.get(tsKey);
 
       if (!latestPrice) {
@@ -73,12 +72,12 @@ export class PriceClient {
           : null;
       }
 
-      // Get 24h ago price using TS.RANGE. Use a 1 hr offset as the end time.
+      // Get 24h ago price using TS.RANGE. Use a 1 min offset as the end time.
       const dayAgo = Date.now() - ONE_DAY;
       const oldPrices = await this.redisClient.ts.range(
         tsKey,
         dayAgo,
-        dayAgo + ONE_HOUR,
+        dayAgo + ONE_MINUTE,
         {
           COUNT: 1,
         },
@@ -112,7 +111,9 @@ export class PriceClient {
   };
 
   initPriceCache = async (): Promise<void> => {
-    if (!this.redisClient) return;
+    if (!this.redisClient) {
+      throw new Error("Redis client not initialized");
+    }
 
     try {
       // Get top 50 assets
@@ -122,6 +123,7 @@ export class PriceClient {
         "XLM",
         ...data.assets.map((asset: any) => `${asset.code}:${asset.issuer}`),
       ];
+
       for (const token of tokens) {
         await this.createTimeSeries(this.getTimeSeriesKey(token));
       }
@@ -130,7 +132,8 @@ export class PriceClient {
       await this.batchUpdatePrices(tokens);
       await this.redisClient.set(PRICE_CACHE_INITIALIZED_KEY, "true");
     } catch (error) {
-      this.logger.error("Error initializing price cache", error);
+      this.logger.error("Failed to initialize price cache", error);
+      throw new Error("Failed to initialize price cache");
     }
   };
 
