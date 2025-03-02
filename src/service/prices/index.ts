@@ -24,7 +24,7 @@ const USDCAsset = new StellarSdk.Asset(
   "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
 );
 const NativeAsset = StellarSdk.Asset.native();
-const USD_RECIEIVE_VALUE = new BigNumber(100);
+const USD_RECIEIVE_VALUE = new BigNumber(500);
 const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
 const TOKEN_UPDATE_BATCH_SIZE = 10; // Process 10 tokens at a time
 const TOKEN_COUNTER_SORTED_SET_KEY = "token_counter";
