@@ -27,6 +27,8 @@ const NativeAsset = StellarSdk.Asset.native();
 const USD_RECIEIVE_VALUE = new BigNumber(100);
 const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
 const TOKEN_UPDATE_BATCH_SIZE = 10; // Process 10 tokens at a time
+const TOKEN_COUNTER_SORTED_SET_KEY = "token_counter";
+
 export interface TokenPriceData {
   currentPrice: BigNumber;
   percentagePriceChange24h: BigNumber | null;
@@ -95,6 +97,7 @@ export class PriceClient {
             .times(100);
         }
       }
+      await this.redisClient.zIncrBy(TOKEN_COUNTER_SORTED_SET_KEY, 1, tsKey);
 
       return {
         currentPrice,
@@ -125,7 +128,8 @@ export class PriceClient {
       ];
 
       for (const token of tokens) {
-        await this.createTimeSeries(this.getTimeSeriesKey(token));
+        const tsKey = this.getTimeSeriesKey(token);
+        await this.createTimeSeries(tsKey);
       }
 
       // Update prices for all tokens
@@ -141,10 +145,14 @@ export class PriceClient {
     if (!this.redisClient) return;
 
     try {
-      // Get all existing time series keys
-      const tokens = await this.redisClient.ts.queryIndex([
-        `PRICE_CACHE_LABEL=${PRICE_TS_KEY_PREFIX}`,
-      ]);
+      const tokens = await this.redisClient.zRange(
+        TOKEN_COUNTER_SORTED_SET_KEY,
+        0,
+        -1,
+        {
+          REV: true,
+        },
+      );
 
       if (tokens.length === 0) {
         this.logger.warn("No tokens found for price update");
@@ -225,7 +233,13 @@ export class PriceClient {
           PRICE_CACHE_LABEL: PRICE_TS_KEY_PREFIX,
         },
       });
+      const addedToSortedSet = await this.redisClient.zIncrBy(
+        TOKEN_COUNTER_SORTED_SET_KEY,
+        1,
+        key,
+      );
       this.logger.info(`Created time series ${key}`, created);
+      this.logger.info(`Added to sorted set ${key}`, addedToSortedSet);
     } catch (error) {
       // Ignore if time series already exists
       if (
