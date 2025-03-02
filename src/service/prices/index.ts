@@ -28,6 +28,8 @@ const USD_RECIEIVE_VALUE = new BigNumber(100);
 const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
 const TOKEN_UPDATE_BATCH_SIZE = 10; // Process 10 tokens at a time
 const TOKEN_COUNTER_SORTED_SET_KEY = "token_counter";
+const BATCH_UPDATE_DELAY_MS = 15000; // 15 second delay between batches
+const PRICE_CALCULATION_TIMEOUT_MS = 10000;
 
 export interface TokenPriceData {
   currentPrice: BigNumber;
@@ -167,6 +169,11 @@ export class PriceClient {
           )}`,
         );
         await this.batchUpdatePrices(tokenBatch);
+
+        // Add a 15s delay between batches to avoid rate limiting
+        await new Promise((resolve) =>
+          setTimeout(resolve, BATCH_UPDATE_DELAY_MS),
+        );
       }
     } catch (error) {
       this.logger.error("Error updating prices", error);
@@ -275,7 +282,21 @@ export class PriceClient {
     token: string,
   ): Promise<{ timestamp: number; price: BigNumber }> => {
     try {
-      return await this.calculatePriceUsingPaths(token);
+      // Add a 10s timeout to the price calculation
+      const timeoutPromise = new Promise<{
+        timestamp: number;
+        price: BigNumber;
+      }>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Price calculation timeout for ${token}`)),
+          PRICE_CALCULATION_TIMEOUT_MS,
+        ),
+      );
+
+      return await Promise.race([
+        this.calculatePriceUsingPaths(token),
+        timeoutPromise,
+      ]);
     } catch (error) {
       this.logger.error({ token }, "Error calculating price:", error);
       return { timestamp: 0, price: new BigNumber(0) };
