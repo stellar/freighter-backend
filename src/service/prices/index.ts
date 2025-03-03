@@ -28,7 +28,7 @@ const USD_RECIEIVE_VALUE = new BigNumber(500);
 const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
 const TOKEN_UPDATE_BATCH_SIZE = 10; // Process 10 tokens at a time
 const TOKEN_COUNTER_SORTED_SET_KEY = "token_counter";
-const BATCH_UPDATE_DELAY_MS = 15000; // 15 second delay between batches
+const BATCH_UPDATE_DELAY_MS = 10000; // 5 second delay between batches
 const PRICE_CALCULATION_TIMEOUT_MS = 10000;
 
 export interface TokenPriceData {
