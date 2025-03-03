@@ -77,7 +77,7 @@ export class PriceClient {
       }
 
       // Get 24h ago price using TS.RANGE. Use a 1 min offset as the end time.
-      const dayAgo = Date.now() - ONE_DAY;
+      const dayAgo = latestPrice.timestamp - ONE_DAY;
       const oldPrices = await this.redisClient.ts.range(
         tsKey,
         dayAgo,
@@ -161,6 +161,8 @@ export class PriceClient {
         return;
       }
 
+      // Process tokens in batches and in decreasing order of popularity (number of times requested).
+      // This ensures that the most popular tokens are updated first.
       for (let i = 0; i < tokens.length; i += TOKEN_UPDATE_BATCH_SIZE) {
         const tokenBatch = tokens.slice(i, i + TOKEN_UPDATE_BATCH_SIZE);
         this.logger.info(
@@ -170,7 +172,7 @@ export class PriceClient {
         );
         await this.batchUpdatePrices(tokenBatch);
 
-        // Add a 15s delay between batches to avoid rate limiting
+        // Add a delay between batches to avoid overloading the price calculation source API.
         await new Promise((resolve) =>
           setTimeout(resolve, BATCH_UPDATE_DELAY_MS),
         );
