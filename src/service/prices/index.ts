@@ -117,7 +117,9 @@ export class PriceClient {
 
   initPriceCache = async (): Promise<void> => {
     if (!this.redisClient) {
-      throw new Error("Redis client not initialized");
+      throw new Error(
+        "Redis client not initialized for price cache initialization",
+      );
     }
 
     try {
@@ -138,8 +140,15 @@ export class PriceClient {
       await this.batchUpdatePrices(tokens);
       await this.redisClient.set(PRICE_CACHE_INITIALIZED_KEY, "true");
     } catch (error) {
-      this.logger.error("Failed to initialize price cache", error);
-      throw new Error("Failed to initialize price cache");
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        { error: errorMsg },
+        "Failed to initialize price cache",
+      );
+      throw new PriceCacheInitializationError(
+        `Failed to initialize price cache: ${errorMsg}`,
+        error,
+      );
     }
   };
 
@@ -202,7 +211,13 @@ export class PriceClient {
           price: price.price,
         }))
         .catch((error) => {
-          this.logger.error({ token }, "Error calculating price", error);
+          this.logger.error(
+            {
+              token,
+              error: error instanceof Error ? error.message : String(error),
+            },
+            "Error calculating price",
+          );
           return null;
         }),
     );
@@ -264,20 +279,23 @@ export class PriceClient {
     if (!this.redisClient) {
       return new BigNumber(0);
     }
-    const { timestamp, price } = await this.calculatePriceInUSD(token);
-    const tsKey = this.getTimeSeriesKey(token);
-
     try {
+      const { timestamp, price } = await this.calculatePriceInUSD(token);
+      const tsKey = this.getTimeSeriesKey(token);
+
       await this.createTimeSeries(tsKey);
       await this.redisClient.ts.add(tsKey, timestamp, price.toNumber());
+      return price;
     } catch (error) {
       this.logger.error(
-        { token, price: price.toString() },
-        "Error adding price to time series",
-        error,
+        {
+          token,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "Error adding new token to cache",
       );
+      return new BigNumber(0);
     }
-    return price;
   };
 
   private calculatePriceInUSD = async (
@@ -301,7 +319,7 @@ export class PriceClient {
       ]);
     } catch (error) {
       this.logger.error({ token }, "Error calculating price:", error);
-      return { timestamp: 0, price: new BigNumber(0) };
+      throw new PriceCalculationError(token, error);
     }
   };
 
@@ -409,4 +427,21 @@ export class PriceClient {
 
   //     return new BigNumber(xlmUsdcAggregations.records[0].avg);
   //   };
+}
+
+// Add these error classes to your file
+class PriceCalculationError extends Error {
+  constructor(token: string, cause?: unknown) {
+    super(`Failed to calculate price for ${token}`);
+    this.name = "PriceCalculationError";
+    this.cause = cause;
+  }
+}
+
+class PriceCacheInitializationError extends Error {
+  constructor(message: string, cause?: unknown) {
+    super(message);
+    this.name = "PriceCacheInitializationError";
+    this.cause = cause;
+  }
 }
