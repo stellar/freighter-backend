@@ -6,7 +6,7 @@ export class TokenPricesError extends Error {
 }
 
 export const ensureError = (error: unknown, message: string): Error => {
-  if (error instanceof TokenPricesError || error instanceof Error) {
+  if (error instanceof TokenPricesError) {
     return error;
   }
   return new TokenPricesError(

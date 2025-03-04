@@ -63,12 +63,16 @@ export class PriceClient {
     }
 
     const tsKey = this.getTimeSeriesKey(token);
+    let latestPrice: { timestamp: number; value: number } | null = null;
+    try {
+      latestPrice = await this.redisClient.ts.get(tsKey);
+    } catch (e) {
+      return this.handleMissingToken(token);
+    }
 
     try {
-      const latestPrice = await this.redisClient.ts.get(tsKey);
-
       if (!latestPrice) {
-        return this.handleMissingToken(token);
+        return null;
       }
 
       // Get 24h ago price using TS.RANGE. Use a 1 min offset as the end time.
@@ -187,7 +191,7 @@ export class PriceClient {
         `adding missing token to cache for ${token}`,
       );
       this.logger.error(error);
-      throw error;
+      return null;
     }
   };
 
@@ -348,7 +352,12 @@ export class PriceClient {
         throw new Error(`No paths found for ${token}`);
       }
 
-      const tokenUnit = new BigNumber(paths.records[0].source_amount);
+      const tokenUnit = new BigNumber(
+        paths.records.reduce(
+          (min, record) => Math.min(min, Number(record.source_amount)),
+          Number(paths.records[0].source_amount),
+        ),
+      );
       const unitTokenPrice = USD_RECIEIVE_VALUE.dividedBy(tokenUnit);
       return { timestamp: latestLedgerTimestamp, price: unitTokenPrice };
     } catch (e) {
