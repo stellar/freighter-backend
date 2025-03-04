@@ -13,7 +13,7 @@ import {
 } from "redis";
 import TimeSeriesCommands from "@redis/time-series";
 import { TimeSeriesDuplicatePolicies } from "@redis/time-series";
-import { TokenPricesError } from "./errors";
+import { ensureError } from "./errors";
 const STELLAR_EXPERT_TOP_ASSETS_URL =
   "https://api.stellar.expert/explorer/public/asset-list/top50";
 const PRICE_TS_KEY_PREFIX = "ts:price";
@@ -48,10 +48,6 @@ export class PriceClient {
   logger: Logger;
   server: StellarSdk.Horizon.Server;
   constructor(logger: Logger, redisClient?: RedisClientWithTS) {
-    if (!logger) {
-      throw new Error("Logger is required");
-    }
-
     this.redisClient = redisClient;
     this.logger = logger;
     const Sdk = getSdk(StellarSdkNext.Networks.PUBLIC);
@@ -63,10 +59,7 @@ export class PriceClient {
 
   getPrice = async (token: string): Promise<TokenPriceData | null> => {
     if (!this.redisClient) {
-      throw new TokenPricesError(
-        "RedisConnectionError",
-        "Redis client not initialized",
-      );
+      return null;
     }
 
     const tsKey = this.getTimeSeriesKey(token);
@@ -75,21 +68,7 @@ export class PriceClient {
       const latestPrice = await this.redisClient.ts.get(tsKey);
 
       if (!latestPrice) {
-        try {
-          const newPrice = await this.addNewTokenToCache(token);
-          return newPrice
-            ? {
-                currentPrice: newPrice,
-                percentagePriceChange24h: null,
-              }
-            : null;
-        } catch (error) {
-          this.logger.error(
-            { token, error },
-            "Failed to add new token to cache",
-          );
-          return null;
-        }
+        return this.handleMissingToken(token);
       }
 
       // Get 24h ago price using TS.RANGE. Use a 1 min offset as the end time.
@@ -121,12 +100,12 @@ export class PriceClient {
         currentPrice,
         percentagePriceChange24h,
       };
-    } catch (error) {
-      this.logger.error(
-        { token },
-        "Error getting price from time series",
-        error,
+    } catch (e) {
+      const error = ensureError(
+        e,
+        `getting price from time series for ${token}`,
       );
+      this.logger.error(error);
       return null;
     }
   };
@@ -136,46 +115,30 @@ export class PriceClient {
       throw new Error("Redis client not initialized");
     }
 
-    try {
-      // Get top 50 assets
-      const response = await fetch(STELLAR_EXPERT_TOP_ASSETS_URL);
-      const data = await response.json();
-      const tokens = [
-        "XLM",
-        ...data.assets.map((asset: any) => `${asset.code}:${asset.issuer}`),
-      ];
+    // Get top 50 assets
+    const response = await fetch(STELLAR_EXPERT_TOP_ASSETS_URL);
+    const data = await response.json();
+    const tokens = [
+      "XLM",
+      ...data.assets.map((asset: any) => `${asset.code}:${asset.issuer}`),
+    ];
 
-      for (const token of tokens) {
-        const tsKey = this.getTimeSeriesKey(token);
-        await this.createTimeSeries(tsKey);
-      }
-
-      // Update prices for all tokens
-      await this.batchUpdatePrices(tokens);
-      await this.redisClient.set(PRICE_CACHE_INITIALIZED_KEY, "true");
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        { error: errorMsg },
-        "Failed to initialize price cache",
-      );
-      throw new TokenPricesError(
-        "PriceCacheInitializationError",
-        `Failed to initialize price cache: ${errorMsg}`,
-        error,
-      );
+    for (const token of tokens) {
+      const tsKey = this.getTimeSeriesKey(token);
+      await this.createTimeSeries(tsKey);
     }
+
+    // Update prices for all tokens
+    await this.batchUpdatePrices(tokens);
+    await this.redisClient.set(PRICE_CACHE_INITIALIZED_KEY, "true");
   };
 
-  updatePrices = async (): Promise<boolean> => {
-    if (!this.redisClient) {
-      throw new TokenPricesError(
-        "RedisConnectionError",
-        "Redis client not initialized",
-      );
-    }
-
+  updatePrices = async (): Promise<void> => {
     try {
+      if (!this.redisClient) {
+        throw new Error("Redis client not initialized");
+      }
+
       const tokens = await this.redisClient.zRange(
         TOKEN_COUNTER_SORTED_SET_KEY,
         0,
@@ -186,8 +149,7 @@ export class PriceClient {
       );
 
       if (tokens.length === 0) {
-        this.logger.warn("No tokens found for price update");
-        return true; // Nothing to do, not an error
+        throw new Error("No tokens found in sorted set");
       }
 
       // Process tokens in batches and in decreasing order of popularity (number of times requested).
@@ -206,14 +168,26 @@ export class PriceClient {
           setTimeout(resolve, BATCH_UPDATE_DELAY_MS),
         );
       }
-      return true;
-    } catch (error) {
-      this.logger.error("Error updating prices", error);
-      throw new TokenPricesError(
-        "PriceCalculationError",
-        "Failed to update prices",
-        error,
+    } catch (e) {
+      throw ensureError(e, `updating prices`);
+    }
+  };
+
+  private handleMissingToken = async (
+    token: string,
+  ): Promise<TokenPriceData | null> => {
+    try {
+      const newPrice = await this.addNewTokenToCache(token);
+      return newPrice
+        ? { currentPrice: newPrice, percentagePriceChange24h: null }
+        : null;
+    } catch (e) {
+      const error = ensureError(
+        e,
+        `adding missing token to cache for ${token}`,
       );
+      this.logger.error(error);
+      throw error;
     }
   };
 
@@ -226,72 +200,55 @@ export class PriceClient {
   }
 
   private async batchUpdatePrices(tokens: string[]): Promise<void> {
-    if (!this.redisClient) {
-      throw new TokenPricesError(
-        "RedisConnectionError",
-        "Redis client not initialized",
-      );
-    }
-
-    // Calculate all prices in parallel
-    const pricePromises = tokens.map((token) =>
-      this.calculatePriceInUSD(token)
-        .then((price) => ({
-          token,
-          timestamp: price.timestamp,
-          price: price.price,
-        }))
-        .catch((error) => {
-          this.logger.error(
-            {
-              token,
-              error: error instanceof Error ? error.message : String(error),
-            },
-            "Error calculating price",
-          );
-          return null;
-        }),
-    );
-
-    // Filter out null responses - these are tokens for which we failed to calculate a price.
-    const prices = (await Promise.all(pricePromises)).filter(
-      (
-        price,
-      ): price is { token: string; timestamp: number; price: BigNumber } =>
-        price !== null,
-    );
-
-    if (prices.length === 0) {
-      this.logger.warn("No valid prices calculated");
-      return;
-    }
-
     try {
+      if (!this.redisClient) {
+        throw new Error("Redis client not initialized");
+      }
+
+      // Calculate all prices in parallel
+      const pricePromises = tokens.map((token) =>
+        this.calculatePriceInUSD(token)
+          .then((price) => ({
+            token,
+            timestamp: price.timestamp,
+            price: price.price,
+          }))
+          .catch((e) => {
+            const error = ensureError(e, `calculating price for ${token}`);
+            this.logger.error(error);
+            return null;
+          }),
+      );
+
+      // Filter out null responses - these are tokens for which we failed to calculate a price.
+      const prices = (await Promise.all(pricePromises)).filter(
+        (
+          price,
+        ): price is { token: string; timestamp: number; price: BigNumber } =>
+          price !== null,
+      );
+
+      if (prices.length === 0) {
+        throw new Error("No prices calculated");
+      }
+
       const mAddEntries = prices.map(({ token, timestamp, price }) => ({
         key: this.getTimeSeriesKey(token),
         timestamp,
         value: price.toNumber(),
       }));
       await this.redisClient.ts.mAdd(mAddEntries);
-    } catch (error) {
-      this.logger.error("Error updating prices with TS.MADD", error);
-      throw new TokenPricesError(
-        "PriceCacheInitializationError",
-        "Failed to add calculated prices to Redis time series",
-        error,
-      );
+    } catch (e) {
+      throw ensureError(e, `batch updating prices`);
     }
   }
 
   private async createTimeSeries(key: string): Promise<void> {
-    if (!this.redisClient) {
-      throw new TokenPricesError(
-        "RedisConnectionError",
-        "Redis client not initialized",
-      );
-    }
-
     try {
+      if (!this.redisClient) {
+        throw new Error("Redis client not initialized");
+      }
+
       const created = await this.redisClient.ts.create(key, {
         RETENTION: RETENTION_PERIOD,
         DUPLICATE_POLICY: TimeSeriesDuplicatePolicies.LAST,
@@ -306,47 +263,27 @@ export class PriceClient {
       );
       this.logger.info(`Created time series ${key}`, created);
       this.logger.info(`Added to sorted set ${key}`, addedToSortedSet);
-    } catch (error) {
-      // More robust error checking
-      if (error instanceof Error && error.message.includes("already exists")) {
-        // This is an expected case - the time series already exists
-        return;
-      }
-      this.logger.error(`Error creating time series ${key}:`, error);
-      throw new TokenPricesError(
-        "PriceCacheInitializationError",
-        `Failed to create time series for ${key}`,
-        error,
-      );
+    } catch (e) {
+      throw ensureError(e, `creating time series for ${key}`);
     }
   }
 
   private addNewTokenToCache = async (
     token: string,
   ): Promise<BigNumber | null> => {
-    if (!this.redisClient) {
-      throw new TokenPricesError(
-        "RedisConnectionError",
-        "Redis client not initialized",
-      );
-    }
-
     try {
+      if (!this.redisClient) {
+        throw new Error("Redis client not initialized");
+      }
+
       const { timestamp, price } = await this.calculatePriceInUSD(token);
       const tsKey = this.getTimeSeriesKey(token);
 
       await this.createTimeSeries(tsKey);
       await this.redisClient.ts.add(tsKey, timestamp, price.toNumber());
       return price;
-    } catch (error) {
-      this.logger.error(
-        {
-          token,
-          error: error instanceof Error ? error.message : String(error),
-        },
-        "Error adding new token to cache",
-      );
-      return null;
+    } catch (e) {
+      throw ensureError(e, `adding new token to cache for ${token}`);
     }
   };
 
@@ -360,13 +297,7 @@ export class PriceClient {
         price: BigNumber;
       }>((_, reject) =>
         setTimeout(
-          () =>
-            reject(
-              new TokenPricesError(
-                "PriceCalculationError",
-                `Price calculation timeout for ${token}`,
-              ),
-            ),
+          () => reject(new Error(`Price calculation timeout for ${token}`)),
           PRICE_CALCULATION_TIMEOUT_MS,
         ),
       );
@@ -375,16 +306,8 @@ export class PriceClient {
         this.calculatePriceUsingPaths(token),
         timeoutPromise,
       ]);
-    } catch (error) {
-      this.logger.error({ token }, "Error calculating price:", error);
-      if (error instanceof TokenPricesError) {
-        throw error;
-      }
-      throw new TokenPricesError(
-        "PriceCalculationError",
-        `Failed to calculate price for ${token}`,
-        error,
-      );
+    } catch (e) {
+      throw ensureError(e, `calculating price for ${token}`);
     }
   };
 
@@ -398,8 +321,7 @@ export class PriceClient {
       } else {
         const [code, issuer] = token.split(":");
         if (!code || !issuer) {
-          throw new TokenPricesError(
-            "PriceCalculationError",
+          throw new Error(
             `Invalid token format: ${token}. Expected 'code:issuer'`,
           );
         }
@@ -422,93 +344,15 @@ export class PriceClient {
           USD_RECIEIVE_VALUE.toString(),
         )
         .call();
-
       if (!paths.records.length) {
-        this.logger.warn({ token }, "No path found");
-        return { timestamp: latestLedgerTimestamp, price: new BigNumber(0) };
+        throw new Error(`No paths found for ${token}`);
       }
 
       const tokenUnit = new BigNumber(paths.records[0].source_amount);
       const unitTokenPrice = USD_RECIEIVE_VALUE.dividedBy(tokenUnit);
       return { timestamp: latestLedgerTimestamp, price: unitTokenPrice };
-    } catch (error) {
-      this.logger.error(
-        { token },
-        "Error calculating price using paths:",
-        error,
-      );
-      throw new TokenPricesError(
-        "PriceCalculationError",
-        `Failed to calculate price for ${token} using paths`,
-        error,
-      );
+    } catch (e) {
+      throw ensureError(e, `calculating price using paths for ${token}`);
     }
   };
-  //   private calculateTokenPriceUsingTradeAggregations = async (
-  //     token: string,
-  //     server: StellarSdk.Horizon.Server,
-  //   ): Promise<BigNumber> => {
-  //     try {
-  //       const [code, issuer] = token.split(":");
-  //       if (!code || !issuer) {
-  //         throw new Error("Invalid token format. Expected 'code:issuer'");
-  //       }
-
-  //       // Get the cached XLM price first
-  //       let xlmPrice = await this.getPrice("XLM");
-  //       if (!xlmPrice || xlmPrice.isZero()) {
-  //         xlmPrice = await this.calculateXLMPriceUsingTradeAggregations(server);
-  //       }
-
-  //       const endTime = Date.now();
-  //       const startTime = endTime - ONE_HOUR;
-  //       const tokenAsset = new StellarSdk.Asset(code, issuer);
-  //       const tokenXlmAggregations = await server
-  //         .tradeAggregation(
-  //           tokenAsset,
-  //           NativeAsset,
-  //           startTime,
-  //           endTime,
-  //           RESOLUTION,
-  //           0, // offset
-  //         )
-  //         .call();
-
-  //       if (!tokenXlmAggregations.records.length) {
-  //         this.logger.warn({ token }, "No token/XLM trade aggregations found");
-  //         return new BigNumber(0);
-  //       }
-
-  //       // Calculate token price in USD by multiplying with XLM/USD price
-  //       const tokenXlmPrice = new BigNumber(tokenXlmAggregations.records[0].avg);
-  //       return tokenXlmPrice.times(xlmPrice);
-  //     } catch (error) {
-  //       this.logger.error(
-  //         { token },
-  //         "Error calculating price using trade aggregations",
-  //         error,
-  //       );
-  //       return new BigNumber(0);
-  //     }
-  //   };
-
-  //   private calculateXLMPriceUsingTradeAggregations = async (
-  //     server: StellarSdk.Horizon.Server,
-  //   ): Promise<BigNumber> => {
-  //     const endTime = Date.now();
-  //     const startTime = endTime - ONE_HOUR;
-
-  //     const xlmUsdcAggregations = await server
-  //       .tradeAggregation(
-  //         NativeAsset,
-  //         USDCAsset,
-  //         startTime,
-  //         endTime,
-  //         RESOLUTION,
-  //         0, // offset
-  //       )
-  //       .call();
-
-  //     return new BigNumber(xlmUsdcAggregations.records[0].avg);
-  //   };
 }

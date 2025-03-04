@@ -9,6 +9,7 @@ import {
   RedisScripts,
 } from "redis";
 import TimeSeriesCommands from "@redis/time-series";
+import { ensureError } from "./errors";
 const { hostname, redisConnectionName, redisPort } = workerData;
 const PRICE_UPDATE_INTERVAL = 1 * 60 * 1000; // 1 minute in milliseconds
 const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
@@ -38,8 +39,8 @@ const initializePriceCache = async (
       await priceClient.initPriceCache();
       await redisClient.set(PRICE_CACHE_INITIALIZED_KEY, "true");
       return;
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : "Unknown error";
+    } catch (e) {
+      lastError = ensureError(e, "price cache initialization").message;
       if (attempt < NUM_RETRIES_CACHE_INITIALIZATION) {
         logger.warn(
           { error: lastError },
@@ -80,8 +81,9 @@ const main = async () => {
   if (!priceCacheInitialized) {
     try {
       await initializePriceCache(priceClient, redisClient);
-    } catch (error) {
-      logger.error("Fatal error during price cache initialization");
+    } catch (e) {
+      const error = ensureError(e, "price cache initialization");
+      logger.error(error);
       process.exit(1);
     }
   } else {
@@ -94,7 +96,8 @@ const main = async () => {
       await priceClient.updatePrices();
       logger.info("Updated price cache");
     } catch (e) {
-      logger.error("Failed to update price cache:", e);
+      const error = ensureError(e, "updating price cache");
+      logger.error(error);
     }
   }, PRICE_UPDATE_INTERVAL);
 };

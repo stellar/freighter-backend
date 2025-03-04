@@ -1,12 +1,16 @@
-type ErrorName =
-  | "PriceCacheInitializationError"
-  | "PriceCalculationError"
-  | "RedisConnectionError";
-
 export class TokenPricesError extends Error {
-  constructor(name: ErrorName, message: string, cause?: unknown) {
+  constructor(message: string, cause?: unknown) {
     super(message);
-    this.name = name;
     this.cause = cause;
   }
 }
+
+export const ensureError = (error: unknown, message: string): Error => {
+  if (error instanceof TokenPricesError || error instanceof Error) {
+    return error;
+  }
+  return new TokenPricesError(
+    message,
+    error instanceof Error ? error : undefined,
+  );
+};
