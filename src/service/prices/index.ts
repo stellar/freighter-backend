@@ -179,7 +179,19 @@ export class PriceClient {
             tokens.length / TOKEN_UPDATE_BATCH_SIZE,
           )}`,
         );
-        await this.batchUpdatePrices(tokenBatch);
+
+        // Calculate all prices in parallel
+        const prices = await this.calculateBatchPrices(tokenBatch);
+        if (prices.length === 0) {
+          throw new Error("No prices calculated");
+        }
+
+        const mAddEntries = prices.map(({ token, timestamp, price }) => ({
+          key: this.getTimeSeriesKey(token),
+          timestamp,
+          value: price.toNumber(),
+        }));
+        await this.redisClient.ts.mAdd(mAddEntries);
 
         // Add a delay between batches to avoid overloading the price calculation source API.
         await new Promise((resolve) =>
@@ -190,6 +202,38 @@ export class PriceClient {
       throw ensureError(e, `updating prices`);
     }
   };
+
+  private async calculateBatchPrices(
+    tokens: string[],
+  ): Promise<{ token: string; timestamp: number; price: BigNumber }[]> {
+    try {
+      const pricePromises = tokens.map((token) =>
+        this.calculatePriceInUSD(token)
+          .then((price) => ({
+            token,
+            timestamp: price.timestamp,
+            price: price.price,
+          }))
+          .catch((e) => {
+            const error = ensureError(e, `calculating price for ${token}`);
+            this.logger.error(error);
+            return null;
+          }),
+      );
+
+      // Filter out null responses - these are tokens for which we failed to calculate a price.
+      const prices = (await Promise.all(pricePromises)).filter(
+        (
+          price,
+        ): price is { token: string; timestamp: number; price: BigNumber } =>
+          price !== null,
+      );
+
+      return prices;
+    } catch (e) {
+      throw ensureError(e, `calculating batch prices for ${tokens}`);
+    }
+  }
 
   private async fetchAllTokens(): Promise<string[]> {
     const tokens: string[] = ["XLM"];
@@ -262,50 +306,6 @@ export class PriceClient {
       key = "XLM";
     }
     return key;
-  }
-
-  private async batchUpdatePrices(tokens: string[]): Promise<void> {
-    try {
-      if (!this.redisClient) {
-        throw new Error("Redis client not initialized");
-      }
-
-      // Calculate all prices in parallel
-      const pricePromises = tokens.map((token) =>
-        this.calculatePriceInUSD(token)
-          .then((price) => ({
-            token,
-            timestamp: price.timestamp,
-            price: price.price,
-          }))
-          .catch((e) => {
-            const error = ensureError(e, `calculating price for ${token}`);
-            this.logger.error(error);
-            return null;
-          }),
-      );
-
-      // Filter out null responses - these are tokens for which we failed to calculate a price.
-      const prices = (await Promise.all(pricePromises)).filter(
-        (
-          price,
-        ): price is { token: string; timestamp: number; price: BigNumber } =>
-          price !== null,
-      );
-
-      if (prices.length === 0) {
-        throw new Error("No prices calculated");
-      }
-
-      const mAddEntries = prices.map(({ token, timestamp, price }) => ({
-        key: this.getTimeSeriesKey(token),
-        timestamp,
-        value: price.toNumber(),
-      }));
-      await this.redisClient.ts.mAdd(mAddEntries);
-    } catch (e) {
-      throw ensureError(e, `batch updating prices`);
-    }
   }
 
   private async createTimeSeries(key: string): Promise<void> {
