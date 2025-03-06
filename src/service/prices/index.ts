@@ -166,14 +166,14 @@ export class PriceClient {
         )}`,
       );
 
-      await this.processBatch(tokenBatch);
+      await this.addBatchToCache(tokenBatch);
       await new Promise((resolve) =>
         setTimeout(resolve, Constants.BATCH_UPDATE_DELAY_MS),
       );
     }
   }
 
-  private async processBatch(tokenBatch: string[]): Promise<void> {
+  private async addBatchToCache(tokenBatch: string[]): Promise<void> {
     const prices = await this.calculateBatchPrices(tokenBatch);
     if (prices.length === 0) {
       throw new Error("No prices calculated");
@@ -397,8 +397,12 @@ export class PriceClient {
         throw new Error(`No paths found for ${token}`);
       }
 
+      const newPaths = paths.records.filter((record) => {
+        return record.source_asset_code === sourceAssets[0].code;
+      });
+
       const tokenUnit = new BigNumber(
-        paths.records.reduce(
+        newPaths.reduce(
           (min, record) => Math.min(min, Number(record.source_amount)),
           Number(paths.records[0].source_amount),
         ),
