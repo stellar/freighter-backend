@@ -93,8 +93,9 @@ const main = async () => {
   // Update prices periodically
   setInterval(async () => {
     try {
+      const startTime = Date.now();
       await priceClient.updatePrices();
-      logger.info("Updated price cache");
+      logger.info(`Updated price cache in ${(Date.now() - startTime) / 1000}s`);
     } catch (e) {
       const error = ensureError(e, "updating price cache");
       logger.error(error);
