@@ -14,8 +14,9 @@ import {
 import TimeSeriesCommands from "@redis/time-series";
 import { TimeSeriesDuplicatePolicies } from "@redis/time-series";
 import { ensureError } from "./errors";
-const STELLAR_EXPERT_TOP_ASSETS_URL =
-  "https://api.stellar.expert/explorer/public/asset-list/top50";
+const STELLAR_EXPERT_ALL_ASSETS_URL =
+  "https://api.stellar.expert/explorer/public/asset";
+const STELLAR_EXPERT_BASE_URL = "https://api.stellar.expert";
 const PRICE_TS_KEY_PREFIX = "ts:price";
 const ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 const ONE_MINUTE = 60 * 1000; // 1 minute in milliseconds
@@ -27,10 +28,11 @@ const USDCAsset = new StellarSdk.Asset(
 const NativeAsset = StellarSdk.Asset.native();
 const USD_RECIEIVE_VALUE = new BigNumber(500);
 const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
-const TOKEN_UPDATE_BATCH_SIZE = 10; // Process 10 tokens at a time
+const TOKEN_UPDATE_BATCH_SIZE = 300;
 const TOKEN_COUNTER_SORTED_SET_KEY = "token_counter";
-const BATCH_UPDATE_DELAY_MS = 10000; // 5 second delay between batches
+const BATCH_UPDATE_DELAY_MS = 5000;
 const PRICE_CALCULATION_TIMEOUT_MS = 10000;
+const INITIAL_TOKEN_COUNT = 1000;
 
 export interface TokenPriceData {
   currentPrice: BigNumber;
@@ -115,26 +117,38 @@ export class PriceClient {
   };
 
   initPriceCache = async (): Promise<void> => {
-    if (!this.redisClient) {
-      throw new Error("Redis client not initialized");
+    try {
+      if (!this.redisClient) {
+        throw new Error("Redis client not initialized");
+      }
+
+      const tokens = await this.fetchAllTokens();
+      this.logger.info(`Fetched ${tokens.length} total tokens`);
+
+      // Create time series and sorted set for each token and add it to Redis pipeline.
+      const pipeline = this.redisClient.multi();
+      for (const token of tokens) {
+        const tsKey = this.getTimeSeriesKey(token);
+        try {
+          pipeline.ts.create(tsKey, {
+            RETENTION: RETENTION_PERIOD,
+            DUPLICATE_POLICY: TimeSeriesDuplicatePolicies.LAST,
+            LABELS: {
+              PRICE_CACHE_LABEL: PRICE_TS_KEY_PREFIX,
+            },
+          });
+          pipeline.zIncrBy(TOKEN_COUNTER_SORTED_SET_KEY, 1, tsKey);
+        } catch (error) {
+          this.logger.error(
+            `Error creating time series for ${token}: ${error}`,
+          );
+        }
+      }
+      await pipeline.exec();
+      await this.redisClient.set(PRICE_CACHE_INITIALIZED_KEY, "true");
+    } catch (error) {
+      throw ensureError(error, `initializing price cache`);
     }
-
-    // Get top 50 assets
-    const response = await fetch(STELLAR_EXPERT_TOP_ASSETS_URL);
-    const data = await response.json();
-    const tokens = [
-      "XLM",
-      ...data.assets.map((asset: any) => `${asset.code}:${asset.issuer}`),
-    ];
-
-    for (const token of tokens) {
-      const tsKey = this.getTimeSeriesKey(token);
-      await this.createTimeSeries(tsKey);
-    }
-
-    // Update prices for all tokens
-    await this.batchUpdatePrices(tokens);
-    await this.redisClient.set(PRICE_CACHE_INITIALIZED_KEY, "true");
   };
 
   updatePrices = async (): Promise<void> => {
@@ -176,6 +190,53 @@ export class PriceClient {
       throw ensureError(e, `updating prices`);
     }
   };
+
+  private async fetchAllTokens(): Promise<string[]> {
+    const tokens: string[] = ["XLM"];
+    let nextUrl = `${STELLAR_EXPERT_ALL_ASSETS_URL}?sort=volume7d&order=desc`;
+
+    while (tokens.length < INITIAL_TOKEN_COUNT && nextUrl) {
+      try {
+        this.logger.info(
+          `Fetching assets from ${nextUrl}, current count: ${tokens.length}`,
+        );
+        const response = await fetch(`${nextUrl}`);
+        const data = await response.json();
+
+        if (data._embedded?.records) {
+          for (const record of data._embedded.records) {
+            let token: string | null = null;
+
+            if (record.asset === "XLM") {
+              continue;
+            } else if (record.tomlInfo?.code && record.tomlInfo?.issuer) {
+              // Use TOML info if available
+              token = `${record.tomlInfo.code}:${record.tomlInfo.issuer}`;
+            } else if (record.asset && record.asset.includes("-")) {
+              // Parse from asset string format: CODE-ISSUER
+              const parts = record.asset.split("-");
+              if (parts.length >= 2) {
+                token = `${parts[0]}:${parts[1]}`;
+              }
+            }
+
+            if (token && !tokens.includes(token)) {
+              tokens.push(token);
+            }
+          }
+        }
+
+        // Check for next page
+        nextUrl = data._links?.next?.href || null;
+        nextUrl = `${STELLAR_EXPERT_BASE_URL}${nextUrl}`;
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      } catch (error) {
+        this.logger.error(`Error fetching assets: ${error}`);
+        break;
+      }
+    }
+    return tokens;
+  }
 
   private handleMissingToken = async (
     token: string,
@@ -253,20 +314,16 @@ export class PriceClient {
         throw new Error("Redis client not initialized");
       }
 
-      const created = await this.redisClient.ts.create(key, {
+      await this.redisClient.ts.create(key, {
         RETENTION: RETENTION_PERIOD,
         DUPLICATE_POLICY: TimeSeriesDuplicatePolicies.LAST,
         LABELS: {
           PRICE_CACHE_LABEL: PRICE_TS_KEY_PREFIX,
         },
       });
-      const addedToSortedSet = await this.redisClient.zIncrBy(
-        TOKEN_COUNTER_SORTED_SET_KEY,
-        1,
-        key,
-      );
-      this.logger.info(`Created time series ${key}`, created);
-      this.logger.info(`Added to sorted set ${key}`, addedToSortedSet);
+      await this.redisClient.zIncrBy(TOKEN_COUNTER_SORTED_SET_KEY, 1, key);
+      this.logger.info(`Created time series ${key}`);
+      this.logger.info(`Added to sorted set ${key}`);
     } catch (e) {
       throw ensureError(e, `creating time series for ${key}`);
     }
@@ -295,7 +352,7 @@ export class PriceClient {
     token: string,
   ): Promise<{ timestamp: number; price: BigNumber }> => {
     try {
-      // Add a 10s timeout to the price calculation
+      // Add a timeout to the price calculation
       const timeoutPromise = new Promise<{
         timestamp: number;
         price: BigNumber;
