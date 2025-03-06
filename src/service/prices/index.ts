@@ -1,5 +1,4 @@
 import { Logger } from "pino";
-// import { Redis } from "ioredis";
 import BigNumber from "bignumber.js";
 import * as StellarSdk from "stellar-sdk";
 import * as StellarSdkNext from "stellar-sdk-next";
