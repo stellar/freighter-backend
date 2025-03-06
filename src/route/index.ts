@@ -39,7 +39,8 @@ import { getUseMercury } from "../helper/mercury";
 import { getHttpRequestDurationLabels } from "../helper/metrics";
 import { mode } from "../helper/env";
 import Blockaid from "@blockaid/client";
-import { PriceClient, TokenPriceData } from "../service/prices";
+import { PriceClient } from "../service/prices";
+import { TokenPriceData } from "../service/prices/types";
 
 const API_VERSION = "v1";
 

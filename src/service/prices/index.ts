@@ -4,52 +4,25 @@ import * as StellarSdk from "stellar-sdk";
 import * as StellarSdkNext from "stellar-sdk-next";
 import { getSdk } from "../../helper/stellar";
 import { NETWORK_URLS } from "../../helper/horizon-rpc";
-import {
-  RedisClientType,
-  RedisModules,
-  RedisFunctions,
-  RedisScripts,
-} from "redis";
-import TimeSeriesCommands from "@redis/time-series";
 import { TimeSeriesDuplicatePolicies } from "@redis/time-series";
 import { ensureError } from "./errors";
-const STELLAR_EXPERT_ALL_ASSETS_URL =
-  "https://api.stellar.expert/explorer/public/asset";
-const STELLAR_EXPERT_BASE_URL = "https://api.stellar.expert";
-const PRICE_TS_KEY_PREFIX = "ts:price";
-const ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
-const ONE_MINUTE = 60 * 1000; // 1 minute in milliseconds
-const RETENTION_PERIOD = 24 * 60 * 60 * 1000; // 1 day retention period
+import * as Constants from "./constants";
+import { RedisClientWithTS, TokenPriceData } from "./types";
 const USDCAsset = new StellarSdk.Asset(
   "USDC",
   "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
 );
 const NativeAsset = StellarSdk.Asset.native();
 const USD_RECIEIVE_VALUE = new BigNumber(500);
-const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
-const TOKEN_UPDATE_BATCH_SIZE = 150;
-const TOKEN_COUNTER_SORTED_SET_KEY = "token_counter";
-const BATCH_UPDATE_DELAY_MS = 5000;
-const PRICE_CALCULATION_TIMEOUT_MS = 10000;
-const INITIAL_TOKEN_COUNT = 1000;
-
-export interface TokenPriceData {
-  currentPrice: BigNumber;
-  percentagePriceChange24h: BigNumber | null;
-}
-
-type RedisClientWithTS = RedisClientType<
-  RedisModules & { ts: typeof TimeSeriesCommands },
-  RedisFunctions,
-  RedisScripts
->;
 
 export class PriceClient {
-  redisClient?: RedisClientWithTS;
-  logger: Logger;
-  server: StellarSdk.Horizon.Server;
-  constructor(logger: Logger, redisClient?: RedisClientWithTS) {
-    this.redisClient = redisClient;
+  private readonly logger: Logger;
+  private readonly server: StellarSdk.Horizon.Server;
+
+  constructor(
+    logger: Logger,
+    private readonly redisClient?: RedisClientWithTS,
+  ) {
     this.logger = logger;
     const Sdk = getSdk(StellarSdkNext.Networks.PUBLIC);
     const { Horizon } = Sdk;
@@ -77,11 +50,11 @@ export class PriceClient {
       }
 
       // Get 24h ago price using TS.RANGE. Use a 1 min offset as the end time.
-      const dayAgo = latestPrice.timestamp - ONE_DAY;
+      const dayAgo = latestPrice.timestamp - Constants.ONE_DAY;
       const oldPrices = await this.redisClient.ts.range(
         tsKey,
         dayAgo,
-        dayAgo + ONE_MINUTE,
+        dayAgo + Constants.ONE_MINUTE,
         {
           COUNT: 1,
         },
@@ -99,7 +72,11 @@ export class PriceClient {
             .times(100);
         }
       }
-      await this.redisClient.zIncrBy(TOKEN_COUNTER_SORTED_SET_KEY, 1, tsKey);
+      await this.redisClient.zIncrBy(
+        Constants.TOKEN_COUNTER_SORTED_SET_KEY,
+        1,
+        tsKey,
+      );
 
       return {
         currentPrice,
@@ -130,13 +107,13 @@ export class PriceClient {
         const tsKey = this.getTimeSeriesKey(token);
         try {
           pipeline.ts.create(tsKey, {
-            RETENTION: RETENTION_PERIOD,
+            RETENTION: Constants.RETENTION_PERIOD,
             DUPLICATE_POLICY: TimeSeriesDuplicatePolicies.LAST,
             LABELS: {
-              PRICE_CACHE_LABEL: PRICE_TS_KEY_PREFIX,
+              PRICE_CACHE_LABEL: Constants.PRICE_TS_KEY_PREFIX,
             },
           });
-          pipeline.zIncrBy(TOKEN_COUNTER_SORTED_SET_KEY, 1, tsKey);
+          pipeline.zIncrBy(Constants.TOKEN_COUNTER_SORTED_SET_KEY, 1, tsKey);
         } catch (error) {
           this.logger.error(
             `Error creating time series for ${token}: ${error}`,
@@ -144,7 +121,7 @@ export class PriceClient {
         }
       }
       await pipeline.exec();
-      await this.redisClient.set(PRICE_CACHE_INITIALIZED_KEY, "true");
+      await this.redisClient.set(Constants.PRICE_CACHE_INITIALIZED_KEY, "true");
     } catch (error) {
       throw ensureError(error, `initializing price cache`);
     }
@@ -156,51 +133,57 @@ export class PriceClient {
         throw new Error("Redis client not initialized");
       }
 
-      const tokens = await this.redisClient.zRange(
-        TOKEN_COUNTER_SORTED_SET_KEY,
-        0,
-        -1,
-        {
-          REV: true,
-        },
-      );
-
-      if (tokens.length === 0) {
-        throw new Error("No tokens found in sorted set");
-      }
-
-      // Process tokens in batches and in decreasing order of popularity (number of times requested).
-      // This ensures that the most popular tokens are updated first.
-      for (let i = 0; i < tokens.length; i += TOKEN_UPDATE_BATCH_SIZE) {
-        const tokenBatch = tokens.slice(i, i + TOKEN_UPDATE_BATCH_SIZE);
-        this.logger.info(
-          `Processing batch ${i / TOKEN_UPDATE_BATCH_SIZE + 1} of ${Math.ceil(
-            tokens.length / TOKEN_UPDATE_BATCH_SIZE,
-          )}`,
-        );
-
-        // Calculate all prices in parallel
-        const prices = await this.calculateBatchPrices(tokenBatch);
-        if (prices.length === 0) {
-          throw new Error("No prices calculated");
-        }
-
-        const mAddEntries = prices.map(({ token, timestamp, price }) => ({
-          key: this.getTimeSeriesKey(token),
-          timestamp,
-          value: price.toNumber(),
-        }));
-        await this.redisClient.ts.mAdd(mAddEntries);
-
-        // Add a delay between batches to avoid overloading the price calculation source API.
-        await new Promise((resolve) =>
-          setTimeout(resolve, BATCH_UPDATE_DELAY_MS),
-        );
-      }
+      const tokens = await this.getTokensToUpdate();
+      await this.processTokenBatches(tokens);
     } catch (e) {
       throw ensureError(e, `updating prices`);
     }
   };
+
+  private async getTokensToUpdate(): Promise<string[]> {
+    const tokens = await this.redisClient!.zRange(
+      Constants.TOKEN_COUNTER_SORTED_SET_KEY,
+      0,
+      -1,
+      { REV: true },
+    );
+
+    if (tokens.length === 0) {
+      throw new Error("No tokens found in sorted set");
+    }
+
+    return tokens;
+  }
+
+  private async processTokenBatches(tokens: string[]): Promise<void> {
+    for (let i = 0; i < tokens.length; i += Constants.TOKEN_UPDATE_BATCH_SIZE) {
+      const tokenBatch = tokens.slice(i, i + Constants.TOKEN_UPDATE_BATCH_SIZE);
+      this.logger.info(
+        `Processing batch ${i / Constants.TOKEN_UPDATE_BATCH_SIZE + 1} of ${Math.ceil(
+          tokens.length / Constants.TOKEN_UPDATE_BATCH_SIZE,
+        )}`,
+      );
+
+      await this.processBatch(tokenBatch);
+      await new Promise((resolve) =>
+        setTimeout(resolve, Constants.BATCH_UPDATE_DELAY_MS),
+      );
+    }
+  }
+
+  private async processBatch(tokenBatch: string[]): Promise<void> {
+    const prices = await this.calculateBatchPrices(tokenBatch);
+    if (prices.length === 0) {
+      throw new Error("No prices calculated");
+    }
+
+    const mAddEntries = prices.map(({ token, timestamp, price }) => ({
+      key: this.getTimeSeriesKey(token),
+      timestamp,
+      value: price.toNumber(),
+    }));
+    await this.redisClient!.ts.mAdd(mAddEntries);
+  }
 
   private async calculateBatchPrices(
     tokens: string[],
@@ -236,9 +219,9 @@ export class PriceClient {
 
   private async fetchAllTokens(): Promise<string[]> {
     const tokens: string[] = ["XLM"];
-    let nextUrl = `${STELLAR_EXPERT_ALL_ASSETS_URL}?sort=volume7d&order=desc`;
+    let nextUrl = `${Constants.STELLAR_EXPERT_ALL_ASSETS_URL}?sort=volume7d&order=desc`;
 
-    while (tokens.length < INITIAL_TOKEN_COUNT && nextUrl) {
+    while (tokens.length < Constants.INITIAL_TOKEN_COUNT && nextUrl) {
       try {
         this.logger.info(
           `Fetching assets from ${nextUrl}, current count: ${tokens.length}`,
@@ -271,7 +254,7 @@ export class PriceClient {
 
         // Check for next page
         nextUrl = data._links?.next?.href || null;
-        nextUrl = `${STELLAR_EXPERT_BASE_URL}${nextUrl}`;
+        nextUrl = `${Constants.STELLAR_EXPERT_BASE_URL}${nextUrl}`;
         await new Promise((resolve) => setTimeout(resolve, 500));
       } catch (error) {
         this.logger.error(`Error fetching assets: ${error}`);
@@ -314,13 +297,17 @@ export class PriceClient {
       }
 
       await this.redisClient.ts.create(key, {
-        RETENTION: RETENTION_PERIOD,
+        RETENTION: Constants.RETENTION_PERIOD,
         DUPLICATE_POLICY: TimeSeriesDuplicatePolicies.LAST,
         LABELS: {
-          PRICE_CACHE_LABEL: PRICE_TS_KEY_PREFIX,
+          PRICE_CACHE_LABEL: Constants.PRICE_TS_KEY_PREFIX,
         },
       });
-      await this.redisClient.zIncrBy(TOKEN_COUNTER_SORTED_SET_KEY, 1, key);
+      await this.redisClient.zIncrBy(
+        Constants.TOKEN_COUNTER_SORTED_SET_KEY,
+        1,
+        key,
+      );
       this.logger.info(`Created time series ${key}`);
       this.logger.info(`Added to sorted set ${key}`);
     } catch (e) {
@@ -358,7 +345,7 @@ export class PriceClient {
       }>((_, reject) =>
         setTimeout(
           () => reject(new Error(`Price calculation timeout for ${token}`)),
-          PRICE_CALCULATION_TIMEOUT_MS,
+          Constants.PRICE_CALCULATION_TIMEOUT_MS,
         ),
       );
 
