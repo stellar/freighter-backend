@@ -114,6 +114,8 @@ export class PriceClient {
             },
           });
           pipeline.zIncrBy(Constants.TOKEN_COUNTER_SORTED_SET_KEY, 1, tsKey);
+          this.logger.info(`Created time series ${tsKey}`);
+          this.logger.info(`Added to sorted set ${tsKey}`);
         } catch (error) {
           this.logger.error(
             `Error creating time series for ${token}: ${error}`,
