@@ -2,23 +2,11 @@ import { createClient } from "redis";
 import { workerData } from "worker_threads";
 import { logger } from "../../logger";
 import { PriceClient } from ".";
-import {
-  RedisClientType,
-  RedisModules,
-  RedisFunctions,
-  RedisScripts,
-} from "redis";
-import TimeSeriesCommands from "@redis/time-series";
 import { ensureError } from "./errors";
 import * as Constants from "./constants";
+import { RedisClientWithTS } from "./types";
 
 const { hostname, redisConnectionName, redisPort } = workerData;
-
-type RedisClientWithTS = RedisClientType<
-  RedisModules & { ts: typeof TimeSeriesCommands },
-  RedisFunctions,
-  RedisScripts
->;
 
 const initializePriceCache = async (
   priceClient: PriceClient,
