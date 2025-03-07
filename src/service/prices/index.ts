@@ -235,7 +235,7 @@ export class PriceClient {
           for (const record of data._embedded.records) {
             let token: string | null = null;
 
-            if (record.asset === "XLM") {
+            if (record.asset === "XLM" || record.asset === "USDC") {
               continue;
             } else if (record.tomlInfo?.code && record.tomlInfo?.issuer) {
               // Use TOML info if available
