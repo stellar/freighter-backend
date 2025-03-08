@@ -278,7 +278,7 @@ describe("Token Price Client", () => {
 
       await priceClient["processTokenBatches"](mockTokens);
 
-      // With default batch size of 150, we expect 3 batches
+      // With default batch size of 150 and 1000 tokens, we expect 7 batches
       expect(priceClient["addBatchToCache"]).toHaveBeenCalledTimes(7);
       expect(testLogger.info).toHaveBeenCalledWith(
         expect.stringContaining("Processing batch 1 of 7"),
