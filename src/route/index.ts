@@ -339,27 +339,6 @@ export async function initApiServer(
               useMercury,
             );
 
-            // calculate the USD balance for each token
-            // try {
-            //   await Promise.all(
-            //     Object.entries(data.balances).map(
-            //       async ([balanceKey, balance]) => {
-            //         const priceUSD = await priceClient.getPrice(balanceKey);
-            //         if (priceUSD) {
-            //           data.balances[balanceKey] = {
-            //             ...(balance as Balance),
-            //             availableUSD: (balance as Balance).available.times(
-            //               priceUSD.currentPrice,
-            //             ),
-            //           };
-            //         }
-            //       },
-            //     ),
-            //   );
-            // } catch (e) {
-            //   logger.error("Error calculating USD balance", e);
-            // }
-
             try {
               data.balances = await addScannedStatus(
                 data.balances,
