@@ -2,8 +2,9 @@ import { PriceClient } from "./index";
 import { testLogger } from "../../helper/test-helper";
 import { TokenPriceData } from "./types";
 import BigNumber from "bignumber.js";
+import * as Constants from "./constants";
 
-describe("getPrice", () => {
+describe("Token Price Client", () => {
   let priceClient: PriceClient;
   const mockRedisClient: any = {
     ts: {
@@ -45,112 +46,113 @@ describe("getPrice", () => {
     jest.clearAllMocks();
   });
 
-  it("should return current price data", async () => {
-    // Setup mock Redis responses
-    const mockCurrentPrice = 50000;
-    const mockTimestamp = Date.now();
+  describe("getPrice", () => {
+    it("should return current price data", async () => {
+      // Setup mock Redis responses
+      const mockCurrentPrice = 50000;
+      const mockTimestamp = Date.now();
 
-    // Mock ts.get to return current price data
-    mockRedisClient.ts.get.mockResolvedValue({
-      timestamp: mockTimestamp,
-      value: mockCurrentPrice,
+      // Mock ts.get to return current price data
+      mockRedisClient.ts.get.mockResolvedValue({
+        timestamp: mockTimestamp,
+        value: mockCurrentPrice,
+      });
+
+      // Mock ts.range to return historical price data
+      mockRedisClient.ts.range.mockResolvedValue([
+        {
+          timestamp: mockTimestamp - 24 * 60 * 60 * 1000, // 24h ago
+          value: 45000,
+        },
+      ]);
+
+      // Call the method being tested
+      const token =
+        "BTC:GDPJALI4AZKUU2W426U5WKMAT6CN3AJRPIIRYR2YM54TL2GDWO5O2MZM";
+      const result = await priceClient.getPrice(token);
+
+      // Verify the result
+      expect(result).not.toBeNull();
+      expect(result?.currentPrice.toNumber()).toBe(mockCurrentPrice);
+      expect(result?.percentagePriceChange24h?.toFixed(2)).toBe("11.11"); // (50000-45000)/45000*100 ≈ 11.11%
+
+      // Verify Redis client was called correctly
+      expect(mockRedisClient.ts.get).toHaveBeenCalledWith(token);
+      expect(mockRedisClient.ts.range).toHaveBeenCalled();
+      expect(mockRedisClient.zIncrBy).toHaveBeenCalledWith(
+        expect.any(String),
+        1,
+        token,
+      );
     });
 
-    // Mock ts.range to return historical price data
-    mockRedisClient.ts.range.mockResolvedValue([
-      {
-        timestamp: mockTimestamp - 24 * 60 * 60 * 1000, // 24h ago
-        value: 45000,
-      },
-    ]);
+    it("should handle missing historical data", async () => {
+      // Setup mock - current price exists but no historical data
+      mockRedisClient.ts.get.mockResolvedValue({
+        timestamp: Date.now(),
+        value: 50000,
+      });
 
-    // Call the method being tested
-    const token =
-      "BTC:GDPJALI4AZKUU2W426U5WKMAT6CN3AJRPIIRYR2YM54TL2GDWO5O2MZM";
-    const result = await priceClient.getPrice(token);
+      // Empty array means no historical data found
+      mockRedisClient.ts.range.mockResolvedValue([]);
 
-    // Verify the result
-    expect(result).not.toBeNull();
-    expect(result?.currentPrice.toNumber()).toBe(mockCurrentPrice);
-    expect(result?.percentagePriceChange24h?.toFixed(2)).toBe("11.11"); // (50000-45000)/45000*100 ≈ 11.11%
+      const token =
+        "BTC:GDPJALI4AZKUU2W426U5WKMAT6CN3AJRPIIRYR2YM54TL2GDWO5O2MZM";
+      const result = await priceClient.getPrice(token);
 
-    // Verify Redis client was called correctly
-    expect(mockRedisClient.ts.get).toHaveBeenCalledWith(token);
-    expect(mockRedisClient.ts.range).toHaveBeenCalled();
-    expect(mockRedisClient.zIncrBy).toHaveBeenCalledWith(
-      expect.any(String),
-      1,
-      token,
-    );
-  });
-
-  it("should handle missing historical data", async () => {
-    // Setup mock - current price exists but no historical data
-    mockRedisClient.ts.get.mockResolvedValue({
-      timestamp: Date.now(),
-      value: 50000,
+      // Should return current price but no percentage change
+      expect(result).not.toBeNull();
+      expect(result?.currentPrice.toNumber()).toBe(50000);
+      expect(result?.percentagePriceChange24h).toBeNull();
     });
 
-    // Empty array means no historical data found
-    mockRedisClient.ts.range.mockResolvedValue([]);
+    it("should handle new token request", async () => {
+      // Setup mock - ts.get throws error for non-existent key
+      mockRedisClient.ts.get.mockRejectedValue(new Error("Key does not exist"));
 
-    const token =
-      "BTC:GDPJALI4AZKUU2W426U5WKMAT6CN3AJRPIIRYR2YM54TL2GDWO5O2MZM";
-    const result = await priceClient.getPrice(token);
+      // Spy on addNewTokenToCache method
+      const addNewTokenToCacheSpy = jest.spyOn(
+        priceClient as any,
+        "addNewTokenToCache",
+      );
+      addNewTokenToCacheSpy.mockResolvedValue({
+        currentPrice: new BigNumber(60000),
+        percentagePriceChange24h: null,
+      } as TokenPriceData);
 
-    // Should return current price but no percentage change
-    expect(result).not.toBeNull();
-    expect(result?.currentPrice.toNumber()).toBe(50000);
-    expect(result?.percentagePriceChange24h).toBeNull();
-  });
+      const token = "NONEXISTENT:TOKEN";
+      const result = await priceClient.getPrice(token);
 
-  it("should handle missing token", async () => {
-    // Setup mock - ts.get throws error for non-existent key
-    mockRedisClient.ts.get.mockRejectedValue(new Error("Key does not exist"));
-
-    // Spy on handleMissingToken method
-    const handleMissingTokenSpy = jest.spyOn(
-      priceClient as any,
-      "handleMissingToken",
-    );
-    handleMissingTokenSpy.mockResolvedValue({
-      currentPrice: new BigNumber(60000),
-      percentagePriceChange24h: null,
-    } as TokenPriceData);
-
-    const token = "NONEXISTENT:TOKEN";
-    const result = await priceClient.getPrice(token);
-
-    // Should call handleMissingToken and return its result
-    expect(handleMissingTokenSpy).toHaveBeenCalledWith(token);
-    expect(result).not.toBeNull();
-    expect(result?.currentPrice.toNumber()).toBe(60000);
-  });
-
-  it("handles errors", async () => {
-    // Setup mock - ts.get throws error
-    mockRedisClient.ts.get.mockResolvedValue({
-      timestamp: Date.now(),
-      value: 50000,
+      // Should call addNewTokenToCache and return its result
+      expect(addNewTokenToCacheSpy).toHaveBeenCalledWith(token);
+      expect(result).not.toBeNull();
+      expect(result?.currentPrice.toNumber()).toBe(60000);
     });
-    mockRedisClient.ts.range.mockRejectedValue(
-      new Error("24h price data not found"),
-    );
 
-    const token =
-      "BTC:GDPJALI4AZKUU2W426U5WKMAT6CN3AJRPIIRYR2YM54TL2GDWO5O2MZM";
-    const result = await priceClient.getPrice(token);
-    expect(result).toBeNull();
-    expect(testLogger.error).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining(
-          `getting price from time series for ${token}`,
-        ),
-      }),
-    );
+    it("handles errors", async () => {
+      // Setup mock - ts.get throws error
+      mockRedisClient.ts.get.mockResolvedValue({
+        timestamp: Date.now(),
+        value: 50000,
+      });
+      mockRedisClient.ts.range.mockRejectedValue(
+        new Error("24h price data not found"),
+      );
+
+      const token =
+        "BTC:GDPJALI4AZKUU2W426U5WKMAT6CN3AJRPIIRYR2YM54TL2GDWO5O2MZM";
+      const result = await priceClient.getPrice(token);
+      expect(result).toBeNull();
+      expect(testLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            `getting price from time series for ${token}`,
+          ),
+        }),
+      );
+    });
   });
 
-  // New tests for initPriceCache
   describe("initPriceCache", () => {
     it("should initialize price cache successfully", async () => {
       // Mock fetchAllTokens to return predefined tokens
@@ -322,46 +324,179 @@ describe("getPrice", () => {
       );
     });
 
-    it("handleMissingToken should add new token to cache", async () => {
-      const mockPrice = new BigNumber(1000);
-
-      jest
-        .spyOn(priceClient as any, "addNewTokenToCache")
-        .mockResolvedValue(mockPrice);
-
-      const result = await priceClient["handleMissingToken"]("NEW:TOKEN");
-
-      expect(result).toEqual({
-        currentPrice: mockPrice,
-        percentagePriceChange24h: null,
-      });
-      expect(priceClient["addNewTokenToCache"]).toHaveBeenCalledWith(
-        "NEW:TOKEN",
-      );
-    });
-
-    it("handleMissingToken should handle errors", async () => {
-      jest
-        .spyOn(priceClient as any, "addNewTokenToCache")
-        .mockRejectedValue(new Error("Failed to add token"));
-
-      const result = await priceClient["handleMissingToken"]("NEW:TOKEN");
-
-      expect(result).toBeNull();
-      expect(testLogger.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            "adding missing token to cache for NEW:TOKEN",
-          ),
-        }),
-      );
-    });
-
     it("getTimeSeriesKey should handle native asset correctly", async () => {
       expect(priceClient["getTimeSeriesKey"]("native")).toBe("XLM");
       expect(priceClient["getTimeSeriesKey"]("CODE:ISSUER")).toBe(
         "CODE:ISSUER",
       );
+    });
+  });
+
+  describe("Price Calculation Methods", () => {
+    it("should calculate prices for a batch of tokens", async () => {
+      // Mock calculatePriceInUSD to return predefined values
+      jest
+        .spyOn(priceClient as any, "calculatePriceInUSD")
+        .mockResolvedValueOnce({
+          timestamp: 123456789,
+          price: new BigNumber(100),
+        })
+        .mockResolvedValueOnce({
+          timestamp: 123456789,
+          price: new BigNumber(200),
+        });
+
+      const tokens = ["TOKEN1", "TOKEN2"];
+      const result = await priceClient["calculateBatchPrices"](tokens);
+
+      expect(result).toEqual([
+        { token: "TOKEN1", timestamp: 123456789, price: new BigNumber(100) },
+        { token: "TOKEN2", timestamp: 123456789, price: new BigNumber(200) },
+      ]);
+      expect(priceClient["calculatePriceInUSD"]).toHaveBeenCalledTimes(2);
+    });
+
+    it("should filter out failed price calculations", async () => {
+      // Mock one successful and one failed calculation
+      jest
+        .spyOn(priceClient as any, "calculatePriceInUSD")
+        .mockResolvedValueOnce({
+          timestamp: 123456789,
+          price: new BigNumber(100),
+        })
+        .mockRejectedValueOnce(new Error("Failed to calculate price"));
+
+      const tokens = ["TOKEN1", "TOKEN2"];
+      const result = await priceClient["calculateBatchPrices"](tokens);
+
+      expect(result).toEqual([
+        { token: "TOKEN1", timestamp: 123456789, price: new BigNumber(100) },
+      ]);
+      expect(testLogger.error).toHaveBeenCalled();
+    });
+
+    it("should calculate price in USD with timeout", async () => {
+      // Mock calculatePriceUsingPaths to return a value
+      jest
+        .spyOn(priceClient as any, "calculatePriceUsingPaths")
+        .mockResolvedValue({ timestamp: 123456789, price: new BigNumber(100) });
+
+      const result = await priceClient["calculatePriceInUSD"]("TOKEN1");
+
+      expect(result).toEqual({
+        timestamp: 123456789,
+        price: new BigNumber(100),
+      });
+      expect(priceClient["calculatePriceUsingPaths"]).toHaveBeenCalledWith(
+        "TOKEN1",
+      );
+    });
+
+    it("should handle timeout in price calculation", async () => {
+      // Use Jest's timer mocks
+      jest.useFakeTimers();
+
+      // Mock calculatePriceUsingPaths to never resolve (simulating a hanging operation)
+      jest
+        .spyOn(priceClient as any, "calculatePriceUsingPaths")
+        .mockImplementation(
+          () =>
+            new Promise(() => {
+              // This promise will never resolve during the test
+            }),
+        );
+
+      // Start the price calculation but don't await it yet
+      const pricePromise = priceClient["calculatePriceInUSD"]("TOKEN1");
+
+      // Fast-forward time past the timeout
+      jest.advanceTimersByTime(Constants.PRICE_CALCULATION_TIMEOUT_MS + 100);
+
+      // Now await the promise, which should reject due to timeout
+      await expect(pricePromise).rejects.toThrow(
+        "calculating price for TOKEN1",
+      );
+
+      // Restore real timers
+      jest.useRealTimers();
+    });
+
+    it("should create time series for a new token", async () => {
+      await priceClient["createTimeSeries"]("TOKEN1");
+
+      expect(mockRedisClient.ts.create).toHaveBeenCalledWith(
+        "TOKEN1",
+        expect.objectContaining({
+          RETENTION: expect.any(Number),
+          DUPLICATE_POLICY: expect.any(String),
+          LABELS: expect.any(Object),
+        }),
+      );
+      expect(mockRedisClient.zIncrBy).toHaveBeenCalledWith(
+        expect.any(String),
+        1,
+        "TOKEN1",
+      );
+    });
+  });
+
+  describe("fetchAllTokens", () => {
+    beforeEach(() => {
+      // Mock fetch
+      global.fetch = jest.fn();
+    });
+
+    it("should fetch tokens from StellarExpert API", async () => {
+      // Mock first page of results
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValue({
+          _embedded: {
+            records: [
+              { asset: "XLM" }, // Should be skipped as it's already included
+              { asset: "USDC" }, // Should be skipped
+              {
+                tomlInfo: { code: "TOKEN1", issuer: "ISSUER1" },
+              },
+              {
+                asset: "TOKEN2-ISSUER2",
+              },
+            ],
+          },
+          _links: { next: { href: "/next-page" } },
+        }),
+      });
+
+      // Mock second page with no more pages
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        json: jest.fn().mockResolvedValue({
+          _embedded: {
+            records: [
+              {
+                tomlInfo: { code: "TOKEN3", issuer: "ISSUER3" },
+              },
+            ],
+          },
+          _links: {},
+        }),
+      });
+
+      const result = await priceClient["fetchAllTokens"]();
+
+      expect(result).toContain("XLM");
+      expect(result).toContain("TOKEN1:ISSUER1");
+      expect(result).toContain("TOKEN2:ISSUER2");
+      expect(result).toContain("TOKEN3:ISSUER3");
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+    });
+
+    it("should handle errors when fetching tokens", async () => {
+      (global.fetch as jest.Mock).mockRejectedValueOnce(new Error("API error"));
+
+      const result = await priceClient["fetchAllTokens"]();
+
+      // Should still return XLM as default
+      expect(result).toEqual(["XLM"]);
+      expect(testLogger.error).toHaveBeenCalled();
     });
   });
 });

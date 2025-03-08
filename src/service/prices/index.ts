@@ -41,7 +41,7 @@ export class PriceClient {
     try {
       latestPrice = await this.redisClient.ts.get(tsKey);
     } catch (e) {
-      return this.handleMissingToken(token);
+      return this.addNewTokenToCache(token);
     }
 
     try {
@@ -266,24 +266,6 @@ export class PriceClient {
     return tokens;
   }
 
-  private handleMissingToken = async (
-    token: string,
-  ): Promise<TokenPriceData | null> => {
-    try {
-      const newPrice = await this.addNewTokenToCache(token);
-      return newPrice
-        ? { currentPrice: newPrice, percentagePriceChange24h: null }
-        : null;
-    } catch (e) {
-      const error = ensureError(
-        e,
-        `adding missing token to cache for ${token}`,
-      );
-      this.logger.error(error);
-      return null;
-    }
-  };
-
   private getTimeSeriesKey(token: string): string {
     let key = token;
     if (token === "native") {
@@ -319,7 +301,7 @@ export class PriceClient {
 
   private addNewTokenToCache = async (
     token: string,
-  ): Promise<BigNumber | null> => {
+  ): Promise<TokenPriceData | null> => {
     try {
       if (!this.redisClient) {
         throw new Error("Redis client not initialized");
@@ -330,7 +312,7 @@ export class PriceClient {
 
       await this.createTimeSeries(tsKey);
       await this.redisClient.ts.add(tsKey, timestamp, price.toNumber());
-      return price;
+      return { currentPrice: price, percentagePriceChange24h: null };
     } catch (e) {
       throw ensureError(e, `adding new token to cache for ${token}`);
     }
