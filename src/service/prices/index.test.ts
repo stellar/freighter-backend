@@ -2,7 +2,6 @@ import { PriceClient } from "./index";
 import { testLogger } from "../../helper/test-helper";
 import { TokenPriceData } from "./types";
 import BigNumber from "bignumber.js";
-import * as Constants from "./constants";
 
 describe("Token Price Client", () => {
   let priceClient: PriceClient;
