@@ -21,6 +21,74 @@ const USD_RECIEIVE_VALUE = new BigNumber(500);
  * and provides methods for retrieving current prices and price change percentages.
  */
 export class PriceClient {
+  /**
+   * Prefix for Redis time series keys storing token price data.
+   * Used to create consistent key naming for all token price time series.
+   */
+  private static readonly PRICE_TS_KEY_PREFIX = "ts:price";
+
+  /**
+   * Redis sorted set key that tracks token access frequency.
+   * Each time a token price is accessed, its score is incremented.
+   * Used to prioritize which tokens to update most frequently based on popularity.
+   */
+  private static readonly TOKEN_COUNTER_SORTED_SET_KEY = "token_counter";
+
+  /**
+   * Represents one day in milliseconds (24h * 60m * 60s * 1000ms).
+   * Used when calculating 24-hour price changes in getPrice() method.
+   */
+  private static readonly ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+
+  /**
+   * Represents one minute in milliseconds (60s * 1000ms).
+   * Used as an offset window when looking up historical prices to handle slight timing variations.
+   */
+  private static readonly ONE_MINUTE = 60 * 1000; // 1 minute in milliseconds
+
+  /**
+   * The time period (in milliseconds) for which to retain price data in Redis time series.
+   * Currently set to 1 day to support 24-hour price change calculations while managing storage usage.
+   */
+  private static readonly RETENTION_PERIOD = 24 * 60 * 60 * 1000; // 1 day retention period
+
+  /**
+   * Delay (in milliseconds) between processing batches of tokens during price updates.
+   * Prevents overwhelming the Stellar network and API rate limits.
+   */
+  private static readonly BATCH_UPDATE_DELAY_MS = 5000;
+
+  /**
+   * Maximum time (in milliseconds) allowed for a single token's price calculation before timing out.
+   * Prevents hanging operations when the Stellar network is slow or unresponsive for a particular token.
+   */
+  private static readonly PRICE_CALCULATION_TIMEOUT_MS = 10000;
+
+  /**
+   * Maximum number of tokens to process in a single batch during price updates.
+   * Balances update efficiency with Stellar network and Redis load.
+   */
+  private static readonly TOKEN_UPDATE_BATCH_SIZE = 150;
+
+  /**
+   * Maximum number of tokens to fetch and track prices for initially.
+   * Limits the total number of tokens to manage system resource usage.
+   */
+  private static readonly INITIAL_TOKEN_COUNT = 1000;
+
+  /**
+   * Stellar Expert API endpoint for fetching all tradable assets.
+   */
+  private static readonly STELLAR_EXPERT_ALL_ASSETS_URL =
+    "https://api.stellar.expert/explorer/public/asset";
+
+  /**
+   * Base URL for Stellar Expert API calls.
+   * Used to construct pagination URLs when fetching multiple pages of assets.
+   */
+  private static readonly STELLAR_EXPERT_BASE_URL =
+    "https://api.stellar.expert";
+
   private readonly logger: Logger;
   private readonly server: StellarSdk.Horizon.Server;
 
@@ -68,11 +136,11 @@ export class PriceClient {
       }
 
       // Get 24h ago price using TS.RANGE. Use a 1 min offset as the end time.
-      const dayAgo = latestPrice.timestamp - Constants.ONE_DAY;
+      const dayAgo = latestPrice.timestamp - PriceClient.ONE_DAY;
       const oldPrices = await this.redisClient.ts.range(
         tsKey,
         dayAgo,
-        dayAgo + Constants.ONE_MINUTE,
+        dayAgo + PriceClient.ONE_MINUTE,
         {
           COUNT: 1,
         },
@@ -91,7 +159,7 @@ export class PriceClient {
         }
       }
       await this.redisClient.zIncrBy(
-        Constants.TOKEN_COUNTER_SORTED_SET_KEY,
+        PriceClient.TOKEN_COUNTER_SORTED_SET_KEY,
         1,
         tsKey,
       );
@@ -131,13 +199,13 @@ export class PriceClient {
         const tsKey = this.getTimeSeriesKey(token);
         try {
           pipeline.ts.create(tsKey, {
-            RETENTION: Constants.RETENTION_PERIOD,
+            RETENTION: PriceClient.RETENTION_PERIOD,
             DUPLICATE_POLICY: TimeSeriesDuplicatePolicies.LAST,
             LABELS: {
-              PRICE_CACHE_LABEL: Constants.PRICE_TS_KEY_PREFIX,
+              PRICE_CACHE_LABEL: PriceClient.PRICE_TS_KEY_PREFIX,
             },
           });
-          pipeline.zIncrBy(Constants.TOKEN_COUNTER_SORTED_SET_KEY, 1, tsKey);
+          pipeline.zIncrBy(PriceClient.TOKEN_COUNTER_SORTED_SET_KEY, 1, tsKey);
           this.logger.info(`Created time series ${tsKey}`);
           this.logger.info(`Added to sorted set ${tsKey}`);
         } catch (error) {
@@ -181,7 +249,7 @@ export class PriceClient {
    */
   private async getTokensToUpdate(): Promise<string[]> {
     const tokens = await this.redisClient!.zRange(
-      Constants.TOKEN_COUNTER_SORTED_SET_KEY,
+      PriceClient.TOKEN_COUNTER_SORTED_SET_KEY,
       0,
       -1,
       { REV: true },
@@ -202,17 +270,24 @@ export class PriceClient {
    * @private
    */
   private async processTokenBatches(tokens: string[]): Promise<void> {
-    for (let i = 0; i < tokens.length; i += Constants.TOKEN_UPDATE_BATCH_SIZE) {
-      const tokenBatch = tokens.slice(i, i + Constants.TOKEN_UPDATE_BATCH_SIZE);
+    for (
+      let i = 0;
+      i < tokens.length;
+      i += PriceClient.TOKEN_UPDATE_BATCH_SIZE
+    ) {
+      const tokenBatch = tokens.slice(
+        i,
+        i + PriceClient.TOKEN_UPDATE_BATCH_SIZE,
+      );
       this.logger.info(
-        `Processing batch ${i / Constants.TOKEN_UPDATE_BATCH_SIZE + 1} of ${Math.ceil(
-          tokens.length / Constants.TOKEN_UPDATE_BATCH_SIZE,
+        `Processing batch ${i / PriceClient.TOKEN_UPDATE_BATCH_SIZE + 1} of ${Math.ceil(
+          tokens.length / PriceClient.TOKEN_UPDATE_BATCH_SIZE,
         )}`,
       );
 
       await this.addBatchToCache(tokenBatch);
       await new Promise((resolve) =>
-        setTimeout(resolve, Constants.BATCH_UPDATE_DELAY_MS),
+        setTimeout(resolve, PriceClient.BATCH_UPDATE_DELAY_MS),
       );
     }
   }
@@ -286,9 +361,9 @@ export class PriceClient {
    */
   private async fetchAllTokens(): Promise<string[]> {
     const tokens: string[] = ["XLM"];
-    let nextUrl = `${Constants.STELLAR_EXPERT_ALL_ASSETS_URL}?sort=volume7d&order=desc`;
+    let nextUrl = `${PriceClient.STELLAR_EXPERT_ALL_ASSETS_URL}?sort=volume7d&order=desc`;
 
-    while (tokens.length < Constants.INITIAL_TOKEN_COUNT && nextUrl) {
+    while (tokens.length < PriceClient.INITIAL_TOKEN_COUNT && nextUrl) {
       try {
         this.logger.info(
           `Fetching assets from ${nextUrl}, current count: ${tokens.length}`,
@@ -321,7 +396,7 @@ export class PriceClient {
 
         // Check for next page
         nextUrl = data._links?.next?.href || null;
-        nextUrl = `${Constants.STELLAR_EXPERT_BASE_URL}${nextUrl}`;
+        nextUrl = `${PriceClient.STELLAR_EXPERT_BASE_URL}${nextUrl}`;
         await new Promise((resolve) => setTimeout(resolve, 500));
       } catch (error) {
         this.logger.error(`Error fetching assets: ${error}`);
@@ -361,14 +436,14 @@ export class PriceClient {
       }
 
       await this.redisClient.ts.create(key, {
-        RETENTION: Constants.RETENTION_PERIOD,
+        RETENTION: PriceClient.RETENTION_PERIOD,
         DUPLICATE_POLICY: TimeSeriesDuplicatePolicies.LAST,
         LABELS: {
-          PRICE_CACHE_LABEL: Constants.PRICE_TS_KEY_PREFIX,
+          PRICE_CACHE_LABEL: PriceClient.PRICE_TS_KEY_PREFIX,
         },
       });
       await this.redisClient.zIncrBy(
-        Constants.TOKEN_COUNTER_SORTED_SET_KEY,
+        PriceClient.TOKEN_COUNTER_SORTED_SET_KEY,
         1,
         key,
       );
@@ -426,7 +501,7 @@ export class PriceClient {
       }>((_, reject) =>
         setTimeout(
           () => reject(new Error(`Price calculation timeout for ${token}`)),
-          Constants.PRICE_CALCULATION_TIMEOUT_MS,
+          PriceClient.PRICE_CALCULATION_TIMEOUT_MS,
         ),
       );
 

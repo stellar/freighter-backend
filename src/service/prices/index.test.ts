@@ -410,7 +410,7 @@ describe("Token Price Client", () => {
       const pricePromise = priceClient["calculatePriceInUSD"]("TOKEN1");
 
       // Fast-forward time past the timeout
-      jest.advanceTimersByTime(Constants.PRICE_CALCULATION_TIMEOUT_MS + 100);
+      jest.advanceTimersByTime(10000 + 100);
 
       // Now await the promise, which should reject due to timeout
       await expect(pricePromise).rejects.toThrow(
