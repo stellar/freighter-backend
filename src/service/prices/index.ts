@@ -15,10 +15,21 @@ const USDCAsset = new StellarSdk.Asset(
 const NativeAsset = StellarSdk.Asset.native();
 const USD_RECIEIVE_VALUE = new BigNumber(500);
 
+/**
+ * PriceClient is responsible for fetching, calculating, and caching token prices
+ * from the Stellar network. It uses Redis time series for storing historical price data
+ * and provides methods for retrieving current prices and price change percentages.
+ */
 export class PriceClient {
   private readonly logger: Logger;
   private readonly server: StellarSdk.Horizon.Server;
 
+  /**
+   * Creates a new PriceClient instance.
+   *
+   * @param logger - The logger instance for logging events and errors
+   * @param redisClient - Optional Redis client with time series support for caching prices
+   */
   constructor(
     logger: Logger,
     private readonly redisClient?: RedisClientWithTS,
@@ -31,6 +42,13 @@ export class PriceClient {
     });
   }
 
+  /**
+   * Retrieves the current price and 24-hour price change percentage for a token.
+   * If the token is not in the cache, it also adds it to the cache.
+   *
+   * @param token - The token identifier in format "code:issuer" or "native" for native asset
+   * @returns The token price data or null if price cannot be retrieved
+   */
   getPrice = async (token: string): Promise<TokenPriceData | null> => {
     if (!this.redisClient) {
       return null;
@@ -92,6 +110,12 @@ export class PriceClient {
     }
   };
 
+  /**
+   * Initializes the price cache by fetching all tokens and creating time series
+   * entries for each in Redis. This should be called once at service startup.
+   *
+   * @throws Error if Redis client is not initialized or price cache initialization fails
+   */
   initPriceCache = async (): Promise<void> => {
     try {
       if (!this.redisClient) {
@@ -129,6 +153,12 @@ export class PriceClient {
     }
   };
 
+  /**
+   * Updates prices for all tokens in the cache. This method should be called
+   * periodically to keep prices current.
+   *
+   * @throws Error if Redis client is not initialized or price update fails
+   */
   updatePrices = async (): Promise<void> => {
     try {
       if (!this.redisClient) {
@@ -142,6 +172,13 @@ export class PriceClient {
     }
   };
 
+  /**
+   * Retrieves tokens to update prices for, from the Redis sorted set, ordered by access frequency.
+   *
+   * @returns Array of token keys to update
+   * @throws Error if no tokens are found in the sorted set
+   * @private
+   */
   private async getTokensToUpdate(): Promise<string[]> {
     const tokens = await this.redisClient!.zRange(
       Constants.TOKEN_COUNTER_SORTED_SET_KEY,
@@ -157,6 +194,13 @@ export class PriceClient {
     return tokens;
   }
 
+  /**
+   * Processes tokens in batches to prevent overwhelming the network and API limits.
+   * Each batch is processed with a delay between batches.
+   *
+   * @param tokens - Array of token keys to process
+   * @private
+   */
   private async processTokenBatches(tokens: string[]): Promise<void> {
     for (let i = 0; i < tokens.length; i += Constants.TOKEN_UPDATE_BATCH_SIZE) {
       const tokenBatch = tokens.slice(i, i + Constants.TOKEN_UPDATE_BATCH_SIZE);
@@ -173,6 +217,13 @@ export class PriceClient {
     }
   }
 
+  /**
+   * Adds a batch of new token prices and the timestamps to the Redis timeseries structure.
+   *
+   * @param tokenBatch - Array of token keys to add to cache
+   * @throws Error if no prices could be calculated
+   * @private
+   */
   private async addBatchToCache(tokenBatch: string[]): Promise<void> {
     const prices = await this.calculateBatchPrices(tokenBatch);
     if (prices.length === 0) {
@@ -187,6 +238,14 @@ export class PriceClient {
     await this.redisClient!.ts.mAdd(mAddEntries);
   }
 
+  /**
+   * Calculates prices for a batch of tokens in parallel.
+   *
+   * @param tokens - Array of token keys to calculate prices for
+   * @returns Array of calculated prices with token, timestamp, and price information
+   * @throws Error if batch price calculation fails
+   * @private
+   */
   private async calculateBatchPrices(
     tokens: string[],
   ): Promise<{ token: string; timestamp: number; price: BigNumber }[]> {
@@ -219,6 +278,12 @@ export class PriceClient {
     }
   }
 
+  /**
+   * Fetches all tradable tokens from Stellar Expert API.
+   *
+   * @returns Array of token identifiers in the format "code:issuer" or "XLM" for native asset
+   * @private
+   */
   private async fetchAllTokens(): Promise<string[]> {
     const tokens: string[] = ["XLM"];
     let nextUrl = `${Constants.STELLAR_EXPERT_ALL_ASSETS_URL}?sort=volume7d&order=desc`;
@@ -266,6 +331,14 @@ export class PriceClient {
     return tokens;
   }
 
+  /**
+   * Converts a token identifier to a Redis time series key.
+   * Handles special case for "native" token which is converted to "XLM".
+   *
+   * @param token - Token identifier
+   * @returns Redis time series key for the token
+   * @private
+   */
   private getTimeSeriesKey(token: string): string {
     let key = token;
     if (token === "native") {
@@ -274,6 +347,13 @@ export class PriceClient {
     return key;
   }
 
+  /**
+   * Creates a new time series in Redis for a token and adds it to the sorted set.
+   *
+   * @param key - The time series key to create
+   * @throws Error if Redis client is not initialized or time series creation fails
+   * @private
+   */
   private async createTimeSeries(key: string): Promise<void> {
     try {
       if (!this.redisClient) {
@@ -299,6 +379,15 @@ export class PriceClient {
     }
   }
 
+  /**
+   * Adds a new token to the Redis price cache by calculating its current price
+   * and creating a time series for it.
+   *
+   * @param token - Token identifier to add to cache
+   * @returns The token price data or null if price calculation fails
+   * @throws Error if Redis client is not initialized or adding token to cache fails
+   * @private
+   */
   private addNewTokenToCache = async (
     token: string,
   ): Promise<TokenPriceData | null> => {
@@ -318,6 +407,14 @@ export class PriceClient {
     }
   };
 
+  /**
+   * Calculates the price of a token in USD with a timeout to prevent hanging.
+   *
+   * @param token - Token identifier to calculate price for
+   * @returns Object containing timestamp and price in USD
+   * @throws Error if price calculation fails or times out
+   * @private
+   */
   private calculatePriceInUSD = async (
     token: string,
   ): Promise<{ timestamp: number; price: BigNumber }> => {
@@ -342,6 +439,15 @@ export class PriceClient {
     }
   };
 
+  /**
+   * Calculates the price of a token in USD using Horizon's path finding functionality.
+   * Finds paths from the token to USDC and calculates the exchange rate.
+   *
+   * @param token - Token identifier to calculate price for
+   * @returns Object containing timestamp and price in USD
+   * @throws Error if no paths are found or price calculation fails
+   * @private
+   */
   private calculatePriceUsingPaths = async (
     token: string,
   ): Promise<{ timestamp: number; price: BigNumber }> => {
