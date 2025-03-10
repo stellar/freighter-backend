@@ -7,12 +7,6 @@ import { NETWORK_URLS } from "../../helper/horizon-rpc";
 import { TimeSeriesDuplicatePolicies } from "@redis/time-series";
 import { ensureError } from "./errors";
 import { RedisClientWithTS, TokenPriceData } from "./types";
-const USDCAsset = new StellarSdk.Asset(
-  "USDC",
-  "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
-);
-const NativeAsset = StellarSdk.Asset.native();
-const USD_RECIEIVE_VALUE = new BigNumber(500);
 
 /**
  * PriceClient is responsible for fetching, calculating, and caching token prices
@@ -20,6 +14,25 @@ const USD_RECIEIVE_VALUE = new BigNumber(500);
  * and provides methods for retrieving current prices and price change percentages.
  */
 export class PriceClient {
+  /**
+   * Stellar Asset for USDC.
+   */
+  private static readonly USDCAsset = new StellarSdk.Asset(
+    "USDC",
+    "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+  );
+
+  /**
+   * Stellar Asset for the native asset (XLM).
+   */
+  private static readonly NativeAsset = StellarSdk.Asset.native();
+
+  /**
+   * The receiving value of the USDC asset used as the destination amount for
+   * pathfinding to calculate the per-unit price of a token in USD.
+   */
+  private static readonly USD_RECIEIVE_VALUE = new BigNumber(500);
+
   /**
    * Redis key that indicates whether the price cache has been successfully initialized.
    * Set to "true" after PriceClient.initPriceCache() completes successfully.
@@ -539,7 +552,7 @@ export class PriceClient {
     try {
       let sourceAssets = undefined;
       if (token === "XLM") {
-        sourceAssets = [NativeAsset];
+        sourceAssets = [PriceClient.NativeAsset];
       } else {
         const [code, issuer] = token.split(":");
         if (!code || !issuer) {
@@ -547,7 +560,10 @@ export class PriceClient {
             `Invalid token format: ${token}. Expected 'code:issuer'`,
           );
         }
-        sourceAssets = [new StellarSdk.Asset(code, issuer), NativeAsset];
+        sourceAssets = [
+          new StellarSdk.Asset(code, issuer),
+          PriceClient.NativeAsset,
+        ];
       }
 
       const latestLedger = await this.server
@@ -562,8 +578,8 @@ export class PriceClient {
       const paths = await this.server
         .strictReceivePaths(
           sourceAssets,
-          USDCAsset,
-          USD_RECIEIVE_VALUE.toString(),
+          PriceClient.USDCAsset,
+          PriceClient.USD_RECIEIVE_VALUE.toString(),
         )
         .call();
       if (!paths.records.length) {
@@ -580,7 +596,8 @@ export class PriceClient {
           Number(paths.records[0].source_amount),
         ),
       );
-      const unitTokenPrice = USD_RECIEIVE_VALUE.dividedBy(tokenUnit);
+      const unitTokenPrice =
+        PriceClient.USD_RECIEIVE_VALUE.dividedBy(tokenUnit);
       return { timestamp: latestLedgerTimestamp, price: unitTokenPrice };
     } catch (e) {
       throw ensureError(e, `calculating price using paths for ${token}`);
