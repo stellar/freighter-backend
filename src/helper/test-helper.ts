@@ -612,12 +612,26 @@ const blockAidService = new BlockAidService(
 jest
   .spyOn(mockMercuryClient, "tokenDetails")
   .mockImplementation(
-    (..._args: Parameters<MercuryClient["tokenDetails"]>): any => {
-      return {
+    (
+      _pubKey: string,
+      _contractId: string,
+      _network: NetworkNames,
+      shouldFetchBalance?: boolean,
+    ): any => {
+      const baseResponse = {
         name: "Test Contract",
-        decimals: 7,
+        decimals: "7",
         symbol: "TST",
       };
+
+      if (shouldFetchBalance) {
+        return {
+          ...baseResponse,
+          balance: "1000000",
+        };
+      }
+
+      return baseResponse;
     },
   );
 async function getDevServer(
@@ -625,6 +639,8 @@ async function getDevServer(
     useBlockaidAssetScanning: true,
     useBlockaidDappScanning: true,
     useBlockaidTxScanning: true,
+    useBlockaidAssetWarningReporting: true,
+    useBlockaidTransactionWarningReporting: true,
   },
 ) {
   const server = await initApiServer(
