@@ -560,10 +560,7 @@ export class PriceClient {
             `Invalid token format: ${token}. Expected 'code:issuer'`,
           );
         }
-        sourceAssets = [
-          new StellarSdk.Asset(code, issuer),
-          PriceClient.NativeAsset,
-        ];
+        sourceAssets = [new StellarSdk.Asset(code, issuer)];
       }
 
       const latestLedger = await this.server
@@ -586,12 +583,8 @@ export class PriceClient {
         throw new Error(`No paths found for ${token}`);
       }
 
-      const newPaths = paths.records.filter((record) => {
-        return record.source_asset_code === sourceAssets[0].code;
-      });
-
       const tokenUnit = new BigNumber(
-        newPaths.reduce(
+        paths.records.reduce(
           (min, record) => Math.min(min, Number(record.source_amount)),
           Number(paths.records[0].source_amount),
         ),
