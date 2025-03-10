@@ -643,6 +643,8 @@ async function getDevServer(
     useBlockaidTransactionWarningReporting: true,
   },
 ) {
+  register.clear();
+
   const server = await initApiServer(
     mockMercuryClient,
     blockAidService,
