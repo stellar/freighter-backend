@@ -894,7 +894,6 @@ describe("API routes", () => {
 
       expect(response.status).toEqual(200);
       expect(resJson.data.token).toEqual("token");
-      register.clear();
       await server.close();
     });
     it("does not fetch a token without Coinbase config", async () => {
@@ -931,7 +930,6 @@ describe("API routes", () => {
       expect(response.status).toEqual(400);
       expect(resJson.data).toEqual(undefined);
       expect(resJson.error).toEqual("Coinbase config not set");
-      register.clear();
       await server.close();
     });
     it("does not fetch a token if it is unable to generate the token", async () => {
@@ -962,7 +960,6 @@ describe("API routes", () => {
       expect(resJson.error).toEqual(
         "Unable to retrieve token: Error: JWT generation failed",
       );
-      register.clear();
       await server.close();
     });
   });
