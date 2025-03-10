@@ -14,6 +14,19 @@ export type RedisClientWithTS = RedisClientType<
 >;
 
 export interface TokenPriceData {
-  currentPrice: BigNumber;
-  percentagePriceChange24h: BigNumber | null;
+  readonly currentPrice: BigNumber;
+  readonly percentagePriceChange24h: BigNumber | null;
+}
+
+export interface PriceCalculationResult {
+  readonly timestamp: number;
+  readonly price: BigNumber;
+}
+
+export type TokenKey = string;
+
+export interface TimeSeriesEntry {
+  readonly key: string;
+  readonly timestamp: number;
+  readonly value: number;
 }

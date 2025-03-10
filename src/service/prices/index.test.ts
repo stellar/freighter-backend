@@ -2,7 +2,7 @@ import { PriceClient } from "./index";
 import { testLogger } from "../../helper/test-helper";
 import { TokenPriceData } from "./types";
 import BigNumber from "bignumber.js";
-
+import { PriceCalculationError } from "./errors";
 describe("Token Price Client", () => {
   let priceClient: PriceClient;
   const mockRedisClient: any = {
@@ -436,7 +436,7 @@ describe("Token Price Client", () => {
 
       // Now await the promise, which should reject due to timeout
       await expect(pricePromise).rejects.toThrow(
-        "calculating price for TOKEN1",
+        new PriceCalculationError("TOKEN1"),
       );
 
       // Restore real timers

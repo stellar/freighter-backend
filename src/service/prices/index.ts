@@ -5,8 +5,19 @@ import * as StellarSdkNext from "stellar-sdk-next";
 import { getSdk } from "../../helper/stellar";
 import { NETWORK_URLS } from "../../helper/horizon-rpc";
 import { TimeSeriesDuplicatePolicies } from "@redis/time-series";
-import { ensureError } from "./errors";
-import { RedisClientWithTS, TokenPriceData } from "./types";
+import {
+  InvalidTokenFormatError,
+  PriceCalculationError,
+  PathsNotFoundError,
+  ensureError,
+} from "./errors";
+import {
+  RedisClientWithTS,
+  TokenPriceData,
+  PriceCalculationResult,
+  TimeSeriesEntry,
+  TokenKey,
+} from "./types";
 
 /**
  * PriceClient is responsible for fetching, calculating, and caching token prices
@@ -143,7 +154,7 @@ export class PriceClient {
    * @param token - The token identifier in format "code:issuer" or "native" for native asset
    * @returns The token price data or null if price cannot be retrieved
    */
-  getPrice = async (token: string): Promise<TokenPriceData | null> => {
+  getPrice = async (token: TokenKey): Promise<TokenPriceData | null> => {
     if (!this.redisClient) {
       return null;
     }
@@ -284,7 +295,7 @@ export class PriceClient {
    * @throws Error if no tokens are found in the sorted set
    * @private
    */
-  private async getTokensToUpdate(): Promise<string[]> {
+  private async getTokensToUpdate(): Promise<TokenKey[]> {
     const tokens = await this.redisClient!.zRange(
       PriceClient.TOKEN_COUNTER_SORTED_SET_KEY,
       0,
@@ -306,7 +317,7 @@ export class PriceClient {
    * @param tokens - Array of token keys to process
    * @private
    */
-  private async processTokenBatches(tokens: string[]): Promise<void> {
+  private async processTokenBatches(tokens: TokenKey[]): Promise<void> {
     for (
       let i = 0;
       i < tokens.length;
@@ -336,17 +347,19 @@ export class PriceClient {
    * @throws Error if no prices could be calculated
    * @private
    */
-  private async addBatchToCache(tokenBatch: string[]): Promise<void> {
+  private async addBatchToCache(tokenBatch: TokenKey[]): Promise<void> {
     const prices = await this.calculateBatchPrices(tokenBatch);
     if (prices.length === 0) {
-      throw new Error("No prices calculated");
+      throw new PriceCalculationError("No prices calculated");
     }
 
-    const mAddEntries = prices.map(({ token, timestamp, price }) => ({
-      key: this.getTimeSeriesKey(token),
-      timestamp,
-      value: price.toNumber(),
-    }));
+    const mAddEntries: TimeSeriesEntry[] = prices.map(
+      ({ token, timestamp, price }) => ({
+        key: this.getTimeSeriesKey(token),
+        timestamp,
+        value: price.toNumber(),
+      }),
+    );
     await this.redisClient!.ts.mAdd(mAddEntries);
   }
 
@@ -359,8 +372,8 @@ export class PriceClient {
    * @private
    */
   private async calculateBatchPrices(
-    tokens: string[],
-  ): Promise<{ token: string; timestamp: number; price: BigNumber }[]> {
+    tokens: TokenKey[],
+  ): Promise<{ token: TokenKey; timestamp: number; price: BigNumber }[]> {
     try {
       const pricePromises = tokens.map((token) =>
         this.calculatePriceInUSD(token)
@@ -380,7 +393,7 @@ export class PriceClient {
       const prices = (await Promise.all(pricePromises)).filter(
         (
           price,
-        ): price is { token: string; timestamp: number; price: BigNumber } =>
+        ): price is { token: TokenKey; timestamp: number; price: BigNumber } =>
           price !== null,
       );
 
@@ -397,8 +410,8 @@ export class PriceClient {
    * @returns Array of token identifiers in the format "code:issuer" or "XLM" for native asset
    * @private
    */
-  private async fetchAllTokens(): Promise<string[]> {
-    const tokens: string[] = ["XLM"];
+  private async fetchAllTokens(): Promise<TokenKey[]> {
+    const tokens: TokenKey[] = ["XLM"];
     let nextUrl = `${PriceClient.STELLAR_EXPERT_ALL_ASSETS_URL}?sort=rating&order=desc`;
 
     while (tokens.length < PriceClient.INITIAL_TOKEN_COUNT && nextUrl) {
@@ -411,7 +424,7 @@ export class PriceClient {
 
         if (data._embedded?.records) {
           for (const record of data._embedded.records) {
-            let token: string | null = null;
+            let token: TokenKey | null = null;
 
             if (record.asset === "XLM" || record.asset === "USDC") {
               continue;
@@ -452,7 +465,7 @@ export class PriceClient {
    * @returns Redis time series key for the token
    * @private
    */
-  private getTimeSeriesKey(token: string): string {
+  private getTimeSeriesKey(token: TokenKey): string {
     let key = token;
     if (token === "native") {
       key = "XLM";
@@ -502,7 +515,7 @@ export class PriceClient {
    * @private
    */
   private addNewTokenToCache = async (
-    token: string,
+    token: TokenKey,
   ): Promise<TokenPriceData | null> => {
     try {
       if (!this.redisClient) {
@@ -529,16 +542,12 @@ export class PriceClient {
    * @private
    */
   private calculatePriceInUSD = async (
-    token: string,
-  ): Promise<{ timestamp: number; price: BigNumber }> => {
+    token: TokenKey,
+  ): Promise<PriceCalculationResult> => {
     try {
-      // Add a timeout to the price calculation
-      const timeoutPromise = new Promise<{
-        timestamp: number;
-        price: BigNumber;
-      }>((_, reject) =>
+      const timeoutPromise = new Promise<PriceCalculationResult>((_, reject) =>
         setTimeout(
-          () => reject(new Error(`Price calculation timeout for ${token}`)),
+          () => reject(new PriceCalculationError(token)),
           PriceClient.PRICE_CALCULATION_TIMEOUT_MS,
         ),
       );
@@ -562,8 +571,8 @@ export class PriceClient {
    * @private
    */
   private calculatePriceUsingPaths = async (
-    token: string,
-  ): Promise<{ timestamp: number; price: BigNumber }> => {
+    token: TokenKey,
+  ): Promise<PriceCalculationResult> => {
     try {
       let sourceAssets = undefined;
       if (token === "XLM") {
@@ -571,9 +580,7 @@ export class PriceClient {
       } else {
         const [code, issuer] = token.split(":");
         if (!code || !issuer) {
-          throw new Error(
-            `Invalid token format: ${token}. Expected 'code:issuer'`,
-          );
+          throw new InvalidTokenFormatError(token);
         }
         sourceAssets = [new StellarSdk.Asset(code, issuer)];
       }
@@ -595,7 +602,7 @@ export class PriceClient {
         )
         .call();
       if (!paths.records.length) {
-        throw new Error(`No paths found for ${token}`);
+        throw new PathsNotFoundError(token);
       }
 
       const tokenUnit = new BigNumber(
