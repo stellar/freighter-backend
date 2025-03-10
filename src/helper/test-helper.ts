@@ -642,6 +642,10 @@ async function getDevServer(
     useBlockaidAssetWarningReporting: true,
     useBlockaidTransactionWarningReporting: true,
   },
+  coinbaseConfig = {
+    coinbaseApiKey: "coinbaseApiKey",
+    coinbaseApiSecret: "coinbaseApiSecret",
+  },
 ) {
   register.clear();
 
@@ -655,6 +659,7 @@ async function getDevServer(
     register,
     "development",
     blockaidConfig,
+    coinbaseConfig,
   );
 
   await server.listen();

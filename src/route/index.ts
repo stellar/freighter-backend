@@ -40,6 +40,7 @@ import { getSdk } from "../helper/stellar";
 import { getUseMercury } from "../helper/mercury";
 import { getHttpRequestDurationLabels } from "../helper/metrics";
 import { mode } from "../helper/env";
+import { fetchOnrampSessionToken, CoinbaseConfig } from "../helper/onramp";
 import Blockaid from "@blockaid/client";
 import { PriceClient } from "../service/prices";
 import { TokenPriceData } from "../service/prices/types";
@@ -65,6 +66,7 @@ export async function initApiServer(
     useBlockaidAssetWarningReporting: boolean;
     useBlockaidTransactionWarningReporting: boolean;
   },
+  coinbaseConfig: CoinbaseConfig,
   redis?: Redis,
 ) {
   const routeMetricsStore = new WeakMap<
@@ -1296,6 +1298,54 @@ export async function initApiServer(
             reply.code(200).send(data);
           } catch (error) {
             reply.code(400).send(error);
+          }
+        },
+      });
+
+      instance.route({
+        method: "POST",
+        url: "/onramp/token",
+        schema: {
+          body: {
+            type: "object",
+            required: ["address"],
+            properties: {
+              address: { type: "string" },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Body: { address: string };
+          }>,
+          reply,
+        ) => {
+          const { address } = request.body;
+          if (
+            !coinbaseConfig.coinbaseApiKey ||
+            !coinbaseConfig.coinbaseApiSecret
+          ) {
+            return reply.code(400).send({ error: "Coinbase config not set" });
+          }
+
+          try {
+            const { data, error } = await fetchOnrampSessionToken({
+              address,
+              coinbaseConfig,
+            });
+
+            const { token } = data;
+
+            if (!token) {
+              return reply
+                .code(400)
+                .send({ error: `Unable to retrieve token: ${error}` });
+            }
+
+            return reply.code(200).send({ data: { token } });
+          } catch (error) {
+            logger.error(error);
+            return reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
