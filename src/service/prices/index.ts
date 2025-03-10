@@ -31,7 +31,7 @@ export class PriceClient {
    * The receiving value of the USDC asset used as the destination amount for
    * pathfinding to calculate the per-unit price of a token in USD.
    */
-  private static readonly USD_RECIEIVE_VALUE = new BigNumber(500);
+  private static readonly USD_RECIEIVE_VALUE = new BigNumber(100);
 
   /**
    * Redis key that indicates whether the price cache has been successfully initialized.
@@ -94,7 +94,13 @@ export class PriceClient {
    * Maximum number of tokens to fetch and track prices for initially.
    * Limits the total number of tokens to manage system resource usage.
    */
-  private static readonly INITIAL_TOKEN_COUNT = 1000;
+  private static readonly INITIAL_TOKEN_COUNT = 100;
+
+  /**
+   * The time period (in milliseconds) for which to consider a price stale.
+   * Currently set to 5 minutes in milliseconds to prevent returning stale prices.
+   */
+  private static readonly LATEST_PRICE_STALE_THRESHOLD = 1000 * 60 * 5;
 
   /**
    * Stellar Expert API endpoint for fetching all tradable assets.
@@ -152,6 +158,13 @@ export class PriceClient {
 
     try {
       if (!latestPrice) {
+        return null;
+      }
+
+      if (
+        latestPrice.timestamp <
+        Date.now() - PriceClient.LATEST_PRICE_STALE_THRESHOLD
+      ) {
         return null;
       }
 
@@ -384,7 +397,7 @@ export class PriceClient {
    */
   private async fetchAllTokens(): Promise<string[]> {
     const tokens: string[] = ["XLM"];
-    let nextUrl = `${PriceClient.STELLAR_EXPERT_ALL_ASSETS_URL}?sort=volume7d&order=desc`;
+    let nextUrl = `${PriceClient.STELLAR_EXPERT_ALL_ASSETS_URL}?sort=rating&order=desc`;
 
     while (tokens.length < PriceClient.INITIAL_TOKEN_COUNT && nextUrl) {
       try {
