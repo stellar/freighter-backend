@@ -3,10 +3,37 @@ import { workerData } from "worker_threads";
 import { logger } from "../../logger";
 import { PriceClient } from ".";
 import { ensureError } from "./errors";
-import * as Constants from "./constants";
 import { RedisClientWithTS } from "./types";
 
 const { hostname, redisConnectionName, redisPort } = workerData;
+
+/**
+ * Redis key that indicates whether the price cache has been successfully initialized.
+ * Set to "true" after PriceClient.initPriceCache() completes successfully.
+ * Used by the worker to determine if initialization is needed on startup.
+ */
+const PRICE_CACHE_INITIALIZED_KEY = "price_cache_initialized";
+
+/**
+ * The interval (in milliseconds) between price updates in the worker process.
+ * Set to 1 minute to ensure prices remain relatively current without excessive API calls.
+ * Used in the price worker to schedule regular price updates.
+ */
+const PRICE_UPDATE_INTERVAL = 1 * 60 * 1000; // 1 minute in milliseconds
+
+/**
+ * Number of attempts to initialize the price cache before giving up.
+ * Helps handle temporary network issues during service startup.
+ * Used in the price worker's initializePriceCache function.
+ */
+const NUM_RETRIES_CACHE_INITIALIZATION = 3;
+
+/**
+ * Delay (in milliseconds) between retry attempts for cache initialization.
+ * Provides time for temporary issues to resolve before retrying.
+ * Used in the price worker's initializePriceCache function.
+ */
+const RETRY_DELAY_MS = 30000;
 
 const initializePriceCache = async (
   priceClient: PriceClient,
@@ -16,32 +43,30 @@ const initializePriceCache = async (
 
   for (
     let attempt = 1;
-    attempt <= Constants.NUM_RETRIES_CACHE_INITIALIZATION;
+    attempt <= NUM_RETRIES_CACHE_INITIALIZATION;
     attempt++
   ) {
     try {
       logger.info(
-        `Attempting price cache initialization (attempt ${attempt}/${Constants.NUM_RETRIES_CACHE_INITIALIZATION})`,
+        `Attempting price cache initialization (attempt ${attempt}/${NUM_RETRIES_CACHE_INITIALIZATION})`,
       );
       await priceClient.initPriceCache();
-      await redisClient.set(Constants.PRICE_CACHE_INITIALIZED_KEY, "true");
+      await redisClient.set(PRICE_CACHE_INITIALIZED_KEY, "true");
       return;
     } catch (e) {
       lastError = ensureError(e, "price cache initialization").message;
-      if (attempt < Constants.NUM_RETRIES_CACHE_INITIALIZATION) {
+      if (attempt < NUM_RETRIES_CACHE_INITIALIZATION) {
         logger.warn(
           { error: lastError },
-          `Price cache initialization attempt: ${attempt} failed, retrying in ${Constants.RETRY_DELAY_MS / 1000} seconds`,
+          `Price cache initialization attempt: ${attempt} failed, retrying in ${RETRY_DELAY_MS / 1000} seconds`,
         );
-        await new Promise((resolve) =>
-          setTimeout(resolve, Constants.RETRY_DELAY_MS),
-        );
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
       }
     }
   }
 
   throw new Error(
-    `Failed to initialize price cache after ${Constants.NUM_RETRIES_CACHE_INITIALIZATION} attempts. Last error: ${lastError}`,
+    `Failed to initialize price cache after ${NUM_RETRIES_CACHE_INITIALIZATION} attempts. Last error: ${lastError}`,
   );
 };
 
@@ -64,7 +89,7 @@ const main = async (): Promise<void> => {
 
   // Initialize cache with top 50 assets
   const priceCacheInitialized = await redisClient.get(
-    Constants.PRICE_CACHE_INITIALIZED_KEY,
+    PRICE_CACHE_INITIALIZED_KEY,
   );
 
   if (!priceCacheInitialized) {
@@ -89,7 +114,7 @@ const main = async (): Promise<void> => {
       const error = ensureError(e, "updating price cache");
       logger.error(error);
     }
-  }, Constants.PRICE_UPDATE_INTERVAL);
+  }, PRICE_UPDATE_INTERVAL);
 };
 
 main().catch((e) => {

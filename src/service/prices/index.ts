@@ -6,7 +6,6 @@ import { getSdk } from "../../helper/stellar";
 import { NETWORK_URLS } from "../../helper/horizon-rpc";
 import { TimeSeriesDuplicatePolicies } from "@redis/time-series";
 import { ensureError } from "./errors";
-import * as Constants from "./constants";
 import { RedisClientWithTS, TokenPriceData } from "./types";
 const USDCAsset = new StellarSdk.Asset(
   "USDC",
@@ -21,6 +20,14 @@ const USD_RECIEIVE_VALUE = new BigNumber(500);
  * and provides methods for retrieving current prices and price change percentages.
  */
 export class PriceClient {
+  /**
+   * Redis key that indicates whether the price cache has been successfully initialized.
+   * Set to "true" after PriceClient.initPriceCache() completes successfully.
+   * Used by the worker to determine if initialization is needed on startup.
+   */
+  private static readonly PRICE_CACHE_INITIALIZED_KEY =
+    "price_cache_initialized";
+
   /**
    * Prefix for Redis time series keys storing token price data.
    * Used to create consistent key naming for all token price time series.
@@ -38,19 +45,19 @@ export class PriceClient {
    * Represents one day in milliseconds (24h * 60m * 60s * 1000ms).
    * Used when calculating 24-hour price changes in getPrice() method.
    */
-  private static readonly ONE_DAY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+  private static readonly ONE_DAY = 24 * 60 * 60 * 1000;
 
   /**
    * Represents one minute in milliseconds (60s * 1000ms).
    * Used as an offset window when looking up historical prices to handle slight timing variations.
    */
-  private static readonly ONE_MINUTE = 60 * 1000; // 1 minute in milliseconds
+  private static readonly ONE_MINUTE = 60 * 1000;
 
   /**
    * The time period (in milliseconds) for which to retain price data in Redis time series.
-   * Currently set to 1 day to support 24-hour price change calculations while managing storage usage.
+   * Currently set to 1 day in milliseconds to support 24-hour price change calculations while managing storage usage.
    */
-  private static readonly RETENTION_PERIOD = 24 * 60 * 60 * 1000; // 1 day retention period
+  private static readonly RETENTION_PERIOD = 24 * 60 * 60 * 1000;
 
   /**
    * Delay (in milliseconds) between processing batches of tokens during price updates.
@@ -215,7 +222,10 @@ export class PriceClient {
         }
       }
       await pipeline.exec();
-      await this.redisClient.set(Constants.PRICE_CACHE_INITIALIZED_KEY, "true");
+      await this.redisClient.set(
+        PriceClient.PRICE_CACHE_INITIALIZED_KEY,
+        "true",
+      );
     } catch (error) {
       throw ensureError(error, `initializing price cache`);
     }
