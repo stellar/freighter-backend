@@ -44,6 +44,7 @@ import { PriceClient } from "../service/prices";
 import { TokenPriceData } from "../service/prices/types";
 
 const API_VERSION = "v1";
+const TOKEN_PRICES_BATCH_SIZE = 100;
 
 export async function initApiServer(
   mercuryClient: MercuryClient,
@@ -903,12 +904,14 @@ export async function initApiServer(
             const { tokens } = request.query;
             const prices: { [key: string]: TokenPriceData | null } = {};
 
-            // Get prices for all tokens in parallel
-            await Promise.all(
-              tokens.map(async (token) => {
-                prices[token] = await priceClient.getPrice(token);
-              }),
-            );
+            for (let i = 0; i < tokens.length; i += TOKEN_PRICES_BATCH_SIZE) {
+              const batch = tokens.slice(i, i + TOKEN_PRICES_BATCH_SIZE);
+              await Promise.all(
+                batch.map(async (token) => {
+                  prices[token] = await priceClient.getPrice(token);
+                }),
+              );
+            }
 
             reply.code(200).send({ data: prices });
           } catch (error) {
