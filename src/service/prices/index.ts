@@ -15,8 +15,9 @@ import {
   RedisClientWithTS,
   TokenPriceData,
   PriceCalculationResult,
-  TimeSeriesEntry,
   TokenKey,
+  TimeSeriesEntry,
+  MAddEntry,
 } from "./types";
 
 /**
@@ -160,7 +161,7 @@ export class PriceClient {
     }
 
     const tsKey = this.getTimeSeriesKey(token);
-    let latestPrice: { timestamp: number; value: number } | null = null;
+    let latestPrice: TimeSeriesEntry | null = null;
     try {
       latestPrice = await this.redisClient.ts.get(tsKey);
     } catch (e) {
@@ -353,7 +354,7 @@ export class PriceClient {
       throw new PriceCalculationError("No prices calculated");
     }
 
-    const mAddEntries: TimeSeriesEntry[] = prices.map(
+    const mAddEntries: MAddEntry[] = prices.map(
       ({ token, timestamp, price }) => ({
         key: this.getTimeSeriesKey(token),
         timestamp,

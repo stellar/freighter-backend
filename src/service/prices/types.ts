@@ -25,8 +25,13 @@ export interface PriceCalculationResult {
 
 export type TokenKey = string;
 
-export interface TimeSeriesEntry {
+export interface MAddEntry {
   readonly key: string;
+  readonly timestamp: number;
+  readonly value: number;
+}
+
+export interface TimeSeriesEntry {
   readonly timestamp: number;
   readonly value: number;
 }
