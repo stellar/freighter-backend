@@ -878,14 +878,14 @@ export async function initApiServer(
       });
 
       instance.route({
-        method: "GET",
+        method: "POST",
         url: "/token-prices",
         schema: {
-          querystring: {
+          body: {
             type: "object",
             required: ["tokens"],
             properties: {
-              ["tokens"]: {
+              tokens: {
                 type: "array",
                 items: { type: "string" },
               },
@@ -894,14 +894,14 @@ export async function initApiServer(
         },
         handler: async (
           request: FastifyRequest<{
-            Querystring: {
-              ["tokens"]: string[];
+            Body: {
+              tokens: string[];
             };
           }>,
           reply,
         ) => {
           try {
-            const { tokens } = request.query;
+            const { tokens } = request.body;
             const prices: { [key: string]: TokenPriceData | null } = {};
 
             for (let i = 0; i < tokens.length; i += TOKEN_PRICES_BATCH_SIZE) {
