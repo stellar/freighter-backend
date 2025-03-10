@@ -25,6 +25,7 @@ import {
   isPubKey,
   isNetwork,
   NetworkNames,
+  isValidTokenString,
 } from "../helper/validate";
 import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
 import {
@@ -887,7 +888,12 @@ export async function initApiServer(
             properties: {
               tokens: {
                 type: "array",
-                items: { type: "string" },
+                minItems: 1,
+                maxItems: 100,
+                items: {
+                  type: "string",
+                  validator: (token: string) => isValidTokenString(token),
+                },
               },
             },
           },
