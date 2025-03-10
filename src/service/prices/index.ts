@@ -100,7 +100,7 @@ export class PriceClient {
    * Maximum number of tokens to process in a single batch during price updates.
    * Balances update efficiency with Stellar network and Redis load.
    */
-  private static readonly TOKEN_UPDATE_BATCH_SIZE = 150;
+  private static readonly TOKEN_UPDATE_BATCH_SIZE = 25;
 
   /**
    * Maximum number of tokens to fetch and track prices for initially.

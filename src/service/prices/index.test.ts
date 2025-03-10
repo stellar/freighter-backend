@@ -283,7 +283,7 @@ describe("Token Price Client", () => {
     });
 
     it("processTokenBatches should process tokens in batches", async () => {
-      const mockTokens = Array(1000)
+      const mockTokens = Array(100)
         .fill(0)
         .map((_, i) => `TOKEN${i}`);
 
@@ -300,10 +300,10 @@ describe("Token Price Client", () => {
 
       await priceClient["processTokenBatches"](mockTokens);
 
-      // With default batch size of 150 and 1000 tokens, we expect 7 batches
-      expect(priceClient["addBatchToCache"]).toHaveBeenCalledTimes(7);
+      // With default batch size of 25 and 100 tokens, we expect 4 batches
+      expect(priceClient["addBatchToCache"]).toHaveBeenCalledTimes(4);
       expect(testLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining("Processing batch 1 of 7"),
+        expect.stringContaining("Processing batch 1 of 4"),
       );
     });
 
