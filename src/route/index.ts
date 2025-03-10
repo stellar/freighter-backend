@@ -46,6 +46,8 @@ import { TokenPriceData } from "../service/prices/types";
 
 const API_VERSION = "v1";
 const TOKEN_PRICES_BATCH_SIZE = 50;
+const TOKEN_PRICES_MIN_REQUEST_SIZE = 1;
+const TOKEN_PRICES_MAX_REQUEST_SIZE = 100;
 
 export async function initApiServer(
   mercuryClient: MercuryClient,
@@ -888,8 +890,8 @@ export async function initApiServer(
             properties: {
               tokens: {
                 type: "array",
-                minItems: 1,
-                maxItems: 100,
+                minItems: TOKEN_PRICES_MIN_REQUEST_SIZE,
+                maxItems: TOKEN_PRICES_MAX_REQUEST_SIZE,
                 items: {
                   type: "string",
                   validator: (token: string) => isValidTokenString(token),
