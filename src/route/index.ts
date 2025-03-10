@@ -45,7 +45,7 @@ import { PriceClient } from "../service/prices";
 import { TokenPriceData } from "../service/prices/types";
 
 const API_VERSION = "v1";
-const TOKEN_PRICES_BATCH_SIZE = 100;
+const TOKEN_PRICES_BATCH_SIZE = 50;
 
 export async function initApiServer(
   mercuryClient: MercuryClient,
