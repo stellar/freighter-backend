@@ -227,6 +227,7 @@ export class PriceClient {
       this.logger.info(`Fetched ${tokens.length} total tokens`);
 
       // Create time series and sorted set for each token and add it to Redis pipeline.
+      // The Redis pipeline submits all the commands at once to Redis, which is more efficient than submitting them one by one.
       const pipeline = this.redisClient.multi();
       for (const token of tokens) {
         const tsKey = this.getTimeSeriesKey(token);
@@ -390,7 +391,8 @@ export class PriceClient {
   }
 
   /**
-   * Fetches all tradable tokens from Stellar Expert API.
+   * Fetches all tradable tokens from Stellar Expert API sorted by the rating. This ensures we start with the most
+   * popular tokens in the cache.
    *
    * @returns Array of token identifiers in the format "code:issuer" or "XLM" for native asset
    * @private
