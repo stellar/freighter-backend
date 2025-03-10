@@ -87,7 +87,6 @@ const main = async (): Promise<void> => {
 
   const priceClient = new PriceClient(logger, redisClient);
 
-  // Initialize cache with top 50 assets
   const priceCacheInitialized = await redisClient.get(
     PRICE_CACHE_INITIALIZED_KEY,
   );
