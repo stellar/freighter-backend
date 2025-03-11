@@ -85,29 +85,6 @@ describe("Token Price Client", () => {
       );
     });
 
-    it("should return null for stale prices", async () => {
-      // Setup mock Redis responses with a stale timestamp (older than 5 minutes)
-      const mockCurrentPrice = 50000;
-      const staleTimestamp = Date.now() - 6 * 60 * 1000; // 6 minutes ago
-
-      // Mock ts.get to return stale price data
-      mockRedisClient.ts.get.mockResolvedValue({
-        timestamp: staleTimestamp,
-        value: mockCurrentPrice,
-      });
-
-      const token =
-        "BTC:GDPJALI4AZKUU2W426U5WKMAT6CN3AJRPIIRYR2YM54TL2GDWO5O2MZM";
-      const result = await priceClient.getPrice(token);
-
-      expect(result).toBeNull();
-      // Verify Redis client was called
-      expect(mockRedisClient.ts.get).toHaveBeenCalledWith(token);
-      // Range and zIncrBy should not be called since we return early for stale prices
-      expect(mockRedisClient.ts.range).not.toHaveBeenCalled();
-      expect(mockRedisClient.zIncrBy).not.toHaveBeenCalled();
-    });
-
     it("should handle missing historical data", async () => {
       // Setup mock - current price exists but no historical data
       mockRedisClient.ts.get.mockResolvedValue({

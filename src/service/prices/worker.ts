@@ -56,7 +56,7 @@ async function initializePriceCache(
       const error = ensureError(e, "price cache initialization");
       if (attempt < CONFIG.NUM_RETRIES_CACHE_INITIALIZATION) {
         logger.warn(
-          { error: error.message },
+          { error: error },
           `Price cache initialization attempt: ${attempt} failed, retrying in ${CONFIG.RETRY_DELAY_MS / 1000} seconds`,
         );
         await delay(CONFIG.RETRY_DELAY_MS);

@@ -109,12 +109,6 @@ export class PriceClient {
   private static readonly INITIAL_TOKEN_COUNT = 100;
 
   /**
-   * The time period (in milliseconds) for which to consider a price stale.
-   * Currently set to 5 minutes in milliseconds to prevent returning stale prices.
-   */
-  private static readonly LATEST_PRICE_STALE_THRESHOLD = 1000 * 60 * 5;
-
-  /**
    * Stellar Expert API endpoint for fetching all tradable assets.
    */
   private static readonly STELLAR_EXPERT_ALL_ASSETS_URL =
@@ -170,13 +164,6 @@ export class PriceClient {
 
     try {
       if (!latestPrice) {
-        return null;
-      }
-
-      if (
-        latestPrice.timestamp <
-        Date.now() - PriceClient.LATEST_PRICE_STALE_THRESHOLD
-      ) {
         return null;
       }
 
@@ -252,8 +239,8 @@ export class PriceClient {
             },
           });
           pipeline.zIncrBy(PriceClient.TOKEN_COUNTER_SORTED_SET_KEY, 1, tsKey);
-          this.logger.info(`Created time series ${tsKey}`);
-          this.logger.info(`Added to sorted set ${tsKey}`);
+          this.logger.info(`Creating time series ${tsKey}`);
+          this.logger.info(`Adding to sorted set ${tsKey}`);
         } catch (error) {
           this.logger.error(
             `Error creating time series for ${token}: ${error}`,
