@@ -23,9 +23,7 @@ const isValidTokenString = (asset: string) => {
     // Asset codes must follow Stellar conventions:
     // 1. Alphanumeric 4 (1-4 characters)
     // 2. Alphanumeric 12 (5-12 characters)
-    if (code.length < 1) return false;
-    if (code.length > 4 && code.length < 5) return false;
-    if (code.length > 12) return false;
+    if (code.length < 1 || code.length > 12) return false;
 
     // Asset codes can only contain a-z, A-Z, 0-9
     if (!/^[a-zA-Z0-9]+$/.test(code)) return false;
