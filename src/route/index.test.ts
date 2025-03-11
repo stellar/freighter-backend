@@ -606,8 +606,14 @@ describe("API routes", () => {
         },
         body: JSON.stringify({
           tokens: [
-            "USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+            // Test Alphanumeric 4 cases (1-4 chars)
+            "USD:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
             "BTC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+            "a:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+            "Ab1z:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+            // Test Alphanumeric 12 cases (5-12 chars)
+            "USDC123:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+            "abcde12345AB:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
           ],
         }),
       };
@@ -665,7 +671,7 @@ describe("API routes", () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          tokens: ["invalid-token"],
+          tokens: ["invalid-token"], // Contains invalid character '-'
         }),
       };
       const response = await fetch(url.href, options);
@@ -704,7 +710,12 @@ describe("API routes", () => {
         },
         body: JSON.stringify({
           tokens: [
-            `TOOLONGASSETCODE:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+            // Too long (> 12 chars)
+            `TOOLONGASSETCDE:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+            // Empty code
+            `:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+            // Invalid length (between 4 and 5 chars)
+            `ABCD1:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
           ],
         }),
       };
@@ -725,7 +736,12 @@ describe("API routes", () => {
         },
         body: JSON.stringify({
           tokens: [
-            `INVALID$:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+            // Contains special character
+            `USD$:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+            // Contains space
+            `US D:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+            // Contains unicode
+            `USD€:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
           ],
         }),
       };
@@ -788,9 +804,9 @@ describe("API routes", () => {
         },
         body: JSON.stringify({
           tokens: [
-            "USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-            "invalid-token",
-            "XLM",
+            "USD:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5", // valid
+            "invalid-token", // invalid format
+            "XLM", // valid
           ],
         }),
       };
