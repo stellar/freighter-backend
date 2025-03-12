@@ -137,9 +137,12 @@ export class PriceClient {
     this.logger = logger;
     const Sdk = getSdk(StellarSdkNext.Networks.PUBLIC);
     const { Horizon } = Sdk;
-    this.server = new Horizon.Server(NETWORK_URLS.PUBLIC, {
-      allowHttp: true,
-    });
+    this.server = new Horizon.Server(
+      process.env.FREIGHTER_HORIZON_URL || NETWORK_URLS.PUBLIC,
+      {
+        allowHttp: true,
+      },
+    );
   }
 
   /**
