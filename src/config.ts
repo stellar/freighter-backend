@@ -13,6 +13,8 @@ const ENV_KEYS = [
   "MERCURY_INTEGRITY_CHECK_ACCOUNT_EMAIL",
   "MERCURY_INTEGRITY_CHECK_ACCOUNT_PASS",
   "BLOCKAID_KEY",
+  "FREIGHTER_HORIZON_URL",
+  "DISABLE_TOKEN_PRICES",
 ];
 
 export function buildConfig(config: Record<string, string | undefined>) {
@@ -61,6 +63,9 @@ export function buildConfig(config: Record<string, string | undefined>) {
       config.USE_MERCURY === "true" || process.env.USE_MERCURY === "true",
     useSorobanPublic: true,
     sentryKey: config.SENTRY_KEY || process.env.SENTRY_KEY,
+    disableTokenPrices:
+      config.DISABLE_TOKEN_PRICES === "true" ||
+      process.env.DISABLE_TOKEN_PRICES === "true",
 
     blockaidConfig: {
       useBlockaidDappScanning: true,

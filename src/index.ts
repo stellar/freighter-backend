@@ -180,7 +180,7 @@ async function main() {
 
   try {
     // Start price update worker
-    if (env !== "development" && redis) {
+    if (env !== "development" && redis && !conf.disableTokenPrices) {
       const priceWorkerData = {
         workerData: {
           hostname: conf.hostname,
