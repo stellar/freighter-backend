@@ -152,7 +152,11 @@ async function main() {
     redis,
   );
 
-  const priceClient = new PriceClient(logger, timeSeriesRedis);
+  const priceClient = new PriceClient(
+    logger,
+    conf.priceConfig,
+    timeSeriesRedis,
+  );
   const server = await initApiServer(
     mercuryClient,
     blockAidService,
@@ -186,6 +190,7 @@ async function main() {
           hostname: conf.hostname,
           redisConnectionName: conf.redisConnectionName,
           redisPort: conf.redisPort,
+          priceConfig: conf.priceConfig,
         },
       };
       const priceWorker = new Worker(

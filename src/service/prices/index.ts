@@ -5,6 +5,7 @@ import * as StellarSdkNext from "stellar-sdk-next";
 import { getSdk } from "../../helper/stellar";
 import { NETWORK_URLS } from "../../helper/horizon-rpc";
 import { TimeSeriesDuplicatePolicies } from "@redis/time-series";
+import { PriceConfig } from "../../config";
 import {
   InvalidTokenFormatError,
   PriceCalculationError,
@@ -88,19 +89,19 @@ export class PriceClient {
    * Delay (in milliseconds) between processing batches of tokens during price updates.
    * Prevents overwhelming the Stellar network and API rate limits.
    */
-  private static readonly BATCH_UPDATE_DELAY_MS = 5000;
+  private static readonly DEFAULT_BATCH_UPDATE_DELAY_MS = 5000;
 
   /**
    * Maximum time (in milliseconds) allowed for a single token's price calculation before timing out.
    * Prevents hanging operations when the Stellar network is slow or unresponsive for a particular token.
    */
-  private static readonly PRICE_CALCULATION_TIMEOUT_MS = 10000;
+  private static readonly DEFAULT_PRICE_CALCULATION_TIMEOUT_MS = 10000;
 
   /**
    * Maximum number of tokens to process in a single batch during price updates.
    * Balances update efficiency with Stellar network and Redis load.
    */
-  private static readonly TOKEN_UPDATE_BATCH_SIZE = 25;
+  private static readonly DEFAULT_TOKEN_UPDATE_BATCH_SIZE = 25;
 
   /**
    * Maximum number of tokens to fetch and track prices for initially.
@@ -123,26 +124,42 @@ export class PriceClient {
 
   private readonly logger: Logger;
   private readonly server: StellarSdk.Horizon.Server;
+  private readonly batchUpdateDelayMs: number;
+  private readonly calculationTimeoutMs: number;
+  private readonly tokenUpdateBatchSize: number;
 
   /**
    * Creates a new PriceClient instance.
    *
    * @param logger - The logger instance for logging events and errors
    * @param redisClient - Optional Redis client with time series support for caching prices
+   * @param priceConfig - Configuration object containing price-related settings
    */
   constructor(
     logger: Logger,
+    priceConfig: PriceConfig,
     private readonly redisClient?: RedisClientWithTS,
   ) {
     this.logger = logger;
     const Sdk = getSdk(StellarSdkNext.Networks.PUBLIC);
     const { Horizon } = Sdk;
     this.server = new Horizon.Server(
-      process.env.FREIGHTER_HORIZON_URL || NETWORK_URLS.PUBLIC,
+      priceConfig?.freighterHorizonUrl || NETWORK_URLS.PUBLIC,
       {
         allowHttp: true,
       },
     );
+
+    // Set configurable values with fallbacks to defaults
+    this.batchUpdateDelayMs =
+      priceConfig.batchUpdateDelayMs ||
+      PriceClient.DEFAULT_BATCH_UPDATE_DELAY_MS;
+    this.calculationTimeoutMs =
+      priceConfig.calculationTimeoutMs ||
+      PriceClient.DEFAULT_PRICE_CALCULATION_TIMEOUT_MS;
+    this.tokenUpdateBatchSize =
+      priceConfig.tokenUpdateBatchSize ||
+      PriceClient.DEFAULT_TOKEN_UPDATE_BATCH_SIZE;
   }
 
   /**
@@ -309,24 +326,17 @@ export class PriceClient {
    * @private
    */
   private async processTokenBatches(tokens: TokenKey[]): Promise<void> {
-    for (
-      let i = 0;
-      i < tokens.length;
-      i += PriceClient.TOKEN_UPDATE_BATCH_SIZE
-    ) {
-      const tokenBatch = tokens.slice(
-        i,
-        i + PriceClient.TOKEN_UPDATE_BATCH_SIZE,
-      );
+    for (let i = 0; i < tokens.length; i += this.tokenUpdateBatchSize) {
+      const tokenBatch = tokens.slice(i, i + this.tokenUpdateBatchSize);
       this.logger.info(
-        `Processing batch ${i / PriceClient.TOKEN_UPDATE_BATCH_SIZE + 1} of ${Math.ceil(
-          tokens.length / PriceClient.TOKEN_UPDATE_BATCH_SIZE,
+        `Processing batch ${i / this.tokenUpdateBatchSize + 1} of ${Math.ceil(
+          tokens.length / this.tokenUpdateBatchSize,
         )}`,
       );
 
       await this.addBatchToCache(tokenBatch);
       await new Promise((resolve) =>
-        setTimeout(resolve, PriceClient.BATCH_UPDATE_DELAY_MS),
+        setTimeout(resolve, this.batchUpdateDelayMs),
       );
     }
   }
@@ -539,7 +549,7 @@ export class PriceClient {
       const timeoutPromise = new Promise<PriceCalculationResult>((_, reject) =>
         setTimeout(
           () => reject(new PriceCalculationError(token)),
-          PriceClient.PRICE_CALCULATION_TIMEOUT_MS,
+          this.calculationTimeoutMs,
         ),
       );
 

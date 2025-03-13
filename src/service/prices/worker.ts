@@ -5,13 +5,12 @@ import { PriceClient } from ".";
 import { CacheInitializationError, ensureError } from "./errors";
 import { RedisClientWithTS } from "./types";
 
-const { hostname, redisConnectionName, redisPort } = workerData;
+const { hostname, redisConnectionName, redisPort, priceConfig } = workerData;
 
 const CONFIG = {
   PRICE_CACHE_INITIALIZED_KEY: "price_cache_initialized",
-  PRICE_UPDATE_INTERVAL: 60 * 1000, // 1 minute in milliseconds
   NUM_RETRIES_CACHE_INITIALIZATION: 3,
-  RETRY_DELAY_MS: 30000,
+  PRICE_CACHE_INITIALIZATION_RETRY_DELAY_MS: 30000,
 } as const;
 
 async function createRedisClient(): Promise<RedisClientWithTS> {
@@ -57,9 +56,9 @@ async function initializePriceCache(
       if (attempt < CONFIG.NUM_RETRIES_CACHE_INITIALIZATION) {
         logger.warn(
           { error: error },
-          `Price cache initialization attempt: ${attempt} failed, retrying in ${CONFIG.RETRY_DELAY_MS / 1000} seconds`,
+          `Price cache initialization attempt: ${attempt} failed, retrying in ${CONFIG.PRICE_CACHE_INITIALIZATION_RETRY_DELAY_MS / 1000} seconds`,
         );
-        await delay(CONFIG.RETRY_DELAY_MS);
+        await delay(CONFIG.PRICE_CACHE_INITIALIZATION_RETRY_DELAY_MS);
       } else {
         throw new CacheInitializationError(error);
       }
@@ -87,7 +86,7 @@ async function startPriceUpdateInterval(
     } catch (error) {
       logger.error({ error }, "Error in price update interval");
     } finally {
-      setTimeout(scheduleNextUpdate, CONFIG.PRICE_UPDATE_INTERVAL);
+      setTimeout(scheduleNextUpdate, priceConfig.priceUpdateInterval);
     }
   };
 
@@ -98,7 +97,7 @@ async function startPriceUpdateInterval(
 async function main(): Promise<void> {
   try {
     const redisClient = await createRedisClient();
-    const priceClient = new PriceClient(logger, redisClient);
+    const priceClient = new PriceClient(logger, priceConfig, redisClient);
 
     const priceCacheInitialized = await redisClient.get(
       CONFIG.PRICE_CACHE_INITIALIZED_KEY,

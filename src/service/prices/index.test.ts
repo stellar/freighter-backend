@@ -20,7 +20,17 @@ describe("Token Price Client", () => {
   };
 
   beforeEach(() => {
-    priceClient = new PriceClient(testLogger, mockRedisClient);
+    // Create mock price config
+    const mockPriceConfig = {
+      batchUpdateDelayMs: 5000,
+      calculationTimeoutMs: 10000,
+      tokenUpdateBatchSize: 25,
+      priceUpdateInterval: 60000,
+      freighterHorizonUrl: "http://test-url",
+    };
+
+    priceClient = new PriceClient(testLogger, mockPriceConfig, mockRedisClient);
+
     jest.clearAllMocks();
 
     // Mock all logger methods to prevent console output during tests
