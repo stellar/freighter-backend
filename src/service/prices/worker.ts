@@ -81,10 +81,18 @@ async function updatePrices(priceClient: PriceClient): Promise<void> {
 async function startPriceUpdateInterval(
   priceClient: PriceClient,
 ): Promise<void> {
-  setInterval(
-    () => void updatePrices(priceClient),
-    CONFIG.PRICE_UPDATE_INTERVAL,
-  );
+  const scheduleNextUpdate = async () => {
+    try {
+      await updatePrices(priceClient);
+    } catch (error) {
+      logger.error({ error }, "Error in price update interval");
+    } finally {
+      setTimeout(scheduleNextUpdate, CONFIG.PRICE_UPDATE_INTERVAL);
+    }
+  };
+
+  // Start the first update
+  void scheduleNextUpdate();
 }
 
 async function main(): Promise<void> {
