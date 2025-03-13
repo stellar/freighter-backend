@@ -528,7 +528,10 @@ export class PriceClient {
 
       await this.createTimeSeries(tsKey);
       await this.redisClient.ts.add(tsKey, timestamp, price.toNumber());
-      return { currentPrice: price, percentagePriceChange24h: null };
+      return {
+        currentPrice: price,
+        percentagePriceChange24h: null,
+      } as TokenPriceData;
     } catch (e) {
       throw ensureError(e, `adding new token to cache for ${token}`);
     }
@@ -614,7 +617,10 @@ export class PriceClient {
       );
       const unitTokenPrice =
         PriceClient.USD_RECIEIVE_VALUE.dividedBy(tokenUnit);
-      return { timestamp: latestLedgerTimestamp, price: unitTokenPrice };
+      return {
+        timestamp: latestLedgerTimestamp,
+        price: unitTokenPrice,
+      } as PriceCalculationResult;
     } catch (e) {
       throw ensureError(e, `calculating price using paths for ${token}`);
     }
