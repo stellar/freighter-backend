@@ -13,7 +13,20 @@ const ENV_KEYS = [
   "MERCURY_INTEGRITY_CHECK_ACCOUNT_EMAIL",
   "MERCURY_INTEGRITY_CHECK_ACCOUNT_PASS",
   "BLOCKAID_KEY",
+  "FREIGHTER_HORIZON_URL",
+  "DISABLE_TOKEN_PRICES",
+  "PRICE_BATCH_UPDATE_DELAY_MS",
+  "PRICE_CALCULATION_TIMEOUT_MS",
+  "PRICE_TOKEN_UPDATE_BATCH_SIZE",
 ];
+
+export interface PriceConfig {
+  batchUpdateDelayMs: number;
+  calculationTimeoutMs: number;
+  tokenUpdateBatchSize: number;
+  priceUpdateInterval: number;
+  freighterHorizonUrl: string;
+}
 
 export function buildConfig(config: Record<string, string | undefined>) {
   const configKeys = Object.keys(config);
@@ -61,6 +74,29 @@ export function buildConfig(config: Record<string, string | undefined>) {
       config.USE_MERCURY === "true" || process.env.USE_MERCURY === "true",
     useSorobanPublic: true,
     sentryKey: config.SENTRY_KEY || process.env.SENTRY_KEY,
+    disableTokenPrices:
+      config.DISABLE_TOKEN_PRICES === "true" ||
+      process.env.DISABLE_TOKEN_PRICES === "true",
+    priceConfig: <PriceConfig>{
+      batchUpdateDelayMs:
+        Number(config.PRICE_BATCH_UPDATE_DELAY_MS) ||
+        Number(process.env.PRICE_BATCH_UPDATE_DELAY_MS!) ||
+        5000,
+      calculationTimeoutMs:
+        Number(config.PRICE_CALCULATION_TIMEOUT_MS) ||
+        Number(process.env.PRICE_CALCULATION_TIMEOUT_MS!) ||
+        10000,
+      tokenUpdateBatchSize:
+        Number(config.PRICE_TOKEN_UPDATE_BATCH_SIZE) ||
+        Number(process.env.PRICE_TOKEN_UPDATE_BATCH_SIZE!) ||
+        25,
+      priceUpdateInterval:
+        Number(config.PRICE_UPDATE_INTERVAL) ||
+        Number(process.env.PRICE_UPDATE_INTERVAL!) ||
+        60000,
+      freighterHorizonUrl:
+        config.FREIGHTER_HORIZON_URL || process.env.FREIGHTER_HORIZON_URL!,
+    },
 
     blockaidConfig: {
       useBlockaidDappScanning: true,

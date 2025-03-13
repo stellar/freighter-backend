@@ -7,7 +7,12 @@
     "module": "commonjs",
     "jsx": "react",
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "inlineSources": true,
+    "outDir": "./build",
+    "rootDir": "./src",
+    "strict": true
   },
   "include": ["src/**/*"],
   "exclude": ["build", "node_modules"],

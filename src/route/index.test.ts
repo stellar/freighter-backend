@@ -4,7 +4,6 @@ import {
   getDevServer,
   queryMockResponse,
   pubKey,
-  register,
   TEST_SOROBAN_TX,
 } from "../helper/test-helper";
 import { transformAccountHistory } from "../service/mercury/helpers/transformers";
@@ -95,7 +94,6 @@ describe("API routes", () => {
           "TESTNET",
         ),
       );
-      register.clear();
       await server.close();
     });
 
@@ -108,7 +106,6 @@ describe("API routes", () => {
         }/api/v1/account-history/${notPubkey}`,
       );
       expect(response.status).toEqual(400);
-      register.clear();
       await server.close();
     });
   });
@@ -123,7 +120,6 @@ describe("API routes", () => {
         }/api/v1/token-details/${contractId}?network=TESTNET&pub_key=${pubKey}`,
       );
       expect(response.status).toEqual(200);
-      register.clear();
       await server.close();
     });
 
@@ -137,7 +133,6 @@ describe("API routes", () => {
         }/api/v1/token-details/${contractId}?network=TESTNET&pub_key=${pubKey}&should_fetch_balance=true`,
       );
       expect(response.status).toEqual(200);
-      register.clear();
       await server.close();
     });
 
@@ -167,7 +162,6 @@ describe("API routes", () => {
       // Both responses should match
       expect(data1).toEqual(data2);
 
-      register.clear();
       await server.close();
     });
 
@@ -187,7 +181,6 @@ describe("API routes", () => {
 
       expect(data1.balance).toBe("1000000");
 
-      register.clear();
       await server.close();
     });
 
@@ -200,7 +193,6 @@ describe("API routes", () => {
         }/api/v1/token-details/${invalidContractId}?network=TESTNET&pub_key=${pubKey}`,
       );
       expect(response.status).toEqual(400);
-      register.clear();
       await server.close();
     });
 
@@ -214,7 +206,6 @@ describe("API routes", () => {
         }/api/v1/token-details/${contractId}?network=TESTNET`,
       );
       expect(response.status).toEqual(400);
-      register.clear();
       await server.close();
     });
   });
@@ -228,7 +219,6 @@ describe("API routes", () => {
         }/api/v1/account-balances/${pubKey}?contract_ids=CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP&network=TESTNET`,
       );
       expect(response.status).toEqual(200);
-      register.clear();
       await server.close();
     });
 
@@ -249,7 +239,6 @@ describe("API routes", () => {
       }
       const response = await fetch(url.href);
       expect(response.status).toEqual(200);
-      register.clear();
       await server.close();
     });
 
@@ -269,7 +258,6 @@ describe("API routes", () => {
         )}`,
       );
       expect(response.status).toEqual(400);
-      register.clear();
       await server.close();
     });
 
@@ -282,7 +270,6 @@ describe("API routes", () => {
         }/api/v1/account-balances/${notPubkey}?contract_ids=CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP`,
       );
       expect(response.status).toEqual(400);
-      register.clear();
       await server.close();
     });
 
@@ -295,7 +282,6 @@ describe("API routes", () => {
         }/api/v1/account-balances/${pubKey}?contract_ids=${notContractId}`,
       );
       expect(response.status).toEqual(400);
-      register.clear();
       await server.close();
     });
 
@@ -328,7 +314,6 @@ describe("API routes", () => {
           "TST:CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP"
         ].blockaidData.result_type,
       ).toEqual("Benign");
-      register.clear();
       await server.close();
     });
     it("doesn't check scanned status on Testnet", async () => {
@@ -355,7 +340,6 @@ describe("API routes", () => {
           "BLND:GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
         ].blockaidData.result_type,
       ).toEqual("Benign");
-      register.clear();
       await server.close();
     });
     it("defaults to not malicious on scan status error", async () => {
@@ -383,7 +367,6 @@ describe("API routes", () => {
           "TST:CDP3XWJ4ZN222LKYBMWIY3GYXZYX3KA6WVNDS6V7WKXSYWLAEMYW7DTZ"
         ].blockaidData.result_type,
       ).toEqual("Benign");
-      register.clear();
       await server.close();
     });
   });
@@ -423,7 +406,6 @@ describe("API routes", () => {
         result_type: "Benign",
         malicious_score: 0,
       });
-      register.clear();
       await server.close();
     });
     it("does not scan assets when config is disabled", async () => {
@@ -465,7 +447,6 @@ describe("API routes", () => {
       ).toEqual({
         ...defaultBenignResponse,
       });
-      register.clear();
       await server.close();
     });
   });
@@ -489,7 +470,6 @@ describe("API routes", () => {
         result_type: "Malicious",
         malicious_score: 1,
       });
-      register.clear();
       await server.close();
     });
     it("does not scan an asset when config is disabled", async () => {
@@ -518,7 +498,6 @@ describe("API routes", () => {
         address:
           "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
       });
-      register.clear();
       await server.close();
     });
   });
@@ -540,7 +519,6 @@ describe("API routes", () => {
 
       expect(response.status).toEqual(200);
       expect(data.data).toEqual(999);
-      register.clear();
       await server.close();
     });
     it("does not report an asset warning when config is disabled", async () => {
@@ -568,7 +546,6 @@ describe("API routes", () => {
       expect(data).toEqual({
         error: ERROR.REPORT_ASSET_DISABLED,
       });
-      register.clear();
       await server.close();
     });
   });
@@ -588,7 +565,6 @@ describe("API routes", () => {
 
       expect(response.status).toEqual(200);
       expect(data.data).toEqual(999);
-      register.clear();
       await server.close();
     });
     it("does not report an trandaction warning when config is disabled", async () => {
@@ -614,7 +590,228 @@ describe("API routes", () => {
       expect(data).toEqual({
         error: ERROR.REPORT_TRANSACTION_DISABLED,
       });
-      register.clear();
+      await server.close();
+    });
+  });
+  describe("/token-prices", () => {
+    it("accepts valid token strings in code:issuer format", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${(server?.server?.address() as any).port}/api/v1/token-prices`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tokens: [
+            // Test Alphanumeric 4 cases (1-4 chars)
+            "USD:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+            "BTC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+            "a:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+            "Ab1z:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+            // Test Alphanumeric 12 cases (5-12 chars)
+            "USDC123:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+            "abcde12345AB:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+          ],
+        }),
+      };
+      const response = await fetch(url.href, options);
+      expect(response.status).toEqual(200);
+      await server.close();
+    });
+
+    it("accepts XLM as a valid token", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${(server?.server?.address() as any).port}/api/v1/token-prices`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tokens: ["XLM"],
+        }),
+      };
+      const response = await fetch(url.href, options);
+      expect(response.status).toEqual(200);
+      await server.close();
+    });
+
+    it("accepts 'native' as a valid token", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${(server?.server?.address() as any).port}/api/v1/token-prices`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tokens: ["native"],
+        }),
+      };
+      const response = await fetch(url.href, options);
+      expect(response.status).toEqual(200);
+      await server.close();
+    });
+
+    it("rejects invalid token format", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${(server?.server?.address() as any).port}/api/v1/token-prices`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tokens: ["invalid-token"], // Contains invalid character '-'
+        }),
+      };
+      const response = await fetch(url.href, options);
+      expect(response.status).toEqual(400);
+      await server.close();
+    });
+
+    it("rejects tokens with invalid issuer public key", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${(server?.server?.address() as any).port}/api/v1/token-prices`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tokens: ["USDC:invalid-public-key"],
+        }),
+      };
+      const response = await fetch(url.href, options);
+      expect(response.status).toEqual(400);
+      await server.close();
+    });
+
+    it("rejects tokens with invalid asset code length", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${(server?.server?.address() as any).port}/api/v1/token-prices`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tokens: [
+            // Too long (> 12 chars)
+            `TOOLONGASSETCDE:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+            // Empty code
+            `:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+            // Invalid length (between 4 and 5 chars)
+            `ABCD1:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+          ],
+        }),
+      };
+      const response = await fetch(url.href, options);
+      expect(response.status).toEqual(400);
+      await server.close();
+    });
+
+    it("rejects tokens with invalid asset code characters", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${(server?.server?.address() as any).port}/api/v1/token-prices`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tokens: [
+            // Contains special character
+            `USD$:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+            // Contains space
+            `US D:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+            // Contains unicode
+            `USD€:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`,
+          ],
+        }),
+      };
+      const response = await fetch(url.href, options);
+      expect(response.status).toEqual(400);
+      await server.close();
+    });
+
+    it("rejects empty token array", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${(server?.server?.address() as any).port}/api/v1/token-prices`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tokens: [],
+        }),
+      };
+      const response = await fetch(url.href, options);
+      expect(response.status).toEqual(400);
+      await server.close();
+    });
+
+    it("rejects arrays larger than 100 tokens", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${(server?.server?.address() as any).port}/api/v1/token-prices`,
+      );
+
+      // Create array of 101 valid tokens
+      const tokens = Array(101).fill(
+        "USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      );
+
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tokens }),
+      };
+      const response = await fetch(url.href, options);
+      expect(response.status).toEqual(400);
+      await server.close();
+    });
+
+    it("rejects if any token in the array is invalid", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${(server?.server?.address() as any).port}/api/v1/token-prices`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tokens: [
+            "USD:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5", // valid
+            "invalid-token", // invalid format
+            "XLM", // valid
+          ],
+        }),
+      };
+      const response = await fetch(url.href, options);
+      expect(response.status).toEqual(400);
       await server.close();
     });
   });
@@ -680,7 +877,6 @@ describe("API routes", () => {
       expect(response.status).toEqual(200);
       expect(data.simulationResponse).toEqual(simResponse);
       expect(data.preparedTransaction).toEqual(preparedTransaction);
-      register.clear();
       await server.close();
     });
 
@@ -714,7 +910,6 @@ describe("API routes", () => {
 
       expect(response.status).toEqual(200);
       expect(resJson.data.token).toEqual("token");
-      register.clear();
       await server.close();
     });
     it("does not fetch a token without Coinbase config", async () => {
@@ -751,7 +946,6 @@ describe("API routes", () => {
       expect(response.status).toEqual(400);
       expect(resJson.data).toEqual(undefined);
       expect(resJson.error).toEqual("Coinbase config not set");
-      register.clear();
       await server.close();
     });
     it("does not fetch a token if it is unable to generate the token", async () => {
@@ -782,7 +976,6 @@ describe("API routes", () => {
       expect(resJson.error).toEqual(
         "Unable to retrieve token: Error: JWT generation failed",
       );
-      register.clear();
       await server.close();
     });
   });

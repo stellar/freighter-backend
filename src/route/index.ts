@@ -25,6 +25,7 @@ import {
   isPubKey,
   isNetwork,
   NetworkNames,
+  isValidTokenString,
 } from "../helper/validate";
 import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
 import {
@@ -41,12 +42,18 @@ import { getHttpRequestDurationLabels } from "../helper/metrics";
 import { mode } from "../helper/env";
 import { fetchOnrampSessionToken, CoinbaseConfig } from "../helper/onramp";
 import Blockaid from "@blockaid/client";
+import { PriceClient } from "../service/prices";
+import { TokenPriceData } from "../service/prices/types";
 
 const API_VERSION = "v1";
+const TOKEN_PRICES_BATCH_SIZE = 50;
+const TOKEN_PRICES_MIN_REQUEST_SIZE = 1;
+const TOKEN_PRICES_MAX_REQUEST_SIZE = 100;
 
 export async function initApiServer(
   mercuryClient: MercuryClient,
   blockAidService: BlockAidService,
+  priceClient: PriceClient,
   logger: Logger,
   useMercuryConf: boolean,
   useSorobanPublic: boolean,
@@ -872,6 +879,55 @@ export async function initApiServer(
           return reply.code(200).send({
             error: ERROR.REPORT_TRANSACTION_DISABLED,
           });
+        },
+      });
+
+      instance.route({
+        method: "POST",
+        url: "/token-prices",
+        schema: {
+          body: {
+            type: "object",
+            required: ["tokens"],
+            properties: {
+              tokens: {
+                type: "array",
+                minItems: TOKEN_PRICES_MIN_REQUEST_SIZE,
+                maxItems: TOKEN_PRICES_MAX_REQUEST_SIZE,
+                items: {
+                  type: "string",
+                  validator: (token: string) => isValidTokenString(token),
+                },
+              },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Body: {
+              tokens: string[];
+            };
+          }>,
+          reply,
+        ) => {
+          try {
+            const { tokens } = request.body;
+            const prices: { [key: string]: TokenPriceData | null } = {};
+
+            for (let i = 0; i < tokens.length; i += TOKEN_PRICES_BATCH_SIZE) {
+              const batch = tokens.slice(i, i + TOKEN_PRICES_BATCH_SIZE);
+              await Promise.all(
+                batch.map(async (token) => {
+                  prices[token] = await priceClient.getPrice(token);
+                }),
+              );
+            }
+
+            reply.code(200).send({ data: prices });
+          } catch (error) {
+            logger.error("Error getting token prices:", error);
+            reply.code(500).send(ERROR.SERVER_ERROR);
+          }
         },
       });
 
