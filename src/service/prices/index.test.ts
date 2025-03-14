@@ -138,6 +138,39 @@ describe("Token Price Client", () => {
       expect(result?.currentPrice.toNumber()).toBe(60000);
     });
 
+    it("should handle failed price calculation for new token", async () => {
+      // First call: Setup mock - ts.get throws error for non-existent key
+      mockRedisClient.ts.get.mockRejectedValue(new Error("Key does not exist"));
+
+      // Mock calculatePriceInUSD to throw an error
+      jest
+        .spyOn(priceClient as any, "calculatePriceInUSD")
+        .mockRejectedValue(new Error("Failed to calculate price"));
+
+      const token = "NONEXISTENT:TOKEN";
+      const result = await priceClient.getPrice(token);
+
+      // Should return null when price calculation fails
+      expect(result).toBeNull();
+      expect(testLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            `adding new token to cache for ${token}`,
+          ),
+        }),
+      );
+
+      // Second call: Key exists but no price data
+      mockRedisClient.ts.get.mockResolvedValue(null);
+      const secondResult = await priceClient.getPrice(token);
+      expect(secondResult).toBeNull();
+      expect(testLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining(
+          `Token in cache but no latest price found for ${token}`,
+        ),
+      );
+    });
+
     it("handles errors", async () => {
       // Setup mock - ts.get throws error
       mockRedisClient.ts.get.mockResolvedValue({

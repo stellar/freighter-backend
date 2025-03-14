@@ -184,6 +184,9 @@ export class PriceClient {
 
     try {
       if (!latestPrice) {
+        this.logger.error(
+          `Token in cache but no latest price found for ${token}`,
+        );
         return null;
       }
 
@@ -209,6 +212,8 @@ export class PriceClient {
             .dividedBy(oldPriceBN)
             .times(100);
         }
+      } else {
+        this.logger.warn(`No 24h price found for ${token}`);
       }
       await this.redisClient.zIncrBy(
         PriceClient.TOKEN_COUNTER_SORTED_SET_KEY,
@@ -290,6 +295,7 @@ export class PriceClient {
       }
 
       const tokens = await this.getTokensToUpdate();
+      this.logger.info(`Updating prices for ${tokens.length} tokens`);
       await this.processTokenBatches(tokens);
     } catch (e) {
       throw ensureError(e, `updating prices`);
@@ -523,17 +529,30 @@ export class PriceClient {
         throw new Error("Redis client not initialized");
       }
 
-      const { timestamp, price } = await this.calculatePriceInUSD(token);
-      const tsKey = this.getTimeSeriesKey(token);
+      let tsKey: string;
+      try {
+        tsKey = this.getTimeSeriesKey(token);
+        await this.createTimeSeries(tsKey);
+      } catch (e) {
+        throw new Error(`creating time series for ${token}`);
+      }
 
-      await this.createTimeSeries(tsKey);
-      await this.redisClient.ts.add(tsKey, timestamp, price.toNumber());
+      const { timestamp, price } = await this.calculatePriceInUSD(token);
+
+      try {
+        await this.redisClient.ts.add(tsKey, timestamp, price.toNumber());
+      } catch (e) {
+        throw new Error(`adding price to time series for ${token}`);
+      }
+
       return {
         currentPrice: price,
         percentagePriceChange24h: null,
       } as TokenPriceData;
     } catch (e) {
-      throw ensureError(e, `adding new token to cache for ${token}`);
+      const error = ensureError(e, `adding new token to cache for ${token}`);
+      this.logger.error(error);
+      return null;
     }
   };
 

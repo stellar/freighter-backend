@@ -44,6 +44,7 @@ import { fetchOnrampSessionToken, CoinbaseConfig } from "../helper/onramp";
 import Blockaid from "@blockaid/client";
 import { PriceClient } from "../service/prices";
 import { TokenPriceData } from "../service/prices/types";
+import { ensureError } from "../service/prices/errors";
 
 const API_VERSION = "v1";
 const TOKEN_PRICES_BATCH_SIZE = 50;
@@ -924,7 +925,8 @@ export async function initApiServer(
             }
 
             reply.code(200).send({ data: prices });
-          } catch (error) {
+          } catch (e) {
+            const error = ensureError(e, "getting token prices");
             logger.error("Error getting token prices:", error);
             reply.code(500).send(ERROR.SERVER_ERROR);
           }
