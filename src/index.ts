@@ -193,19 +193,50 @@ async function main() {
           priceConfig: conf.priceConfig,
         },
       };
-      const priceWorker = new Worker(
-        "./build/price-worker.js",
-        priceWorkerData,
-      );
 
-      priceWorker.on("error", (e) => {
-        logger.error("Price worker error:", e);
-        priceWorker.terminate();
-      });
+      const startPriceWorker = (retryCount = 0) => {
+        const maxRetries = 10;
+        const baseDelay = 1000; // 1 second
+        const maxDelay = 300000; // 5 minutes
 
-      priceWorker.on("exit", () => {
-        logger.info("Price worker exited");
-      });
+        const priceWorker = new Worker(
+          "./build/price-worker.js",
+          priceWorkerData,
+        );
+
+        priceWorker.on("error", (e) => {
+          logger.error("Price worker error:", e);
+          priceWorker.terminate();
+        });
+
+        priceWorker.on("exit", (code) => {
+          logger.info(`Price worker exited with code ${code}`);
+
+          // Non-zero exit code indicates abnormal termination
+          if (code !== 0) {
+            const delay = Math.min(
+              baseDelay * Math.pow(2, retryCount),
+              maxDelay,
+            );
+
+            if (retryCount < maxRetries) {
+              logger.info(
+                `Restarting price worker in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`,
+              );
+              setTimeout(() => startPriceWorker(retryCount + 1), delay);
+            } else {
+              logger.error(
+                "Max retry attempts reached for price worker. Manual intervention required.",
+              );
+              criticalError.inc();
+            }
+          }
+        });
+
+        return priceWorker;
+      };
+
+      startPriceWorker();
     }
 
     // the worker is not properly instantiated when running this app with ts-node
