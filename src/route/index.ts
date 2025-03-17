@@ -131,6 +131,62 @@ export async function initApiServer(
 
       instance.route({
         method: "GET",
+        url: "/price-worker-health",
+        handler: async (_request, reply) => {
+          if (!redis) {
+            return reply
+              .code(503)
+              .send({ status: "unhealthy", error: "Redis not available" });
+          }
+
+          try {
+            // Check if price cache is initialized
+            const isCacheInitialized = await redis.get(
+              "price_cache_initialized",
+            );
+            if (!isCacheInitialized) {
+              return reply.code(503).send({
+                status: "unhealthy",
+                error: "Price cache not initialized",
+              });
+            }
+
+            // Check last update time
+            const lastUpdateTime = await redis.get("price_worker_last_update");
+            if (!lastUpdateTime) {
+              return reply.code(503).send({
+                status: "unhealthy",
+                error: "No recent price updates",
+              });
+            }
+
+            // Check if last update was within the expected interval
+            const lastUpdate = parseInt(lastUpdateTime);
+            const maxUpdateInterval = 2 * 60 * 1000;
+            const timeSinceLastUpdate = Date.now() - lastUpdate;
+
+            if (timeSinceLastUpdate > maxUpdateInterval) {
+              return reply.code(503).send({
+                status: "unhealthy",
+                error: `Price worker not updating (last update ${timeSinceLastUpdate / 1000}s ago)`,
+              });
+            }
+
+            reply.code(200).send({ status: "healthy" });
+          } catch (error) {
+            logger.error(error);
+            reply
+              .code(503)
+              .send({
+                status: "unhealthy",
+                error: "Error checking price worker health",
+              });
+          }
+        },
+      });
+
+      instance.route({
+        method: "GET",
         url: "/rpc-health",
         schema: {
           querystring: {
