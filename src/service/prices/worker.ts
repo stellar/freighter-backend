@@ -11,6 +11,7 @@ const CONFIG = {
   PRICE_CACHE_INITIALIZED_KEY: "price_cache_initialized",
   NUM_RETRIES_CACHE_INITIALIZATION: 3,
   PRICE_CACHE_INITIALIZATION_RETRY_DELAY_MS: 30000,
+  PRICE_WORKER_LAST_UPDATE_KEY: "price_worker_last_update",
 } as const;
 
 async function createRedisClient(): Promise<RedisClientWithTS> {
@@ -70,6 +71,11 @@ async function updatePrices(priceClient: PriceClient): Promise<void> {
   const startTime = Date.now();
   try {
     await priceClient.updatePrices();
+    const redisClient = await createRedisClient();
+    await redisClient.set(
+      CONFIG.PRICE_WORKER_LAST_UPDATE_KEY,
+      Date.now().toString(),
+    );
     logger.info(`Updated price cache in ${(Date.now() - startTime) / 1000}s`);
   } catch (e) {
     const error = ensureError(e, "updating price cache");
