@@ -15,9 +15,6 @@ const ENV_KEYS = [
   "BLOCKAID_KEY",
   "FREIGHTER_HORIZON_URL",
   "DISABLE_TOKEN_PRICES",
-  "PRICE_BATCH_UPDATE_DELAY_MS",
-  "PRICE_CALCULATION_TIMEOUT_MS",
-  "PRICE_TOKEN_UPDATE_BATCH_SIZE",
 ];
 
 export interface PriceConfig {
@@ -26,6 +23,7 @@ export interface PriceConfig {
   tokenUpdateBatchSize: number;
   priceUpdateInterval: number;
   freighterHorizonUrl: string;
+  priceStalenessThreshold: number;
 }
 
 export function buildConfig(config: Record<string, string | undefined>) {
@@ -96,6 +94,10 @@ export function buildConfig(config: Record<string, string | undefined>) {
         60000,
       freighterHorizonUrl:
         config.FREIGHTER_HORIZON_URL || process.env.FREIGHTER_HORIZON_URL!,
+      priceStalenessThreshold:
+        Number(config.PRICE_STALENESS_THRESHOLD) ||
+        Number(process.env.PRICE_STALENESS_THRESHOLD!) ||
+        0,
     },
 
     blockaidConfig: {

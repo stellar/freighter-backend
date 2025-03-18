@@ -67,11 +67,13 @@ async function initializePriceCache(
   }
 }
 
-async function updatePrices(priceClient: PriceClient): Promise<void> {
+async function updatePrices(
+  priceClient: PriceClient,
+  redisClient: RedisClientWithTS,
+): Promise<void> {
   const startTime = Date.now();
   try {
     await priceClient.updatePrices();
-    const redisClient = await createRedisClient();
     await redisClient.set(
       CONFIG.PRICE_WORKER_LAST_UPDATE_KEY,
       Date.now().toString(),
@@ -85,10 +87,11 @@ async function updatePrices(priceClient: PriceClient): Promise<void> {
 
 async function startPriceUpdateInterval(
   priceClient: PriceClient,
+  redisClient: RedisClientWithTS,
 ): Promise<void> {
   const scheduleNextUpdate = async () => {
     try {
-      await updatePrices(priceClient);
+      await updatePrices(priceClient, redisClient);
     } catch (error) {
       logger.error({ error }, "Error in price update interval");
     } finally {
@@ -115,7 +118,7 @@ async function main(): Promise<void> {
       logger.info("Price cache already initialized");
     }
 
-    await startPriceUpdateInterval(priceClient);
+    await startPriceUpdateInterval(priceClient, redisClient);
   } catch (e) {
     const error = ensureError(e, "worker initialization");
     logger.error(error);
