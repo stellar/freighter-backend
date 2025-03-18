@@ -168,6 +168,7 @@ async function main() {
     env as mode,
     conf.blockaidConfig,
     conf.coinbaseConfig,
+    conf.priceConfig,
     redis,
   );
   const metricsServer = await initMetricsServer(register, redis);

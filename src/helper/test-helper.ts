@@ -596,6 +596,7 @@ const mockPriceConfig = {
   tokenUpdateBatchSize: 25,
   priceUpdateInterval: 60000,
   freighterHorizonUrl: "https://horizon.stellar.org",
+  priceStalenessThreshold: 0,
 } as PriceConfig;
 const mockPriceClient = new PriceClient(testLogger, mockPriceConfig);
 
@@ -656,6 +657,7 @@ async function getDevServer(
     coinbaseApiKey: "coinbaseApiKey",
     coinbaseApiSecret: "coinbaseApiSecret",
   },
+  priceConfig = mockPriceConfig,
 ) {
   register.clear();
 
@@ -670,6 +672,7 @@ async function getDevServer(
     "development",
     blockaidConfig,
     coinbaseConfig,
+    priceConfig,
   );
 
   await server.listen();

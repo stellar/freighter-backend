@@ -45,6 +45,7 @@ import Blockaid from "@blockaid/client";
 import { PriceClient } from "../service/prices";
 import { TokenPriceData } from "../service/prices/types";
 import { ensureError } from "../service/prices/errors";
+import { PriceConfig } from "../config";
 
 const API_VERSION = "v1";
 const TOKEN_PRICES_BATCH_SIZE = 50;
@@ -68,6 +69,7 @@ export async function initApiServer(
     useBlockaidTransactionWarningReporting: boolean;
   },
   coinbaseConfig: CoinbaseConfig,
+  priceConfig: PriceConfig,
   redis?: Redis,
 ) {
   const routeMetricsStore = new WeakMap<
@@ -161,26 +163,26 @@ export async function initApiServer(
             }
 
             // Check if last update was within the expected interval
-            const lastUpdate = parseInt(lastUpdateTime);
-            const maxUpdateInterval = 2 * 60 * 1000;
-            const timeSinceLastUpdate = Date.now() - lastUpdate;
+            if (priceConfig.priceStalenessThreshold > 0) {
+              const maxUpdateInterval = priceConfig.priceStalenessThreshold;
+              const lastUpdate = parseInt(lastUpdateTime);
+              const timeSinceLastUpdate = Date.now() - lastUpdate;
 
-            if (timeSinceLastUpdate > maxUpdateInterval) {
-              return reply.code(503).send({
-                status: "unhealthy",
-                error: `Price worker not updating (last update ${timeSinceLastUpdate / 1000}s ago)`,
-              });
+              if (timeSinceLastUpdate > maxUpdateInterval) {
+                return reply.code(503).send({
+                  status: "unhealthy",
+                  error: `Price worker not updating (last update ${timeSinceLastUpdate / 1000}s ago)`,
+                });
+              }
             }
 
             reply.code(200).send({ status: "healthy" });
           } catch (error) {
             logger.error(error);
-            reply
-              .code(503)
-              .send({
-                status: "unhealthy",
-                error: "Error checking price worker health",
-              });
+            reply.code(503).send({
+              status: "unhealthy",
+              error: "Error checking price worker health",
+            });
           }
         },
       });
