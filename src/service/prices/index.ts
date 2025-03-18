@@ -357,7 +357,8 @@ export class PriceClient {
   private async addBatchToCache(tokenBatch: TokenKey[]): Promise<void> {
     const prices = await this.calculateBatchPrices(tokenBatch);
     if (prices.length === 0) {
-      throw new PriceCalculationError("No prices calculated");
+      this.logger.warn("No prices calculated for batch");
+      return;
     }
 
     const mAddEntries: MAddEntry[] = prices.map(
