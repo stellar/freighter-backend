@@ -28,6 +28,7 @@ describe("Token Price Client", () => {
       priceUpdateInterval: 60000,
       freighterHorizonUrl: "http://test-url",
       priceStalenessThreshold: 0,
+      usdReceiveValue: 500,
     };
 
     priceClient = new PriceClient(testLogger, mockPriceConfig, mockRedisClient);
