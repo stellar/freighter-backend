@@ -44,7 +44,7 @@ export class PriceClient {
    * The receiving value of the USDC asset used as the destination amount for
    * pathfinding to calculate the per-unit price of a token in USD.
    */
-  private static readonly USD_RECIEIVE_VALUE = new BigNumber(100);
+  private static readonly DEFAULT_USD_RECEIVE_VALUE = new BigNumber(500);
 
   /**
    * Redis key that indicates whether the price cache has been successfully initialized.
@@ -127,7 +127,7 @@ export class PriceClient {
   private readonly batchUpdateDelayMs: number;
   private readonly calculationTimeoutMs: number;
   private readonly tokenUpdateBatchSize: number;
-
+  private readonly usdReceiveValue: BigNumber;
   /**
    * Creates a new PriceClient instance.
    *
@@ -160,6 +160,9 @@ export class PriceClient {
     this.tokenUpdateBatchSize =
       priceConfig.tokenUpdateBatchSize ||
       PriceClient.DEFAULT_TOKEN_UPDATE_BATCH_SIZE;
+    this.usdReceiveValue = new BigNumber(
+      priceConfig.usdReceiveValue || PriceClient.DEFAULT_USD_RECEIVE_VALUE,
+    );
   }
 
   /**
@@ -357,7 +360,8 @@ export class PriceClient {
   private async addBatchToCache(tokenBatch: TokenKey[]): Promise<void> {
     const prices = await this.calculateBatchPrices(tokenBatch);
     if (prices.length === 0) {
-      throw new PriceCalculationError("No prices calculated");
+      this.logger.warn("No prices calculated for batch");
+      return;
     }
 
     const mAddEntries: MAddEntry[] = prices.map(
@@ -621,7 +625,7 @@ export class PriceClient {
         .strictReceivePaths(
           sourceAssets,
           PriceClient.USDCAsset,
-          PriceClient.USD_RECIEIVE_VALUE.toString(),
+          this.usdReceiveValue.toString(),
         )
         .call();
       if (!paths.records.length) {
@@ -634,8 +638,7 @@ export class PriceClient {
           Number(paths.records[0].source_amount),
         ),
       );
-      const unitTokenPrice =
-        PriceClient.USD_RECIEIVE_VALUE.dividedBy(tokenUnit);
+      const unitTokenPrice = this.usdReceiveValue.dividedBy(tokenUnit);
       return {
         timestamp: latestLedgerTimestamp,
         price: unitTokenPrice,

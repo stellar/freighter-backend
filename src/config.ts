@@ -24,6 +24,7 @@ export interface PriceConfig {
   priceUpdateInterval: number;
   freighterHorizonUrl: string;
   priceStalenessThreshold: number;
+  usdReceiveValue: number;
 }
 
 export function buildConfig(config: Record<string, string | undefined>) {
@@ -98,6 +99,10 @@ export function buildConfig(config: Record<string, string | undefined>) {
         Number(config.PRICE_STALENESS_THRESHOLD) ||
         Number(process.env.PRICE_STALENESS_THRESHOLD!) ||
         0,
+      usdReceiveValue:
+        Number(config.USD_RECEIVE_VALUE) ||
+        Number(process.env.USD_RECEIVE_VALUE!) ||
+        500,
     },
 
     blockaidConfig: {

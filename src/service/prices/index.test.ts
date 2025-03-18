@@ -28,6 +28,7 @@ describe("Token Price Client", () => {
       priceUpdateInterval: 60000,
       freighterHorizonUrl: "http://test-url",
       priceStalenessThreshold: 0,
+      usdReceiveValue: 500,
     };
 
     priceClient = new PriceClient(testLogger, mockPriceConfig, mockRedisClient);
@@ -357,13 +358,15 @@ describe("Token Price Client", () => {
       );
     });
 
-    it("addBatchToCache should throw error if no prices calculated", async () => {
+    it("addBatchToCache should return if no prices calculated", async () => {
       jest
         .spyOn(priceClient as any, "calculateBatchPrices")
         .mockResolvedValue([]);
 
-      await expect(priceClient["addBatchToCache"](["TOKEN1"])).rejects.toThrow(
-        "No prices calculated",
+      await priceClient["addBatchToCache"](["TOKEN1"]);
+
+      expect(testLogger.warn).toHaveBeenCalledWith(
+        "No prices calculated for batch",
       );
     });
 
