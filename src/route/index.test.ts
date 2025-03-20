@@ -77,7 +77,7 @@ jest.mock("@blockaid/client", () => {
 
 describe("API routes", () => {
   describe("/account-history/:pubKey", () => {
-    it.skip("can fetch an account history for a pub key", async () => {
+    it("can fetch an account history for a pub key", async () => {
       const server = await getDevServer();
       const response = await fetch(
         `http://localhost:${
