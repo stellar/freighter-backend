@@ -147,18 +147,38 @@ export async function initApiServer(
               "price_cache_initialized",
             );
             if (!isCacheInitialized) {
+              logger.error(
+                "price worker health check: price cache not initialized",
+              );
               return reply.code(503).send({
                 status: "unhealthy",
-                error: "Price cache not initialized",
+              });
+            }
+
+            // Check horizon health
+            const horizonHealthURL = `${priceConfig?.freighterHorizonUrl}/health`;
+            const response = await fetch(horizonHealthURL);
+            const data = await response.json();
+            if (
+              !(data.database_connected || data.core_up || data.core_synced)
+            ) {
+              logger.error(
+                "price worker health check: horizon not healthy",
+                data,
+              );
+              return reply.code(503).send({
+                status: "unhealthy",
               });
             }
 
             // Check last update time
             const lastUpdateTime = await redis.get("price_worker_last_update");
             if (!lastUpdateTime) {
+              logger.error(
+                "price worker health check: no recent price updates",
+              );
               return reply.code(503).send({
                 status: "unhealthy",
-                error: "No recent price updates",
               });
             }
 
@@ -169,9 +189,11 @@ export async function initApiServer(
               const timeSinceLastUpdate = Date.now() - lastUpdate;
 
               if (timeSinceLastUpdate > maxUpdateInterval) {
+                logger.error(
+                  `price worker health check: last cache update ${timeSinceLastUpdate / 1000}s ago`,
+                );
                 return reply.code(503).send({
                   status: "unhealthy",
-                  error: `Price worker not updating (last update ${timeSinceLastUpdate / 1000}s ago)`,
                 });
               }
             }
