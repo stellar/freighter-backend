@@ -153,6 +153,19 @@ export async function initApiServer(
               });
             }
 
+            // Check horizon health
+            const horizonHealthURL = `${priceConfig?.freighterHorizonUrl}/health`;
+            const response = await fetch(horizonHealthURL);
+            const data = await response.json();
+            if (
+              !(data.database_connected || data.core_up || data.core_synced)
+            ) {
+              return reply.code(503).send({
+                status: "unhealthy",
+                error: "Horizon health check failed",
+              });
+            }
+
             // Check last update time
             const lastUpdateTime = await redis.get("price_worker_last_update");
             if (!lastUpdateTime) {
