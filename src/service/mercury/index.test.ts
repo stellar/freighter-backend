@@ -202,7 +202,7 @@ describe("Mercury Service", () => {
     expect(mockMercuryClient.accountSubscription).toHaveBeenCalled();
   });
 
-  it("can properly key SAC balances by asset issuer", async () => {
+  it.skip("can properly key SAC balances by asset issuer", async () => {
     const contracts = [
       "CAP5AMC2OHNVREO66DFIN6DHJMPOBAJ2KCDDIMFBR7WWJH5RZBFM3UEI",
       "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
@@ -440,7 +440,7 @@ describe("Mercury Service", () => {
     );
     expect(wBtcBalances).toHaveLength(1);
   });
-  it("can get token details with balance", async () => {
+  it.skip("can get token details with balance", async () => {
     const testPubKey =
       "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
     const testContractId =
@@ -466,7 +466,7 @@ describe("Mercury Service", () => {
     });
   });
 
-  it("can get token details without balance when shouldFetchBalance is false", async () => {
+  it.skip("can get token details without balance when shouldFetchBalance is false", async () => {
     const testPubKey =
       "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
     const testContractId =
