@@ -9,7 +9,6 @@ import Prometheus from "prom-client";
 
 import { mutation, query } from "./queries";
 import {
-  SOROBAN_RPC_URLS,
   getServer,
   getTokenBalance,
   getTokenDecimals,
@@ -37,7 +36,7 @@ import {
   hasSubForPublicKey,
 } from "../../helper/mercury";
 import { getSdk } from "../../helper/stellar";
-
+import { StellarRpcConfig } from "../../config";
 const DEFAULT_RETRY_AMOUNT = 5;
 
 export const ERROR_MESSAGES = {
@@ -106,6 +105,7 @@ export class MercuryClient {
     TESTNET: string;
     PUBLIC: string;
   };
+  rpcConfig: StellarRpcConfig;
   redisClient?: Redis;
   logger: Logger;
   mercuryErrorCounter: Prometheus.Counter<"endpoint">;
@@ -121,12 +121,13 @@ export class MercuryClient {
       rpcErrorCounter: Prometheus.Counter<"rpc">;
       criticalError: Prometheus.Counter<"message">;
     },
+    rpcConfig: StellarRpcConfig,
     redisClient?: Redis,
   ) {
     this.mercurySession = mercurySession;
     this.logger = logger;
     this.redisClient = redisClient;
-
+    this.rpcConfig = rpcConfig;
     this.mercuryErrorCounter = metrics.mercuryErrorCounter;
     this.rpcErrorCounter = metrics.rpcErrorCounter;
     this.criticalError = metrics.criticalError;
@@ -431,7 +432,7 @@ export class MercuryClient {
     balance?: string;
   }> => {
     try {
-      const server = await getServer(network);
+      const server = await getServer(network, this.rpcConfig);
       const compositeKey = `${network}__${contractId}`;
 
       let balance: string | undefined;
@@ -631,15 +632,11 @@ export class MercuryClient {
     network: NetworkNames,
   ) => {
     const Sdk = getSdk(StellarSdk.Networks[network]);
-    const networkUrl = SOROBAN_RPC_URLS[network];
-    if (!networkUrl) {
-      throw new Error(ERROR.UNSUPPORTED_NETWORK);
-    }
 
     const balances = [];
     const balanceMap = {} as Record<string, any>;
 
-    const server = await getServer(network);
+    const server = await getServer(network, this.rpcConfig);
     for (const id of contractIds) {
       try {
         const builder = await getTxBuilder(pubKey, network, server);

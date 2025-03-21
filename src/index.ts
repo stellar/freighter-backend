@@ -149,6 +149,7 @@ async function main() {
       rpcErrorCounter,
       criticalError,
     },
+    conf.stellarRpcConfig,
     redis,
   );
 
@@ -169,6 +170,7 @@ async function main() {
     conf.blockaidConfig,
     conf.coinbaseConfig,
     conf.priceConfig,
+    conf.stellarRpcConfig,
     redis,
   );
   const metricsServer = await initMetricsServer(register, redis);
@@ -260,6 +262,7 @@ async function main() {
           redisConnectionName: conf.redisConnectionName,
           redisPort: conf.redisPort,
           sentryKey: conf.sentryKey,
+          stellarRpcConfig: conf.stellarRpcConfig,
         },
       };
       const integrityCheckWorker = new Worker("./build/worker.js", workerData);

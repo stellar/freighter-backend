@@ -10,10 +10,17 @@ import { transformAccountHistory } from "../service/mercury/helpers/transformers
 import { query } from "../service/mercury/queries";
 import { defaultBenignResponse } from "../service/blockaid/helpers/addScanResults";
 import { Networks } from "stellar-sdk-next";
-import { SOROBAN_RPC_URLS } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
 import * as StellarHelpers from "../helper/stellar";
 import * as OnrampHelpers from "../helper/onramp";
+import { getStellarRpcUrls } from "../helper/soroban-rpc";
+import { StellarRpcConfig } from "../config";
+
+const mockStellarRpcConfig = {
+  freighterRpcPubnetUrl: "https://rpc-pubnet.stellar.org",
+  freighterRpcTestnetUrl: "https://rpc-testnet.stellar.org",
+  freighterRpcFuturenetUrl: "https://rpc-futurenet.stellar.org",
+} as StellarRpcConfig;
 
 jest.mock("@blockaid/client", () => {
   return class Blockaid {
@@ -867,7 +874,7 @@ describe("API routes", () => {
         },
         body: JSON.stringify({
           xdr: TEST_SOROBAN_TX,
-          network_url: SOROBAN_RPC_URLS.TESTNET,
+          network_url: getStellarRpcUrls(mockStellarRpcConfig).TESTNET,
           network_passphrase: Networks.TESTNET,
         }),
       };

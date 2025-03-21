@@ -75,7 +75,18 @@ describe("Soroban RPC helpers", () => {
         return Promise.resolve({ result: { notDefinitions: {} }, error: null });
       });
 
-      const isSep41 = await getIsTokenSpec("contractId", "TESTNET", testLogger);
+      const mockConfig = {
+        freighterRpcPubnetUrl: "http://mock-pubnet",
+        freighterRpcTestnetUrl: "http://mock-testnet",
+        freighterRpcFuturenetUrl: "http://mock-futurenet",
+      };
+
+      const isSep41 = await getIsTokenSpec(
+        "contractId",
+        "TESTNET",
+        testLogger,
+        mockConfig,
+      );
 
       expect(isSep41).toBeFalsy();
     });

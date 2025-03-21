@@ -29,10 +29,10 @@ import {
 } from "../helper/validate";
 import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
 import {
-  SOROBAN_RPC_URLS,
   buildTransfer,
   getContractSpec,
   getIsTokenSpec,
+  getStellarRpcUrls,
   isSacContractExecutable,
 } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
@@ -45,7 +45,7 @@ import Blockaid from "@blockaid/client";
 import { PriceClient } from "../service/prices";
 import { TokenPriceData } from "../service/prices/types";
 import { ensureError } from "../service/prices/errors";
-import { PriceConfig } from "../config";
+import { PriceConfig, StellarRpcConfig } from "../config";
 
 const API_VERSION = "v1";
 const TOKEN_PRICES_BATCH_SIZE = 50;
@@ -70,6 +70,7 @@ export async function initApiServer(
   },
   coinbaseConfig: CoinbaseConfig,
   priceConfig: PriceConfig,
+  stellarRpcConfig: StellarRpcConfig,
   redis?: Redis,
 ) {
   const routeMetricsStore = new WeakMap<
@@ -232,9 +233,12 @@ export async function initApiServer(
           }>,
           reply,
         ) => {
-          const networkUrl = SOROBAN_RPC_URLS[request.query.network];
-
+          const networkUrl =
+            getStellarRpcUrls(stellarRpcConfig)[request.query.network];
           if (!networkUrl) {
+            if (request.query.network === "PUBLIC") {
+              return reply.code(400).send("RPC pubnet URL is not set");
+            }
             return reply.code(400).send("Unknown network");
           }
 
@@ -569,7 +573,12 @@ export async function initApiServer(
           }
 
           try {
-            const isToken = await getIsTokenSpec(contractId, network, logger);
+            const isToken = await getIsTokenSpec(
+              contractId,
+              network,
+              logger,
+              stellarRpcConfig,
+            );
 
             reply.code(200).send({ data: isToken, error: null });
           } catch (error) {
@@ -625,6 +634,7 @@ export async function initApiServer(
               contractId,
               network,
               logger,
+              stellarRpcConfig,
             );
 
             reply.code(error ? 400 : 200).send({ data: result, error });
@@ -680,6 +690,7 @@ export async function initApiServer(
             const isSacContract = await isSacContractExecutable(
               contractId,
               network,
+              stellarRpcConfig,
             );
 
             reply.code(200).send({ isSacContract });

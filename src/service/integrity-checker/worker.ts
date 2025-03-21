@@ -32,6 +32,7 @@ const {
   redisConnectionName,
   redisPort,
   sentryKey,
+  stellarRpcConfig,
 } = workerData;
 
 const main = async () => {
@@ -41,7 +42,7 @@ const main = async () => {
 
   if (!sentryKey || !sentryClient) {
     throw new Error(
-      `Sentry misconfiguration, dsn: ${sentryKey}, client: ${sentryClient}`
+      `Sentry misconfiguration, dsn: ${sentryKey}, client: ${sentryClient}`,
     );
   }
 
@@ -79,7 +80,7 @@ const main = async () => {
     backendClientMaker: buildBackendClientMaker(graphQlEndpoints, false),
     currentDataClientMaker: buildCurrentDataClientMaker(
       graphQlCurrentDataEndpoints,
-      false
+      false,
     ),
     backends,
     credentials: {
@@ -104,14 +105,15 @@ const main = async () => {
       rpcErrorCounter,
       criticalError,
     },
-    redis
+    stellarRpcConfig,
+    redis,
   );
 
   const integrityCheckerClient = new IntegrityChecker(
     logger,
     integrityCheckMercuryClient,
     redis,
-    sentryClient
+    sentryClient,
   );
   await integrityCheckerClient.watchLedger(checkNetwork);
 };
