@@ -27,6 +27,12 @@ export interface PriceConfig {
   usdReceiveValue: number;
 }
 
+export interface StellarRpcConfig {
+  freighterRpcPubnetUrl: string;
+  freighterRpcTestnetUrl: string;
+  freighterRpcFuturenetUrl: string;
+}
+
 export function buildConfig(config: Record<string, string | undefined>) {
   const configKeys = Object.keys(config);
   const missingKeys = [] as string[];
@@ -76,6 +82,19 @@ export function buildConfig(config: Record<string, string | undefined>) {
     disableTokenPrices:
       config.DISABLE_TOKEN_PRICES === "true" ||
       process.env.DISABLE_TOKEN_PRICES === "true",
+    stellarRpcConfig: <StellarRpcConfig>{
+      freighterRpcPubnetUrl:
+        config.FREIGHTER_RPC_PUBNET_URL ||
+        process.env.FREIGHTER_RPC_PUBNET_URL!,
+      freighterRpcTestnetUrl:
+        config.FREIGHTER_RPC_TESTNET_URL ||
+        process.env.FREIGHTER_RPC_TESTNET_URL ||
+        "https://soroban-testnet.stellar.org/",
+      freighterRpcFuturenetUrl:
+        config.FREIGHTER_RPC_FUTURENET_URL ||
+        process.env.FREIGHTER_RPC_FUTURENET_URL ||
+        "https://rpc-futurenet.stellar.org/",
+    },
     priceConfig: <PriceConfig>{
       batchUpdateDelayMs:
         Number(config.PRICE_BATCH_UPDATE_DELAY_MS) ||
