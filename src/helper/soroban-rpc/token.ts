@@ -4,6 +4,7 @@ import { NetworkNames } from "../validate";
 import { Logger } from "pino";
 import { getSdk } from "../stellar";
 import { getContractSpec, getServer, simulateTx } from "./network";
+import { StellarRpcConfig } from "../../config";
 
 // https://github.com/stellar/soroban-examples/blob/main/token/src/contract.rs
 enum SorobanTokenInterface {
@@ -299,9 +300,15 @@ const getIsTokenSpec = async (
   contractId: string,
   network: NetworkNames,
   logger: Logger,
+  stellarRpcConfig: StellarRpcConfig,
 ) => {
   try {
-    const spec = await getContractSpec(contractId, network, logger);
+    const spec = await getContractSpec(
+      contractId,
+      network,
+      logger,
+      stellarRpcConfig,
+    );
     if (spec.error) {
       throw new Error(spec.error);
     }
@@ -329,12 +336,14 @@ const isTokenSpec = (spec: Record<string, any>) => {
 const isSacContractExecutable = async (
   contractId: string,
   network: NetworkNames,
+  stellarRpcConfig: StellarRpcConfig,
 ) => {
   // verify the contract executable in the instance entry
   // The SAC has a unique contract executable type
   const Sdk = getSdk(StellarSdkNext.Networks[network]);
   const { xdr } = Sdk;
-  const server = await getServer(network);
+
+  const server = await getServer(network, stellarRpcConfig);
   const instance = new Sdk.Contract(contractId).getFootprint();
   const ledgerKeyContractCode = instance.toXDR("base64");
 

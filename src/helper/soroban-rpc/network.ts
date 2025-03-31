@@ -7,18 +7,22 @@ import { NetworkNames } from "../validate";
 import { ERROR } from "../error";
 import { getSdk } from "../stellar";
 import { TOKEN_SPEC_DEFINITIONS } from "./token";
+import { StellarRpcConfig } from "../../config";
 
-const SOROBAN_RPC_URLS: { [key in keyof typeof StellarSdk.Networks]?: string } =
-  {
-    PUBLIC:
-      "http://soroban-rpc-pubnet-prd.soroban-rpc-pubnet-prd.svc.cluster.local:8000",
-    TESTNET: "https://soroban-testnet.stellar.org/",
-    FUTURENET: "https://rpc-futurenet.stellar.org/",
-  };
+const getStellarRpcUrls = (
+  config: StellarRpcConfig,
+): Partial<Record<NetworkNames, string>> => ({
+  PUBLIC: config.freighterRpcPubnetUrl,
+  TESTNET: config.freighterRpcTestnetUrl,
+  FUTURENET: config.freighterRpcFuturenetUrl,
+});
 
-const getServer = async (network: NetworkNames) => {
-  const serverUrl = SOROBAN_RPC_URLS[network];
+const getServer = async (network: NetworkNames, config: StellarRpcConfig) => {
+  const serverUrl = getStellarRpcUrls(config)[network];
   if (!serverUrl) {
+    if (network === "PUBLIC") {
+      throw new Error("RPC pubnet URL is not set");
+    }
     throw new Error(ERROR.UNSUPPORTED_NETWORK);
   }
 
@@ -169,13 +173,17 @@ const getContractSpec = async (
   contractId: string,
   network: NetworkNames,
   logger: Logger,
+  config: StellarRpcConfig,
 ) => {
   try {
     const Sdk = getSdk(StellarSdkNext.Networks[network]);
     const { xdr } = Sdk;
 
-    const serverUrl = SOROBAN_RPC_URLS[network];
+    const serverUrl = getStellarRpcUrls(config)[network];
     if (!serverUrl) {
+      if (network === "PUBLIC") {
+        throw new Error("RPC pubnet URL is not set");
+      }
       throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
 
@@ -231,5 +239,5 @@ export {
   getTxBuilder,
   parseWasmXdr,
   simulateTx,
-  SOROBAN_RPC_URLS,
+  getStellarRpcUrls,
 };

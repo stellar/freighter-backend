@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   redis:
-    image: redis:7.2-alpine
+    image: redis/redis-stack-server:latest
     container_name: freighter-redis
     hostname: freighter-redis
     restart: always

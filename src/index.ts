@@ -2,6 +2,7 @@ import * as dotEnv from "dotenv";
 import { expand } from "dotenv-expand";
 import yargs from "yargs";
 import Redis from "ioredis";
+import { createClient } from "redis";
 import Prometheus from "prom-client";
 import { Worker } from "worker_threads";
 import Blockaid from "@blockaid/client";
@@ -30,6 +31,7 @@ import {
 } from "./helper/metrics";
 import { fetchWithTimeout } from "./helper/fetch";
 import { BlockAidService } from "./service/blockaid";
+import { PriceClient } from "./service/prices";
 
 interface CliArgs {
   env: string;
@@ -98,6 +100,8 @@ async function main() {
   };
 
   let redis = undefined;
+  let timeSeriesRedis = undefined;
+
   // use in-memory store in dev
   if (env !== "development") {
     redis = new Redis({
@@ -113,6 +117,21 @@ async function main() {
     });
 
     await redis.set(REDIS_USE_MERCURY_KEY, String(conf.useMercury));
+
+    // Separate Redis client for time series operations
+    timeSeriesRedis = createClient({
+      socket: {
+        host: conf.hostname,
+        port: conf.redisPort,
+      },
+      name: conf.redisConnectionName,
+    });
+    await timeSeriesRedis.connect();
+
+    timeSeriesRedis.on("error", (error: any) => {
+      logger.info("redis time series connection error", error);
+      throw new Error(error);
+    });
   }
 
   const blockAidClient = new Blockaid({
@@ -130,17 +149,28 @@ async function main() {
       rpcErrorCounter,
       criticalError,
     },
+    conf.stellarRpcConfig,
     redis,
+  );
+
+  const priceClient = new PriceClient(
+    logger,
+    conf.priceConfig,
+    timeSeriesRedis,
   );
   const server = await initApiServer(
     mercuryClient,
     blockAidService,
+    priceClient,
     logger,
     conf.useMercury,
     conf.useSorobanPublic,
     register,
     env as mode,
     conf.blockaidConfig,
+    conf.coinbaseConfig,
+    conf.priceConfig,
+    conf.stellarRpcConfig,
     redis,
   );
   const metricsServer = await initMetricsServer(register, redis);
@@ -156,6 +186,62 @@ async function main() {
   }
 
   try {
+    // Start price update worker
+    if (env !== "development" && redis && !conf.disableTokenPrices) {
+      const priceWorkerData = {
+        workerData: {
+          hostname: conf.hostname,
+          redisConnectionName: conf.redisConnectionName,
+          redisPort: conf.redisPort,
+          priceConfig: conf.priceConfig,
+        },
+      };
+
+      const startPriceWorker = (retryCount = 0) => {
+        const maxRetries = 10;
+        const baseDelay = 1000; // 1 second
+        const maxDelay = 300000; // 5 minutes
+
+        const priceWorker = new Worker(
+          "./build/price-worker.js",
+          priceWorkerData,
+        );
+
+        priceWorker.on("error", (e) => {
+          logger.error("Price worker error:", e);
+          priceWorker.terminate();
+        });
+
+        priceWorker.on("exit", (code) => {
+          logger.info(`Price worker exited with code ${code}`);
+
+          // Non-zero exit code indicates abnormal termination
+          if (code !== 0) {
+            const delay = Math.min(
+              baseDelay * Math.pow(2, retryCount),
+              maxDelay,
+            );
+
+            if (retryCount < maxRetries) {
+              logger.info(
+                `Restarting price worker in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`,
+              );
+              setTimeout(() => startPriceWorker(retryCount + 1), delay);
+            } else {
+              logger.error(
+                "Max retry attempts reached for price worker. Manual intervention required.",
+              );
+              criticalError.inc();
+            }
+          }
+        });
+
+        return priceWorker;
+      };
+
+      startPriceWorker();
+    }
+
     // the worker is not properly instantiated when running this app with ts-node
     // if you need to test this, build the app with webpack and run the build with node manually
     if (conf.useMercury && env !== "development") {
@@ -176,6 +262,7 @@ async function main() {
           redisConnectionName: conf.redisConnectionName,
           redisPort: conf.redisPort,
           sentryKey: conf.sentryKey,
+          stellarRpcConfig: conf.stellarRpcConfig,
         },
       };
       const integrityCheckWorker = new Worker("./build/worker.js", workerData);

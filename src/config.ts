@@ -13,7 +13,25 @@ const ENV_KEYS = [
   "MERCURY_INTEGRITY_CHECK_ACCOUNT_EMAIL",
   "MERCURY_INTEGRITY_CHECK_ACCOUNT_PASS",
   "BLOCKAID_KEY",
+  "FREIGHTER_HORIZON_URL",
+  "DISABLE_TOKEN_PRICES",
 ];
+
+export interface PriceConfig {
+  batchUpdateDelayMs: number;
+  calculationTimeoutMs: number;
+  tokenUpdateBatchSize: number;
+  priceUpdateInterval: number;
+  freighterHorizonUrl: string;
+  priceStalenessThreshold: number;
+  usdReceiveValue: number;
+}
+
+export interface StellarRpcConfig {
+  freighterRpcPubnetUrl: string;
+  freighterRpcTestnetUrl: string;
+  freighterRpcFuturenetUrl: string;
+}
 
 export function buildConfig(config: Record<string, string | undefined>) {
   const configKeys = Object.keys(config);
@@ -61,6 +79,50 @@ export function buildConfig(config: Record<string, string | undefined>) {
       config.USE_MERCURY === "true" || process.env.USE_MERCURY === "true",
     useSorobanPublic: true,
     sentryKey: config.SENTRY_KEY || process.env.SENTRY_KEY,
+    disableTokenPrices:
+      config.DISABLE_TOKEN_PRICES === "true" ||
+      process.env.DISABLE_TOKEN_PRICES === "true",
+    stellarRpcConfig: <StellarRpcConfig>{
+      freighterRpcPubnetUrl:
+        config.FREIGHTER_RPC_PUBNET_URL ||
+        process.env.FREIGHTER_RPC_PUBNET_URL!,
+      freighterRpcTestnetUrl:
+        config.FREIGHTER_RPC_TESTNET_URL ||
+        process.env.FREIGHTER_RPC_TESTNET_URL ||
+        "https://soroban-testnet.stellar.org/",
+      freighterRpcFuturenetUrl:
+        config.FREIGHTER_RPC_FUTURENET_URL ||
+        process.env.FREIGHTER_RPC_FUTURENET_URL ||
+        "https://rpc-futurenet.stellar.org/",
+    },
+    priceConfig: <PriceConfig>{
+      batchUpdateDelayMs:
+        Number(config.PRICE_BATCH_UPDATE_DELAY_MS) ||
+        Number(process.env.PRICE_BATCH_UPDATE_DELAY_MS!) ||
+        5000,
+      calculationTimeoutMs:
+        Number(config.PRICE_CALCULATION_TIMEOUT_MS) ||
+        Number(process.env.PRICE_CALCULATION_TIMEOUT_MS!) ||
+        10000,
+      tokenUpdateBatchSize:
+        Number(config.PRICE_TOKEN_UPDATE_BATCH_SIZE) ||
+        Number(process.env.PRICE_TOKEN_UPDATE_BATCH_SIZE!) ||
+        25,
+      priceUpdateInterval:
+        Number(config.PRICE_UPDATE_INTERVAL) ||
+        Number(process.env.PRICE_UPDATE_INTERVAL!) ||
+        60000,
+      freighterHorizonUrl:
+        config.FREIGHTER_HORIZON_URL || process.env.FREIGHTER_HORIZON_URL!,
+      priceStalenessThreshold:
+        Number(config.PRICE_STALENESS_THRESHOLD) ||
+        Number(process.env.PRICE_STALENESS_THRESHOLD!) ||
+        0,
+      usdReceiveValue:
+        Number(config.USD_RECEIVE_VALUE) ||
+        Number(process.env.USD_RECEIVE_VALUE!) ||
+        500,
+    },
 
     blockaidConfig: {
       useBlockaidDappScanning: true,
@@ -68,6 +130,11 @@ export function buildConfig(config: Record<string, string | undefined>) {
       useBlockaidAssetScanning: true,
       useBlockaidAssetWarningReporting: true,
       useBlockaidTransactionWarningReporting: true,
+    },
+    coinbaseConfig: {
+      coinbaseApiKey: config.COINBASE_API_KEY || process.env.COINBASE_API_KEY!,
+      coinbaseApiSecret:
+        config.COINBASE_API_SECRET || process.env.COINBASE_API_SECRET!,
     },
   };
 }

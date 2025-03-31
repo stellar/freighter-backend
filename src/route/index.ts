@@ -25,13 +25,14 @@ import {
   isPubKey,
   isNetwork,
   NetworkNames,
+  isValidTokenString,
 } from "../helper/validate";
 import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
 import {
-  SOROBAN_RPC_URLS,
   buildTransfer,
   getContractSpec,
   getIsTokenSpec,
+  getStellarRpcUrls,
   isSacContractExecutable,
 } from "../helper/soroban-rpc";
 import { ERROR } from "../helper/error";
@@ -39,13 +40,22 @@ import { getSdk } from "../helper/stellar";
 import { getUseMercury } from "../helper/mercury";
 import { getHttpRequestDurationLabels } from "../helper/metrics";
 import { mode } from "../helper/env";
+import { fetchOnrampSessionToken, CoinbaseConfig } from "../helper/onramp";
 import Blockaid from "@blockaid/client";
+import { PriceClient } from "../service/prices";
+import { TokenPriceData } from "../service/prices/types";
+import { ensureError } from "../service/prices/errors";
+import { PriceConfig, StellarRpcConfig } from "../config";
 
 const API_VERSION = "v1";
+const TOKEN_PRICES_BATCH_SIZE = 50;
+const TOKEN_PRICES_MIN_REQUEST_SIZE = 1;
+const TOKEN_PRICES_MAX_REQUEST_SIZE = 100;
 
 export async function initApiServer(
   mercuryClient: MercuryClient,
   blockAidService: BlockAidService,
+  priceClient: PriceClient,
   logger: Logger,
   useMercuryConf: boolean,
   useSorobanPublic: boolean,
@@ -58,6 +68,9 @@ export async function initApiServer(
     useBlockaidAssetWarningReporting: boolean;
     useBlockaidTransactionWarningReporting: boolean;
   },
+  coinbaseConfig: CoinbaseConfig,
+  priceConfig: PriceConfig,
+  stellarRpcConfig: StellarRpcConfig,
   redis?: Redis,
 ) {
   const routeMetricsStore = new WeakMap<
@@ -121,6 +134,84 @@ export async function initApiServer(
 
       instance.route({
         method: "GET",
+        url: "/price-worker-health",
+        handler: async (_request, reply) => {
+          if (!redis) {
+            return reply
+              .code(503)
+              .send({ status: "unhealthy", error: "Redis not available" });
+          }
+
+          try {
+            // Check if price cache is initialized
+            const isCacheInitialized = await redis.get(
+              "price_cache_initialized",
+            );
+            if (!isCacheInitialized) {
+              logger.error(
+                "price worker health check: price cache not initialized",
+              );
+              return reply.code(503).send({
+                status: "unhealthy",
+              });
+            }
+
+            // Check horizon health
+            const horizonHealthURL = `${priceConfig?.freighterHorizonUrl}/health`;
+            const response = await fetch(horizonHealthURL);
+            const data = await response.json();
+            if (
+              !(data.database_connected || data.core_up || data.core_synced)
+            ) {
+              logger.error(
+                "price worker health check: horizon not healthy",
+                data,
+              );
+              return reply.code(503).send({
+                status: "unhealthy",
+              });
+            }
+
+            // Check last update time
+            const lastUpdateTime = await redis.get("price_worker_last_update");
+            if (!lastUpdateTime) {
+              logger.error(
+                "price worker health check: no recent price updates",
+              );
+              return reply.code(503).send({
+                status: "unhealthy",
+              });
+            }
+
+            // Check if last update was within the expected interval
+            if (priceConfig.priceStalenessThreshold > 0) {
+              const maxUpdateInterval = priceConfig.priceStalenessThreshold;
+              const lastUpdate = parseInt(lastUpdateTime);
+              const timeSinceLastUpdate = Date.now() - lastUpdate;
+
+              if (timeSinceLastUpdate > maxUpdateInterval) {
+                logger.error(
+                  `price worker health check: last cache update ${timeSinceLastUpdate / 1000}s ago`,
+                );
+                return reply.code(503).send({
+                  status: "unhealthy",
+                });
+              }
+            }
+
+            reply.code(200).send({ status: "healthy" });
+          } catch (error) {
+            logger.error(error);
+            reply.code(503).send({
+              status: "unhealthy",
+              error: "Error checking price worker health",
+            });
+          }
+        },
+      });
+
+      instance.route({
+        method: "GET",
         url: "/rpc-health",
         schema: {
           querystring: {
@@ -142,9 +233,12 @@ export async function initApiServer(
           }>,
           reply,
         ) => {
-          const networkUrl = SOROBAN_RPC_URLS[request.query.network];
-
+          const networkUrl =
+            getStellarRpcUrls(stellarRpcConfig)[request.query.network];
           if (!networkUrl) {
+            if (request.query.network === "PUBLIC") {
+              return reply.code(400).send("RPC pubnet URL is not set");
+            }
             return reply.code(400).send("Unknown network");
           }
 
@@ -479,7 +573,12 @@ export async function initApiServer(
           }
 
           try {
-            const isToken = await getIsTokenSpec(contractId, network, logger);
+            const isToken = await getIsTokenSpec(
+              contractId,
+              network,
+              logger,
+              stellarRpcConfig,
+            );
 
             reply.code(200).send({ data: isToken, error: null });
           } catch (error) {
@@ -535,6 +634,7 @@ export async function initApiServer(
               contractId,
               network,
               logger,
+              stellarRpcConfig,
             );
 
             reply.code(error ? 400 : 200).send({ data: result, error });
@@ -590,6 +690,7 @@ export async function initApiServer(
             const isSacContract = await isSacContractExecutable(
               contractId,
               network,
+              stellarRpcConfig,
             );
 
             reply.code(200).send({ isSacContract });
@@ -870,6 +971,56 @@ export async function initApiServer(
           return reply.code(200).send({
             error: ERROR.REPORT_TRANSACTION_DISABLED,
           });
+        },
+      });
+
+      instance.route({
+        method: "POST",
+        url: "/token-prices",
+        schema: {
+          body: {
+            type: "object",
+            required: ["tokens"],
+            properties: {
+              tokens: {
+                type: "array",
+                minItems: TOKEN_PRICES_MIN_REQUEST_SIZE,
+                maxItems: TOKEN_PRICES_MAX_REQUEST_SIZE,
+                items: {
+                  type: "string",
+                  validator: (token: string) => isValidTokenString(token),
+                },
+              },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Body: {
+              tokens: string[];
+            };
+          }>,
+          reply,
+        ) => {
+          try {
+            const { tokens } = request.body;
+            const prices: { [key: string]: TokenPriceData | null } = {};
+
+            for (let i = 0; i < tokens.length; i += TOKEN_PRICES_BATCH_SIZE) {
+              const batch = tokens.slice(i, i + TOKEN_PRICES_BATCH_SIZE);
+              await Promise.all(
+                batch.map(async (token) => {
+                  prices[token] = await priceClient.getPrice(token);
+                }),
+              );
+            }
+
+            reply.code(200).send({ data: prices });
+          } catch (e) {
+            const error = ensureError(e, "getting token prices");
+            logger.error("Error getting token prices:", error);
+            reply.code(500).send(ERROR.SERVER_ERROR);
+          }
         },
       });
 
@@ -1240,6 +1391,54 @@ export async function initApiServer(
             reply.code(200).send(data);
           } catch (error) {
             reply.code(400).send(error);
+          }
+        },
+      });
+
+      instance.route({
+        method: "POST",
+        url: "/onramp/token",
+        schema: {
+          body: {
+            type: "object",
+            required: ["address"],
+            properties: {
+              address: { type: "string" },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Body: { address: string };
+          }>,
+          reply,
+        ) => {
+          const { address } = request.body;
+          if (
+            !coinbaseConfig.coinbaseApiKey ||
+            !coinbaseConfig.coinbaseApiSecret
+          ) {
+            return reply.code(400).send({ error: "Coinbase config not set" });
+          }
+
+          try {
+            const { data, error } = await fetchOnrampSessionToken({
+              address,
+              coinbaseConfig,
+            });
+
+            const { token } = data;
+
+            if (!token) {
+              return reply
+                .code(400)
+                .send({ error: `Unable to retrieve token: ${error}` });
+            }
+
+            return reply.code(200).send({ data: { token } });
+          } catch (error) {
+            logger.error(error);
+            return reply.code(500).send(ERROR.SERVER_ERROR);
           }
         },
       });
