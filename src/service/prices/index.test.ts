@@ -9,6 +9,7 @@ describe("Token Price Client", () => {
     ts: {
       get: jest.fn(),
       range: jest.fn(),
+      revRange: jest.fn(),
       create: jest.fn(),
       add: jest.fn(),
       mAdd: jest.fn(),
@@ -17,6 +18,7 @@ describe("Token Price Client", () => {
     zRange: jest.fn(),
     set: jest.fn(),
     multi: jest.fn(),
+    get: jest.fn(),
   };
 
   beforeEach(() => {
@@ -58,22 +60,36 @@ describe("Token Price Client", () => {
   });
 
   describe("getPrice", () => {
-    it("should return current price data", async () => {
+    it("should return current price data when history is longer than 24h", async () => {
       // Setup mock Redis responses
       const mockCurrentPrice = 50000;
-      const mockTimestamp = Date.now();
+      const mockHistoricalPrice = 45000;
+      const mockNow = Date.now();
+      // Use PriceClient static properties if available, otherwise redefine
+      const ONE_DAY = 24 * 60 * 60 * 1000;
+      const ONE_MINUTE = 60 * 1000;
+      const twentyFourHoursAgo = mockNow - ONE_DAY;
+      const muchOlderTimestamp = mockNow - 2 * ONE_DAY; // Timestamp > 24h ago
 
       // Mock ts.get to return current price data
       mockRedisClient.ts.get.mockResolvedValue({
-        timestamp: mockTimestamp,
+        timestamp: mockNow,
         value: mockCurrentPrice,
       });
 
-      // Mock ts.range to return historical price data
+      // Mock ts.range for the firstEntry check (needs to be >= 24h old)
       mockRedisClient.ts.range.mockResolvedValue([
         {
-          timestamp: mockTimestamp - 24 * 60 * 60 * 1000, // 24h ago
-          value: 45000,
+          timestamp: muchOlderTimestamp,
+          value: 40000,
+        },
+      ]);
+
+      // Mock ts.revRange for the oldPrices check
+      mockRedisClient.ts.revRange.mockResolvedValue([
+        {
+          timestamp: twentyFourHoursAgo, // Simulate finding a price exactly 24h ago
+          value: mockHistoricalPrice,
         },
       ]);
 
@@ -85,36 +101,63 @@ describe("Token Price Client", () => {
       // Verify the result
       expect(result).not.toBeNull();
       expect(result?.currentPrice.toNumber()).toBe(mockCurrentPrice);
-      expect(result?.percentagePriceChange24h?.toFixed(2)).toBe("11.11"); // (50000-45000)/45000*100 ≈ 11.11%
+      // Calculation: (50000 - 45000) / 45000 * 100 = 11.111...
+      expect(result?.percentagePriceChange24h?.toFixed(2)).toBe("11.11");
 
-      // Verify Redis client was called correctly
       expect(mockRedisClient.ts.get).toHaveBeenCalledWith(token);
-      expect(mockRedisClient.ts.range).toHaveBeenCalled();
+      expect(mockRedisClient.ts.range).toHaveBeenCalledWith(token, 0, "-", {
+        COUNT: 1,
+      });
+      expect(mockRedisClient.ts.revRange).toHaveBeenCalledWith(
+        token,
+        "-",
+        twentyFourHoursAgo + ONE_MINUTE, // Match the timestamp used in getPrice
+        { COUNT: 1 },
+      );
+      // Check the counter increment
       expect(mockRedisClient.zIncrBy).toHaveBeenCalledWith(
-        expect.any(String),
+        "token_counter", // Assuming this is the key defined in PriceClient
         1,
         token,
       );
     });
 
-    it("should handle missing historical data", async () => {
-      // Setup mock - current price exists but no historical data
+    it("should return null percentage change when history is shorter than 24h", async () => {
+      // Setup mock - current price exists
+      const mockCurrentPrice = 50000;
+      const mockNow = Date.now();
+      const ONE_DAY = 24 * 60 * 60 * 1000;
+      const twelveHoursAgo = mockNow - ONE_DAY / 2; // Timestamp < 24h ago
+
       mockRedisClient.ts.get.mockResolvedValue({
-        timestamp: Date.now(),
-        value: 50000,
+        timestamp: mockNow,
+        value: mockCurrentPrice,
       });
 
-      // Empty array means no historical data found
-      mockRedisClient.ts.range.mockResolvedValue([]);
+      // Mock ts.range for the firstEntry check (return entry < 24h old)
+      mockRedisClient.ts.range.mockResolvedValue([
+        {
+          timestamp: twelveHoursAgo,
+          value: 48000,
+        },
+      ]);
 
       const token =
-        "BTC:GDPJALI4AZKUU2W426U5WKMAT6CN3AJRPIIRYR2YM54TL2GDWO5O2MZM";
+        "BTC_SHORT:GDPJALI4AZKUU2W426U5WKMAT6CN3AJRPIIRYR2YM54TL2GDWO5O2MZM";
       const result = await priceClient.getPrice(token);
 
-      // Should return current price but no percentage change
+      // Should return current price but null percentage change
       expect(result).not.toBeNull();
-      expect(result?.currentPrice.toNumber()).toBe(50000);
+      expect(result?.currentPrice.toNumber()).toBe(mockCurrentPrice);
       expect(result?.percentagePriceChange24h).toBeNull();
+      expect(mockRedisClient.ts.revRange).not.toHaveBeenCalled();
+
+      // Verify logger info was called
+      expect(testLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining(
+          `Token ${token} history is shorter than 24h, skipping % change calculation.`,
+        ),
+      );
     });
 
     it("should handle new token request", async () => {
