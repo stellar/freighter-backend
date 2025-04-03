@@ -193,31 +193,54 @@ export class PriceClient {
         return null;
       }
 
-      // Get 24h ago price using TS.RANGE. Use a 1 min offset as the end time.
-      const dayAgo = latestPrice.timestamp - PriceClient.ONE_DAY;
-      const oldPrices = await this.redisClient.ts.range(
-        tsKey,
-        dayAgo,
-        dayAgo + PriceClient.ONE_MINUTE,
-        {
-          COUNT: 1,
-        },
-      );
-
       const currentPrice = new BigNumber(latestPrice.value);
       let percentagePriceChange24h: BigNumber | null = null;
 
-      if (oldPrices && oldPrices.length > 0) {
-        const oldPriceBN = new BigNumber(oldPrices[0].value);
-        if (!oldPriceBN.isZero()) {
-          percentagePriceChange24h = currentPrice
-            .minus(oldPriceBN)
-            .dividedBy(oldPriceBN)
-            .times(100);
+      // When calculating the 24h price change, we want to make sure the token has been tracked for at least 24 hours.
+      const firstEntry = await this.redisClient.ts.range(tsKey, 0, "-", {
+        COUNT: 1,
+      });
+      if (
+        firstEntry &&
+        firstEntry.length > 0 &&
+        latestPrice.timestamp - firstEntry[0].timestamp >= PriceClient.ONE_DAY
+      ) {
+        // revRange traverses the time series in reverse chronological order.
+        // We use the "-" symbol to indicate the earliest/oldest timestamp of the time series.
+        // We then add 1 min to the dayAgo timestamp to account for the slight timing variations.
+        // The scan window will be [earliest timestamp, dayAgo + 1 min] and revRange will start scanning from
+        // the price at (dayAgo + 1 min) timestamp until it finds the first entry.
+        const dayAgo = latestPrice.timestamp - PriceClient.ONE_DAY;
+        const oldPrices = await this.redisClient.ts.revRange(
+          tsKey,
+          "-", // Indicates the earliest/oldest timestamp of the time series
+          dayAgo + PriceClient.ONE_MINUTE, // Indicates the timestamp roughly 24 hours ago from the latest price.
+          {
+            COUNT: 1, // Get the single most recent entry at or before (dayAgo + 1min)
+          },
+        );
+
+        if (oldPrices && oldPrices.length > 0) {
+          const oldPriceBN = new BigNumber(oldPrices[0].value);
+          if (!oldPriceBN.isZero()) {
+            percentagePriceChange24h = currentPrice
+              .minus(oldPriceBN)
+              .dividedBy(oldPriceBN)
+              .times(100);
+          }
+        } else {
+          // This case should be less common now, but log if revRange still finds nothing
+          this.logger.warn(
+            `No 24h price found for ${token} despite >24h history`,
+          );
         }
       } else {
-        this.logger.warn(`No 24h price found for ${token}`);
+        // Log if the token history is shorter than 24 hours
+        this.logger.info(
+          `Token ${token} history is shorter than 24h, skipping % change calculation.`,
+        );
       }
+
       await this.redisClient.zIncrBy(
         PriceClient.TOKEN_COUNTER_SORTED_SET_KEY,
         1,
