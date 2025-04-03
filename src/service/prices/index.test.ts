@@ -31,6 +31,7 @@ describe("Token Price Client", () => {
       freighterHorizonUrl: "http://test-url",
       priceStalenessThreshold: 0,
       usdReceiveValue: 500,
+      priceOneDayThresholdMs: 300000,
     };
 
     priceClient = new PriceClient(testLogger, mockPriceConfig, mockRedisClient);
@@ -68,7 +69,7 @@ describe("Token Price Client", () => {
       // Use PriceClient static properties if available, otherwise redefine
       const ONE_DAY = 24 * 60 * 60 * 1000;
       const ONE_MINUTE = 60 * 1000;
-      const twentyFourHoursAgo = mockNow - ONE_DAY;
+      const twentyFourHoursAgo = mockNow - (ONE_DAY - 5 * ONE_MINUTE);
       const muchOlderTimestamp = mockNow - 2 * ONE_DAY; // Timestamp > 24h ago
 
       // Mock ts.get to return current price data
@@ -111,7 +112,7 @@ describe("Token Price Client", () => {
       expect(mockRedisClient.ts.revRange).toHaveBeenCalledWith(
         token,
         "-",
-        twentyFourHoursAgo + ONE_MINUTE, // Match the timestamp used in getPrice
+        twentyFourHoursAgo, // Match the timestamp used in getPrice
         { COUNT: 1 },
       );
       // Check the counter increment

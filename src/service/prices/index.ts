@@ -74,12 +74,6 @@ export class PriceClient {
   private static readonly ONE_DAY = 24 * 60 * 60 * 1000;
 
   /**
-   * Represents one minute in milliseconds (60s * 1000ms).
-   * Used as an offset window when looking up historical prices to handle slight timing variations.
-   */
-  private static readonly ONE_MINUTE = 60 * 1000;
-
-  /**
    * The time period (in milliseconds) for which to retain price data in Redis time series.
    * Currently set to 1 day in milliseconds to support 24-hour price change calculations while managing storage usage.
    */
@@ -102,6 +96,12 @@ export class PriceClient {
    * Balances update efficiency with Stellar network and Redis load.
    */
   private static readonly DEFAULT_TOKEN_UPDATE_BATCH_SIZE = 25;
+
+  /**
+   * The time delta (in milliseconds) to adjust the 1 day threshold by.
+   * Default set to 5 minutes to account for slight timing variations.
+   */
+  private static readonly DEFAULT_ONE_DAY_THRESHOLD_MS = 300000;
 
   /**
    * Maximum number of tokens to fetch and track prices for initially.
@@ -128,6 +128,8 @@ export class PriceClient {
   private readonly calculationTimeoutMs: number;
   private readonly tokenUpdateBatchSize: number;
   private readonly usdReceiveValue: BigNumber;
+  private readonly priceOneDayThresholdMs: number;
+
   /**
    * Creates a new PriceClient instance.
    *
@@ -163,6 +165,9 @@ export class PriceClient {
     this.usdReceiveValue = new BigNumber(
       priceConfig.usdReceiveValue || PriceClient.DEFAULT_USD_RECEIVE_VALUE,
     );
+    this.priceOneDayThresholdMs =
+      priceConfig.priceOneDayThresholdMs ||
+      PriceClient.DEFAULT_ONE_DAY_THRESHOLD_MS;
   }
 
   /**
@@ -195,7 +200,7 @@ export class PriceClient {
 
       const currentPrice = new BigNumber(latestPrice.value);
       let percentagePriceChange24h: BigNumber | null = null;
-      const oneDayThreshold = PriceClient.ONE_DAY - 1 * PriceClient.ONE_MINUTE;
+      const oneDayThreshold = PriceClient.ONE_DAY - this.priceOneDayThresholdMs;
 
       // When calculating the 24h price change, we want to make sure the token has been tracked for at least 24 hours.
       const firstEntry = await this.redisClient.ts.range(tsKey, "-", "+", {
@@ -204,7 +209,7 @@ export class PriceClient {
       if (
         firstEntry &&
         firstEntry.length > 0 &&
-        latestPrice.timestamp - firstEntry[0].timestamp >= oneDayThreshold
+        latestPrice.timestamp - oneDayThreshold >= firstEntry[0].timestamp
       ) {
         // revRange traverses the time series in reverse chronological order.
         // We use the "-" symbol to indicate the earliest/oldest timestamp of the time series.
