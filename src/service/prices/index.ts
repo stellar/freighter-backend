@@ -213,14 +213,14 @@ export class PriceClient {
       ) {
         // revRange traverses the time series in reverse chronological order.
         // We use the "-" symbol to indicate the earliest/oldest timestamp of the time series.
-        // We dont use the exact 1 day calculation but use an offset of 5 minutes to account for slight timing variations.
+        // We dont use the exact 1 day calculation but use an offset of few minutes to account for slight timing variations.
         const dayAgo = latestPrice.timestamp - oneDayThreshold;
         const oldPrices = await this.redisClient.ts.revRange(
           tsKey,
           "-", // Indicates the earliest/oldest timestamp of the time series
           dayAgo, // Indicates the timestamp roughly 24 hours ago from the latest price.
           {
-            COUNT: 1, // Get the single most recent entry at or before (dayAgo + 1min)
+            COUNT: 1, // Get the single most recent entry at or before dayAgo
           },
         );
 
