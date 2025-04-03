@@ -32,7 +32,7 @@ export class PriceClient {
    */
   private static readonly USDCAsset = new StellarSdk.Asset(
     "USDC",
-    "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+    "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN"
   );
 
   /**
@@ -140,7 +140,7 @@ export class PriceClient {
   constructor(
     logger: Logger,
     priceConfig: PriceConfig,
-    private readonly redisClient?: RedisClientWithTS,
+    private readonly redisClient?: RedisClientWithTS
   ) {
     this.logger = logger;
     const Sdk = getSdk(StellarSdkNext.Networks.PUBLIC);
@@ -149,7 +149,7 @@ export class PriceClient {
       priceConfig?.freighterHorizonUrl || NETWORK_URLS.PUBLIC,
       {
         allowHttp: true,
-      },
+      }
     );
 
     // Set configurable values with fallbacks to defaults
@@ -163,7 +163,7 @@ export class PriceClient {
       priceConfig.tokenUpdateBatchSize ||
       PriceClient.DEFAULT_TOKEN_UPDATE_BATCH_SIZE;
     this.usdReceiveValue = new BigNumber(
-      priceConfig.usdReceiveValue || PriceClient.DEFAULT_USD_RECEIVE_VALUE,
+      priceConfig.usdReceiveValue || PriceClient.DEFAULT_USD_RECEIVE_VALUE
     );
     this.priceOneDayThresholdMs =
       priceConfig.priceOneDayThresholdMs ||
@@ -193,7 +193,7 @@ export class PriceClient {
     try {
       if (!latestPrice) {
         this.logger.error(
-          `Token in cache but no latest price found for ${token}`,
+          `Token in cache but no latest price found for ${token}`
         );
         return null;
       }
@@ -221,7 +221,7 @@ export class PriceClient {
           dayAgo, // Indicates the timestamp roughly 24 hours ago from the latest price.
           {
             COUNT: 1, // Get the single most recent entry at or before dayAgo
-          },
+          }
         );
 
         if (oldPrices && oldPrices.length > 0) {
@@ -235,24 +235,24 @@ export class PriceClient {
         } else {
           // This case should be less common now, but log if revRange still finds nothing
           this.logger.warn(
-            `No 24h price found for ${token} despite >24h history`,
+            `No 24h price found for ${token} despite >24h history`
           );
         }
       } else {
         // Log if the token history is shorter than 24 hours
         this.logger.info(
-          `Token ${token} history is shorter than 24h, skipping % change calculation.`,
+          `Token ${token} history is shorter than 24h, skipping % change calculation.`
         );
         this.logger.info(`Earliest entry: ${JSON.stringify(firstEntry)}`);
         this.logger.info(
-          `Time difference: ${latestPrice.timestamp - firstEntry[0].timestamp}, 1 day threshold: ${oneDayThreshold}`,
+          `Time difference: ${latestPrice.timestamp - firstEntry[0].timestamp}, 1 day threshold: ${oneDayThreshold}`
         );
       }
 
       await this.redisClient.zIncrBy(
         PriceClient.TOKEN_COUNTER_SORTED_SET_KEY,
         1,
-        tsKey,
+        tsKey
       );
 
       return {
@@ -262,7 +262,7 @@ export class PriceClient {
     } catch (e) {
       const error = ensureError(
         e,
-        `getting price from time series for ${token}`,
+        `getting price from time series for ${token}`
       );
       this.logger.error(error);
       return null;
@@ -302,14 +302,14 @@ export class PriceClient {
           this.logger.info(`Adding to sorted set ${tsKey}`);
         } catch (error) {
           this.logger.error(
-            `Error creating time series for ${token}: ${error}`,
+            `Error creating time series for ${token}: ${error}`
           );
         }
       }
       await pipeline.exec();
       await this.redisClient.set(
         PriceClient.PRICE_CACHE_INITIALIZED_KEY,
-        "true",
+        "true"
       );
     } catch (error) {
       throw ensureError(error, `initializing price cache`);
@@ -348,7 +348,7 @@ export class PriceClient {
       PriceClient.TOKEN_COUNTER_SORTED_SET_KEY,
       0,
       -1,
-      { REV: true },
+      { REV: true }
     );
 
     if (tokens.length === 0) {
@@ -370,13 +370,13 @@ export class PriceClient {
       const tokenBatch = tokens.slice(i, i + this.tokenUpdateBatchSize);
       this.logger.info(
         `Processing batch ${i / this.tokenUpdateBatchSize + 1} of ${Math.ceil(
-          tokens.length / this.tokenUpdateBatchSize,
-        )}`,
+          tokens.length / this.tokenUpdateBatchSize
+        )}`
       );
 
       await this.addBatchToCache(tokenBatch);
       await new Promise((resolve) =>
-        setTimeout(resolve, this.batchUpdateDelayMs),
+        setTimeout(resolve, this.batchUpdateDelayMs)
       );
     }
   }
@@ -400,7 +400,7 @@ export class PriceClient {
         key: this.getTimeSeriesKey(token),
         timestamp,
         value: price.toNumber(),
-      }),
+      })
     );
     await this.redisClient!.ts.mAdd(mAddEntries);
   }
@@ -414,7 +414,7 @@ export class PriceClient {
    * @private
    */
   private async calculateBatchPrices(
-    tokens: TokenKey[],
+    tokens: TokenKey[]
   ): Promise<{ token: TokenKey; timestamp: number; price: BigNumber }[]> {
     try {
       const pricePromises = tokens.map((token) =>
@@ -428,15 +428,15 @@ export class PriceClient {
             const error = ensureError(e, `calculating price for ${token}`);
             this.logger.error(error);
             return null;
-          }),
+          })
       );
 
       // Filter out null responses - these are tokens for which we failed to calculate a price.
       const prices = (await Promise.all(pricePromises)).filter(
         (
-          price,
+          price
         ): price is { token: TokenKey; timestamp: number; price: BigNumber } =>
-          price !== null,
+          price !== null
       );
 
       return prices;
@@ -459,7 +459,7 @@ export class PriceClient {
     while (tokens.length < PriceClient.INITIAL_TOKEN_COUNT && nextUrl) {
       try {
         this.logger.info(
-          `Fetching assets from ${nextUrl}, current count: ${tokens.length}`,
+          `Fetching assets from ${nextUrl}, current count: ${tokens.length}`
         );
         const response = await fetch(`${nextUrl}`);
         const data = await response.json();
@@ -538,7 +538,7 @@ export class PriceClient {
       await this.redisClient.zIncrBy(
         PriceClient.TOKEN_COUNTER_SORTED_SET_KEY,
         1,
-        key,
+        key
       );
       this.logger.info(`Created time series ${key}`);
       this.logger.info(`Added to sorted set ${key}`);
@@ -557,7 +557,7 @@ export class PriceClient {
    * @private
    */
   private addNewTokenToCache = async (
-    token: TokenKey,
+    token: TokenKey
   ): Promise<TokenPriceData | null> => {
     try {
       if (!this.redisClient) {
@@ -600,14 +600,14 @@ export class PriceClient {
    * @private
    */
   private calculatePriceInUSD = async (
-    token: TokenKey,
+    token: TokenKey
   ): Promise<PriceCalculationResult> => {
     try {
       const timeoutPromise = new Promise<PriceCalculationResult>((_, reject) =>
         setTimeout(
           () => reject(new PriceCalculationError(token)),
-          this.calculationTimeoutMs,
-        ),
+          this.calculationTimeoutMs
+        )
       );
 
       return await Promise.race([
@@ -629,7 +629,7 @@ export class PriceClient {
    * @private
    */
   private calculatePriceUsingPaths = async (
-    token: TokenKey,
+    token: TokenKey
   ): Promise<PriceCalculationResult> => {
     try {
       let sourceAssets = undefined;
@@ -649,14 +649,14 @@ export class PriceClient {
         .limit(1)
         .call();
       const latestLedgerTimestamp = new Date(
-        latestLedger.records[0].closed_at,
+        latestLedger.records[0].closed_at
       ).getTime();
 
       const paths = await this.server
         .strictReceivePaths(
           sourceAssets,
           PriceClient.USDCAsset,
-          this.usdReceiveValue.toString(),
+          this.usdReceiveValue.toString()
         )
         .call();
       if (!paths.records.length) {
@@ -666,8 +666,8 @@ export class PriceClient {
       const tokenUnit = new BigNumber(
         paths.records.reduce(
           (min, record) => Math.min(min, Number(record.source_amount)),
-          Number(paths.records[0].source_amount),
-        ),
+          Number(paths.records[0].source_amount)
+        )
       );
       const unitTokenPrice = this.usdReceiveValue.dividedBy(tokenUnit);
       return {
