@@ -113,13 +113,13 @@ describe("Token Price Client", () => {
         token,
         "-",
         twentyFourHoursAgo, // Match the timestamp used in getPrice
-        { COUNT: 1 },
+        { COUNT: 1 }
       );
       // Check the counter increment
       expect(mockRedisClient.zIncrBy).toHaveBeenCalledWith(
         "token_counter", // Assuming this is the key defined in PriceClient
         1,
-        token,
+        token
       );
     });
 
@@ -156,8 +156,8 @@ describe("Token Price Client", () => {
       // Verify logger info was called
       expect(testLogger.info).toHaveBeenCalledWith(
         expect.stringContaining(
-          `Token ${token} history is shorter than 24h, skipping % change calculation.`,
-        ),
+          `Token ${token} history is shorter than 24h, skipping % change calculation.`
+        )
       );
     });
 
@@ -168,7 +168,7 @@ describe("Token Price Client", () => {
       // Spy on addNewTokenToCache method
       const addNewTokenToCacheSpy = jest.spyOn(
         priceClient as any,
-        "addNewTokenToCache",
+        "addNewTokenToCache"
       );
       addNewTokenToCacheSpy.mockResolvedValue({
         currentPrice: new BigNumber(60000),
@@ -201,9 +201,9 @@ describe("Token Price Client", () => {
       expect(testLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining(
-            `adding new token to cache for ${token}`,
+            `adding new token to cache for ${token}`
           ),
-        }),
+        })
       );
 
       // Second call: Key exists but no price data
@@ -212,8 +212,8 @@ describe("Token Price Client", () => {
       expect(secondResult).toBeNull();
       expect(testLogger.error).toHaveBeenCalledWith(
         expect.stringContaining(
-          `Token in cache but no latest price found for ${token}`,
-        ),
+          `Token in cache but no latest price found for ${token}`
+        )
       );
     });
 
@@ -224,7 +224,7 @@ describe("Token Price Client", () => {
         value: 50000,
       });
       mockRedisClient.ts.range.mockRejectedValue(
-        new Error("24h price data not found"),
+        new Error("24h price data not found")
       );
 
       const token =
@@ -234,9 +234,9 @@ describe("Token Price Client", () => {
       expect(testLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining(
-            `getting price from time series for ${token}`,
+            `getting price from time series for ${token}`
           ),
-        }),
+        })
       );
     });
   });
@@ -259,10 +259,10 @@ describe("Token Price Client", () => {
       expect(mockRedisClient.multi).toHaveBeenCalled();
       expect(mockRedisClient.set).toHaveBeenCalledWith(
         expect.any(String),
-        "true",
+        "true"
       );
       expect(testLogger.info).toHaveBeenCalledWith(
-        `Fetched ${mockTokens.length} total tokens`,
+        `Fetched ${mockTokens.length} total tokens`
       );
     });
 
@@ -274,7 +274,7 @@ describe("Token Price Client", () => {
       await expect(priceClient.initPriceCache()).rejects.toThrow(
         expect.objectContaining({
           message: expect.stringContaining("initializing price cache"),
-        }),
+        })
       );
     });
   });
@@ -302,7 +302,7 @@ describe("Token Price Client", () => {
       // Verify method calls
       expect(priceClient["getTokensToUpdate"]).toHaveBeenCalled();
       expect(priceClient["processTokenBatches"]).toHaveBeenCalledWith(
-        mockTokens,
+        mockTokens
       );
     });
 
@@ -314,7 +314,7 @@ describe("Token Price Client", () => {
       await expect(priceClient.updatePrices()).rejects.toThrow(
         expect.objectContaining({
           message: expect.stringContaining("updating prices"),
-        }),
+        })
       );
     });
   });
@@ -336,7 +336,7 @@ describe("Token Price Client", () => {
         expect.any(String),
         0,
         -1,
-        { REV: true },
+        { REV: true }
       );
     });
 
@@ -344,7 +344,7 @@ describe("Token Price Client", () => {
       mockRedisClient.zRange.mockResolvedValue([]);
 
       await expect(priceClient["getTokensToUpdate"]()).rejects.toThrow(
-        "No tokens found in sorted set",
+        "No tokens found in sorted set"
       );
     });
 
@@ -369,7 +369,7 @@ describe("Token Price Client", () => {
       // With default batch size of 25 and 100 tokens, we expect 4 batches
       expect(priceClient["addBatchToCache"]).toHaveBeenCalledTimes(4);
       expect(testLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining("Processing batch 1 of 4"),
+        expect.stringContaining("Processing batch 1 of 4")
       );
     });
 
@@ -398,7 +398,7 @@ describe("Token Price Client", () => {
             timestamp: 123456789,
             value: 200,
           }),
-        ]),
+        ])
       );
     });
 
@@ -410,14 +410,14 @@ describe("Token Price Client", () => {
       await priceClient["addBatchToCache"](["TOKEN1"]);
 
       expect(testLogger.warn).toHaveBeenCalledWith(
-        "No prices calculated for batch",
+        "No prices calculated for batch"
       );
     });
 
     it("getTimeSeriesKey should handle native asset correctly", async () => {
       expect(priceClient["getTimeSeriesKey"]("native")).toBe("XLM");
       expect(priceClient["getTimeSeriesKey"]("CODE:ISSUER")).toBe(
-        "CODE:ISSUER",
+        "CODE:ISSUER"
       );
     });
   });
@@ -478,7 +478,7 @@ describe("Token Price Client", () => {
         price: new BigNumber(100),
       });
       expect(priceClient["calculatePriceUsingPaths"]).toHaveBeenCalledWith(
-        "TOKEN1",
+        "TOKEN1"
       );
     });
 
@@ -493,7 +493,7 @@ describe("Token Price Client", () => {
           () =>
             new Promise(() => {
               // This promise will never resolve during the test
-            }),
+            })
         );
 
       // Start the price calculation but don't await it yet
@@ -504,7 +504,7 @@ describe("Token Price Client", () => {
 
       // Now await the promise, which should reject due to timeout
       await expect(pricePromise).rejects.toThrow(
-        new PriceCalculationError("TOKEN1"),
+        new PriceCalculationError("TOKEN1")
       );
 
       // Restore real timers
@@ -520,12 +520,12 @@ describe("Token Price Client", () => {
           RETENTION: expect.any(Number),
           DUPLICATE_POLICY: expect.any(String),
           LABELS: expect.any(Object),
-        }),
+        })
       );
       expect(mockRedisClient.zIncrBy).toHaveBeenCalledWith(
         expect.any(String),
         1,
-        "TOKEN1",
+        "TOKEN1"
       );
     });
   });
