@@ -195,6 +195,7 @@ export class PriceClient {
 
       const currentPrice = new BigNumber(latestPrice.value);
       let percentagePriceChange24h: BigNumber | null = null;
+      const oneDayThreshold = PriceClient.ONE_DAY - 1 * PriceClient.ONE_MINUTE;
 
       // When calculating the 24h price change, we want to make sure the token has been tracked for at least 24 hours.
       const firstEntry = await this.redisClient.ts.range(tsKey, "-", "+", {
@@ -203,18 +204,16 @@ export class PriceClient {
       if (
         firstEntry &&
         firstEntry.length > 0 &&
-        latestPrice.timestamp - firstEntry[0].timestamp >= PriceClient.ONE_DAY
+        latestPrice.timestamp - firstEntry[0].timestamp >= oneDayThreshold
       ) {
         // revRange traverses the time series in reverse chronological order.
         // We use the "-" symbol to indicate the earliest/oldest timestamp of the time series.
-        // We then add 1 min to the dayAgo timestamp to account for the slight timing variations.
-        // The scan window will be [earliest timestamp, dayAgo + 1 min] and revRange will start scanning from
-        // the price at (dayAgo + 1 min) timestamp until it finds the first entry.
-        const dayAgo = latestPrice.timestamp - PriceClient.ONE_DAY;
+        // We dont use the exact 1 day calculation but use an offset of 5 minutes to account for slight timing variations.
+        const dayAgo = latestPrice.timestamp - oneDayThreshold;
         const oldPrices = await this.redisClient.ts.revRange(
           tsKey,
           "-", // Indicates the earliest/oldest timestamp of the time series
-          dayAgo + PriceClient.ONE_MINUTE, // Indicates the timestamp roughly 24 hours ago from the latest price.
+          dayAgo, // Indicates the timestamp roughly 24 hours ago from the latest price.
           {
             COUNT: 1, // Get the single most recent entry at or before (dayAgo + 1min)
           },
@@ -238,6 +237,10 @@ export class PriceClient {
         // Log if the token history is shorter than 24 hours
         this.logger.info(
           `Token ${token} history is shorter than 24h, skipping % change calculation.`,
+        );
+        this.logger.info(`Earliest entry: ${JSON.stringify(firstEntry)}`);
+        this.logger.info(
+          `Time difference: ${latestPrice.timestamp - firstEntry[0].timestamp}, 1 day threshold: ${oneDayThreshold}`,
         );
       }
 
