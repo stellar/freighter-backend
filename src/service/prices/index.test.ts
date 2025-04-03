@@ -105,7 +105,7 @@ describe("Token Price Client", () => {
       expect(result?.percentagePriceChange24h?.toFixed(2)).toBe("11.11");
 
       expect(mockRedisClient.ts.get).toHaveBeenCalledWith(token);
-      expect(mockRedisClient.ts.range).toHaveBeenCalledWith(token, 0, "-", {
+      expect(mockRedisClient.ts.range).toHaveBeenCalledWith(token, "-", "+", {
         COUNT: 1,
       });
       expect(mockRedisClient.ts.revRange).toHaveBeenCalledWith(
