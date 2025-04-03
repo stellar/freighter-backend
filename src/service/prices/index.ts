@@ -197,7 +197,7 @@ export class PriceClient {
       let percentagePriceChange24h: BigNumber | null = null;
 
       // When calculating the 24h price change, we want to make sure the token has been tracked for at least 24 hours.
-      const firstEntry = await this.redisClient.ts.range(tsKey, 0, "-", {
+      const firstEntry = await this.redisClient.ts.range(tsKey, "-", "+", {
         COUNT: 1,
       });
       if (
