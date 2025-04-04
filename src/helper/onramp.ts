@@ -32,7 +32,15 @@ export const generateJWT = ({
     nonce: crypto.randomBytes(16).toString("hex"),
   };
 
-  return jwt.sign(payload, coinbaseConfig.coinbaseApiSecret, {
+  // When we set values in Vault, we aren't able to set this value with "" around it.
+  // Because of that, when JS interperets it, it tries to escape `/n` characters, turning them into `//n`
+  // Adding this extra slash breaks the algorithm, so we need to remove it.
+  const coinbaseApiSecret = coinbaseConfig.coinbaseApiSecret.replaceAll(
+    "\\n",
+    "\n",
+  );
+
+  return jwt.sign(payload, coinbaseApiSecret, {
     algorithm,
     header,
   });
