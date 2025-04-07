@@ -25,6 +25,7 @@ export interface PriceConfig {
   freighterHorizonUrl: string;
   priceStalenessThreshold: number;
   usdReceiveValue: number;
+  priceOneDayThresholdMs: number;
 }
 
 export interface StellarRpcConfig {
@@ -122,6 +123,10 @@ export function buildConfig(config: Record<string, string | undefined>) {
         Number(config.USD_RECEIVE_VALUE) ||
         Number(process.env.USD_RECEIVE_VALUE!) ||
         500,
+      priceOneDayThresholdMs:
+        Number(config.PRICE_ONE_DAY_THRESHOLD_MS) ||
+        Number(process.env.PRICE_ONE_DAY_THRESHOLD_MS!) ||
+        300000,
     },
 
     blockaidConfig: {
