@@ -739,20 +739,16 @@ export async function initApiServer(
       });
 
       instance.route({
-        method: "GET",
+        method: "POST",
         url: "/scan-tx",
         schema: {
-          querystring: {
+          body: {
             type: "object",
-            required: ["tx_xdr", "url", "network"],
+            required: ["url", "tx_xdr", "network"],
             properties: {
-              ["tx_xdr"]: {
-                type: "string",
-              },
-              ["url"]: {
-                type: "string",
-              },
-              ["network"]: {
+              url: { type: "string" },
+              tx_xdr: { type: "string" },
+              network: {
                 type: "string",
                 validator: (qStr: string) => isNetwork(qStr),
               },
@@ -761,15 +757,15 @@ export async function initApiServer(
         },
         handler: async (
           request: FastifyRequest<{
-            Querystring: {
-              ["tx_xdr"]: string;
-              ["url"]: string;
-              ["network"]: NetworkNames;
+            Body: {
+              url: string;
+              tx_xdr: string;
+              network: NetworkNames;
             };
           }>,
           reply,
         ) => {
-          const { tx_xdr, url, network } = request.query;
+          const { tx_xdr, url, network } = request.body;
           if (blockaidConfig.useBlockaidTxScanning) {
             try {
               const { data, error } = await blockAidService.scanTx(
