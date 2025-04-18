@@ -738,6 +738,57 @@ export async function initApiServer(
         },
       });
 
+      // TODO: decomission this endpoint once all users have upgraded to Freighter 5.32.0
+      instance.route({
+        method: "GET",
+        url: "/scan-tx",
+        schema: {
+          querystring: {
+            type: "object",
+            required: ["tx_xdr", "url", "network"],
+            properties: {
+              ["tx_xdr"]: {
+                type: "string",
+              },
+              ["url"]: {
+                type: "string",
+              },
+              ["network"]: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Querystring: {
+              ["tx_xdr"]: string;
+              ["url"]: string;
+              ["network"]: NetworkNames;
+            };
+          }>,
+          reply,
+        ) => {
+          const { tx_xdr, url, network } = request.query;
+          if (blockaidConfig.useBlockaidTxScanning) {
+            try {
+              const { data, error } = await blockAidService.scanTx(
+                tx_xdr,
+                url,
+                network,
+              );
+              return reply.code(error ? 400 : 200).send({ data, error });
+            } catch (error) {
+              return reply.code(500).send(ERROR.SERVER_ERROR);
+            }
+          }
+          return reply
+            .code(200)
+            .send({ data: null, error: ERROR.SCAN_TX_DISABLED });
+        },
+      });
+
       instance.route({
         method: "POST",
         url: "/scan-tx",
