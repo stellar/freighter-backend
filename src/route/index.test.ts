@@ -546,7 +546,7 @@ describe("API routes", () => {
       await server.close();
     });
   });
-  describe.only("/scan-tx", () => {
+  describe("/scan-tx", () => {
     it("can scan a tx", async () => {
       const server = await getDevServer();
       const url = new URL(
