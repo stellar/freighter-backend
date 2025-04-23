@@ -13,6 +13,7 @@ import { Networks } from "stellar-sdk-next";
 import { ERROR } from "../helper/error";
 import * as StellarHelpers from "../helper/stellar";
 import * as OnrampHelpers from "../helper/onramp";
+import * as HorizonRpcHelpers from "../helper/horizon-rpc";
 import { getStellarRpcUrls } from "../helper/soroban-rpc";
 import { StellarRpcConfig } from "../config";
 
@@ -151,6 +152,28 @@ describe("API routes", () => {
         }/api/v1/account-history/${notPubkey}`,
       );
       expect(response.status).toEqual(400);
+      await server.close();
+    });
+
+    it("includes failed tx's in stellar-sdk operations", async () => {
+      const fetchAccountHistorySpy = jest.spyOn(
+        HorizonRpcHelpers,
+        "fetchAccountHistory",
+      );
+      const server = await getDevServer(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        false,
+      );
+      await fetch(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/account-history/${pubKey}?network=TESTNET&is_failed_included=true`,
+      );
+
+      expect(fetchAccountHistorySpy.mock.calls[0][2]).toEqual(true);
       await server.close();
     });
   });
