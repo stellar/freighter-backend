@@ -343,6 +343,9 @@ export async function initApiServer(
                 type: "string",
                 validator: (qStr: string) => isNetwork(qStr),
               },
+              ["is_failed_included"]: {
+                type: "string",
+              },
             },
           },
         },
@@ -351,6 +354,7 @@ export async function initApiServer(
             Params: { ["pubKey"]: string };
             Querystring: {
               ["network"]: NetworkNames;
+              ["is_failed_included"]: string;
             };
           }>,
           reply,
@@ -358,11 +362,14 @@ export async function initApiServer(
           try {
             const useMercury = await getUseMercury(mode, useMercuryConf, redis);
             const pubKey = request.params["pubKey"];
-            const { network } = request.query;
+            const { network, is_failed_included: isFailedIncluded } =
+              request.query;
+
             const { data, error } = await mercuryClient.getAccountHistory(
               pubKey,
               network,
               useMercury,
+              isFailedIncluded === "true",
             );
             if (error) {
               reply.code(400).send(JSON.stringify(error));

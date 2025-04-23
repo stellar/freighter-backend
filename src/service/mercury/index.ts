@@ -510,7 +510,11 @@ export class MercuryClient {
     }
   };
 
-  getAccountHistoryHorizon = async (pubKey: string, network: NetworkNames) => {
+  getAccountHistoryHorizon = async (
+    pubKey: string,
+    network: NetworkNames,
+    isFailedIncluded?: boolean,
+  ) => {
     try {
       const networkUrl = NETWORK_URLS[network];
       if (!networkUrl) {
@@ -523,7 +527,7 @@ export class MercuryClient {
       const server = new Horizon.Server(networkUrl, {
         allowHttp: !networkUrl.includes("https"),
       });
-      const data = await fetchAccountHistory(pubKey, server);
+      const data = await fetchAccountHistory(pubKey, server, isFailedIncluded);
       return {
         data,
         error: null,
@@ -603,6 +607,7 @@ export class MercuryClient {
     pubKey: string,
     network: NetworkNames,
     useMercury: boolean,
+    isFailedIncluded?: boolean,
   ) => {
     if (hasIndexerSupport(network) && useMercury) {
       const response = await this.getAccountHistoryMercury(pubKey, network);
@@ -622,6 +627,7 @@ export class MercuryClient {
     const horizonResponse = await this.getAccountHistoryHorizon(
       pubKey,
       network,
+      isFailedIncluded,
     );
     return horizonResponse;
   };
