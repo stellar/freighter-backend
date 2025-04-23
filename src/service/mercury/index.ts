@@ -513,7 +513,7 @@ export class MercuryClient {
   getAccountHistoryHorizon = async (
     pubKey: string,
     network: NetworkNames,
-    isFailedIncluded: boolean,
+    isFailedIncluded?: boolean,
   ) => {
     try {
       const networkUrl = NETWORK_URLS[network];
@@ -607,7 +607,7 @@ export class MercuryClient {
     pubKey: string,
     network: NetworkNames,
     useMercury: boolean,
-    isFailedIncluded: boolean,
+    isFailedIncluded?: boolean,
   ) => {
     if (hasIndexerSupport(network) && useMercury) {
       const response = await this.getAccountHistoryMercury(pubKey, network);
