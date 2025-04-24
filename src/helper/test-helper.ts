@@ -666,6 +666,7 @@ async function getDevServer(
   },
   priceConfig = mockPriceConfig,
   stellarRpcConfig = mockStellarRpcConfig,
+  useMercury = true,
 ) {
   register.clear();
 
@@ -674,7 +675,7 @@ async function getDevServer(
     blockAidService,
     mockPriceClient,
     testLogger,
-    true,
+    useMercury,
     true,
     register,
     "development",

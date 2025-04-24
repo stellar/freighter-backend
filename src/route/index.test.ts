@@ -13,6 +13,7 @@ import { Networks } from "stellar-sdk-next";
 import { ERROR } from "../helper/error";
 import * as StellarHelpers from "../helper/stellar";
 import * as OnrampHelpers from "../helper/onramp";
+import * as HorizonRpcHelpers from "../helper/horizon-rpc";
 import { getStellarRpcUrls } from "../helper/soroban-rpc";
 import { StellarRpcConfig } from "../config";
 
@@ -76,6 +77,44 @@ jest.mock("@blockaid/client", () => {
     };
     stellar = {
       transaction: {
+        scan: () => ({
+          withResponse: () =>
+            Promise.resolve({
+              data: {
+                simulation: {
+                  status: "Success",
+                  assets_diffs: {},
+                  exposures: {},
+                  ownership_diffs: {},
+                  address_details: [],
+                  account_summary: [],
+                },
+                validation: {
+                  status: "Success",
+                  result_type: "Benign",
+                  description: "",
+                  reason: "",
+                  classification: "",
+                  features: [],
+                },
+              },
+              response: {
+                status: 200,
+                statusText: "OK",
+                headers: {
+                  get: () => ({
+                    "x-request-id": "1214",
+                  }),
+                  "x-request-id": "1214",
+                },
+                bodyUsed: true,
+                ok: true,
+                redirected: false,
+                type: "basic",
+                url: "https://api.blockaid.io/v0/stellar/transaction/scan",
+              },
+            }),
+        }),
         report: () => Promise.resolve(999),
       },
     };
@@ -113,6 +152,28 @@ describe("API routes", () => {
         }/api/v1/account-history/${notPubkey}`,
       );
       expect(response.status).toEqual(400);
+      await server.close();
+    });
+
+    it("includes failed tx's in stellar-sdk operations", async () => {
+      const fetchAccountHistorySpy = jest.spyOn(
+        HorizonRpcHelpers,
+        "fetchAccountHistory",
+      );
+      const server = await getDevServer(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        false,
+      );
+      await fetch(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/account-history/${pubKey}?network=TESTNET&is_failed_included=true`,
+      );
+
+      expect(fetchAccountHistorySpy.mock.calls[0][2]).toEqual(true);
       await server.close();
     });
   });
@@ -504,6 +565,87 @@ describe("API routes", () => {
         ...defaultBenignResponse,
         address:
           "BLND-GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
+      });
+      await server.close();
+    });
+  });
+  describe("/scan-tx", () => {
+    it("can scan a tx", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/scan-tx`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tx_xdr: TEST_SOROBAN_TX,
+          network: "PUBLIC",
+          url: "https://example.com",
+        }),
+      };
+      const response = await fetch(url.href, options);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(data.data).toEqual({
+        simulation: {
+          status: "Success",
+          assets_diffs: {},
+          exposures: {},
+          ownership_diffs: {},
+          address_details: [],
+          account_summary: [],
+        },
+        validation: {
+          status: "Success",
+          result_type: "Benign",
+          description: "",
+          reason: "",
+          classification: "",
+          features: [],
+        },
+        request_id: {
+          "x-request-id": "1214",
+        },
+      });
+      await server.close();
+    });
+    it("does not scan a tx when config is disabled", async () => {
+      const server = await getDevServer({
+        useBlockaidAssetScanning: false,
+        useBlockaidDappScanning: false,
+        useBlockaidTxScanning: false,
+        useBlockaidAssetWarningReporting: true,
+        useBlockaidTransactionWarningReporting: true,
+      });
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/scan-tx`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tx_xdr: TEST_SOROBAN_TX,
+          network: "PUBLIC",
+          url: "https://example.com",
+        }),
+      };
+      const response = await fetch(url.href, options);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(data).toEqual({
+        data: null,
+        error: ERROR.SCAN_TX_DISABLED,
       });
       await server.close();
     });

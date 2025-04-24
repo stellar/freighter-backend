@@ -343,6 +343,9 @@ export async function initApiServer(
                 type: "string",
                 validator: (qStr: string) => isNetwork(qStr),
               },
+              ["is_failed_included"]: {
+                type: "string",
+              },
             },
           },
         },
@@ -351,6 +354,7 @@ export async function initApiServer(
             Params: { ["pubKey"]: string };
             Querystring: {
               ["network"]: NetworkNames;
+              ["is_failed_included"]: string;
             };
           }>,
           reply,
@@ -358,11 +362,14 @@ export async function initApiServer(
           try {
             const useMercury = await getUseMercury(mode, useMercuryConf, redis);
             const pubKey = request.params["pubKey"];
-            const { network } = request.query;
+            const { network, is_failed_included: isFailedIncluded } =
+              request.query;
+
             const { data, error } = await mercuryClient.getAccountHistory(
               pubKey,
               network,
               useMercury,
+              isFailedIncluded === "true",
             );
             if (error) {
               reply.code(400).send(JSON.stringify(error));
@@ -738,6 +745,7 @@ export async function initApiServer(
         },
       });
 
+      // TODO: decomission this endpoint once all users have upgraded to Freighter 5.32.0
       instance.route({
         method: "GET",
         url: "/scan-tx",
@@ -770,6 +778,52 @@ export async function initApiServer(
           reply,
         ) => {
           const { tx_xdr, url, network } = request.query;
+          if (blockaidConfig.useBlockaidTxScanning) {
+            try {
+              const { data, error } = await blockAidService.scanTx(
+                tx_xdr,
+                url,
+                network,
+              );
+              return reply.code(error ? 400 : 200).send({ data, error });
+            } catch (error) {
+              return reply.code(500).send(ERROR.SERVER_ERROR);
+            }
+          }
+          return reply
+            .code(200)
+            .send({ data: null, error: ERROR.SCAN_TX_DISABLED });
+        },
+      });
+
+      instance.route({
+        method: "POST",
+        url: "/scan-tx",
+        schema: {
+          body: {
+            type: "object",
+            required: ["url", "tx_xdr", "network"],
+            properties: {
+              url: { type: "string" },
+              tx_xdr: { type: "string" },
+              network: {
+                type: "string",
+                validator: (qStr: string) => isNetwork(qStr),
+              },
+            },
+          },
+        },
+        handler: async (
+          request: FastifyRequest<{
+            Body: {
+              url: string;
+              tx_xdr: string;
+              network: NetworkNames;
+            };
+          }>,
+          reply,
+        ) => {
+          const { tx_xdr, url, network } = request.body;
           if (blockaidConfig.useBlockaidTxScanning) {
             try {
               const { data, error } = await blockAidService.scanTx(
