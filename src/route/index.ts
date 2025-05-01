@@ -1314,7 +1314,9 @@ export async function initApiServer(
           try {
             const Sdk = getSdk(network_passphrase as Networks);
             const tx = Sdk.TransactionBuilder.fromXDR(xdr, network_passphrase);
-            const server = new Sdk.SorobanRpc.Server(network_url);
+            const server = new Sdk.SorobanRpc.Server(network_url, {
+              allowHttp: true,
+            });
             const simulationResponse = await server.simulateTransaction(tx);
             const preparedTransaction = Sdk.SorobanRpc.assembleTransaction(
               tx,
