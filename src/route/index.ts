@@ -1331,7 +1331,13 @@ export async function initApiServer(
             };
             reply.code(200).send(data);
           } catch (error) {
-            logger.error(JSON.stringify(error));
+            if (error instanceof Error) {
+              logger.error(
+                `Error: ${error.name} - ${error.message}\n${error.stack}`,
+              );
+            } else {
+              logger.error(`Unknown error: ${JSON.stringify(error)}`);
+            }
             reply.code(400).send(JSON.stringify(error));
           }
         },
