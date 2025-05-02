@@ -1314,14 +1314,12 @@ export async function initApiServer(
           try {
             const Sdk = getSdk(network_passphrase as Networks);
             const tx = Sdk.TransactionBuilder.fromXDR(xdr, network_passphrase);
-            const server = new Sdk.SorobanRpc.Server(network_url, {
+            const server = new Sdk.rpc.Server(network_url, {
               allowHttp: true,
             });
             const simulationResponse = await server.simulateTransaction(tx);
-            const preparedTransaction = Sdk.SorobanRpc.assembleTransaction(
-              tx,
-              simulationResponse,
-            )
+            const preparedTransaction = Sdk.rpc
+              .assembleTransaction(tx, simulationResponse)
               .build()
               .toXDR();
 
@@ -1395,7 +1393,7 @@ export async function initApiServer(
           try {
             const Sdk = getSdk(network_passphrase as Networks);
             const _fee = fee || Sdk.BASE_FEE;
-            const server = new Sdk.SorobanRpc.Server(network_url, {
+            const server = new Sdk.rpc.Server(network_url, {
               allowHttp: network_url.startsWith("http://"),
             });
             const sourceAccount = await server.getAccount(pub_key);
@@ -1417,9 +1415,9 @@ export async function initApiServer(
             );
             const simulationResponse = (await server.simulateTransaction(
               tx,
-            )) as StellarSdk.SorobanRpc.Api.SimulateTransactionSuccessResponse;
+            )) as StellarSdk.rpc.Api.SimulateTransactionSuccessResponse;
 
-            const preparedTransaction = Sdk.SorobanRpc.assembleTransaction(
+            const preparedTransaction = Sdk.rpc.assembleTransaction(
               tx,
               simulationResponse,
             );
