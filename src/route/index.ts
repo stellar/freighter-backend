@@ -1312,6 +1312,9 @@ export async function initApiServer(
 
           try {
             const networkPassphrase = Networks[network];
+            if (!networkPassphrase) {
+              reply.code(400).send({ error: ERROR.UNSUPPORTED_NETWORK });
+            }
             const Sdk = getSdk(networkPassphrase);
             const tx = Sdk.TransactionBuilder.fromXDR(xdr, networkPassphrase);
             const server = await getServer(network, stellarRpcConfig);
