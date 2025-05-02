@@ -1292,11 +1292,10 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
-            required: ["xdr", "network_url", "network_passphrase"],
+            required: ["xdr", "network"],
             properties: {
               xdr: { type: "string" },
               network: { type: "string" },
-              network_passphrase: { type: "string" },
             },
           },
         },
@@ -1305,16 +1304,16 @@ export async function initApiServer(
             Body: {
               xdr: string;
               network: NetworkNames;
-              network_passphrase: string;
             };
           }>,
           reply,
         ) => {
-          const { xdr, network, network_passphrase } = request.body;
+          const { xdr, network } = request.body;
 
           try {
-            const Sdk = getSdk(network_passphrase as Networks);
-            const tx = Sdk.TransactionBuilder.fromXDR(xdr, network_passphrase);
+            const networkPassphrase = Networks[network];
+            const Sdk = getSdk(networkPassphrase);
+            const tx = Sdk.TransactionBuilder.fromXDR(xdr, networkPassphrase);
             const server = await getServer(network, stellarRpcConfig);
             const simulationResponse = await server.simulateTransaction(tx);
             const preparedTransaction = Sdk.rpc
