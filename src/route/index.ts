@@ -32,6 +32,7 @@ import {
   buildTransfer,
   getContractSpec,
   getIsTokenSpec,
+  getServer,
   getStellarRpcUrls,
   isSacContractExecutable,
 } from "../helper/soroban-rpc";
@@ -1294,7 +1295,7 @@ export async function initApiServer(
             required: ["xdr", "network_url", "network_passphrase"],
             properties: {
               xdr: { type: "string" },
-              network_url: { type: "string" },
+              network: { type: "string" },
               network_passphrase: { type: "string" },
             },
           },
@@ -1303,20 +1304,18 @@ export async function initApiServer(
           request: FastifyRequest<{
             Body: {
               xdr: string;
-              network_url: string;
+              network: NetworkNames;
               network_passphrase: string;
             };
           }>,
           reply,
         ) => {
-          const { xdr, network_url, network_passphrase } = request.body;
+          const { xdr, network, network_passphrase } = request.body;
 
           try {
             const Sdk = getSdk(network_passphrase as Networks);
             const tx = Sdk.TransactionBuilder.fromXDR(xdr, network_passphrase);
-            const server = new Sdk.rpc.Server(network_url, {
-              allowHttp: true,
-            });
+            const server = await getServer(network, stellarRpcConfig);
             const simulationResponse = await server.simulateTransaction(tx);
             const preparedTransaction = Sdk.rpc
               .assembleTransaction(tx, simulationResponse)
@@ -1327,16 +1326,14 @@ export async function initApiServer(
               simulationResponse,
               preparedTransaction,
             };
-            reply.code(200).send(data);
+            reply.code(200).send({ data });
           } catch (error) {
+            let errorMessage = `Unknown error: ${JSON.stringify(error)}`;
             if (error instanceof Error) {
-              logger.error(
-                `Error: ${error.name} - ${error.message}\n${error.stack}`,
-              );
-            } else {
-              logger.error(`Unknown error: ${JSON.stringify(error)}`);
+              errorMessage = `Error: ${error.name} - ${error.message}\n${error.stack}`;
             }
-            reply.code(400).send(JSON.stringify(error));
+            logger.error(errorMessage);
+            reply.code(400).send({ error: errorMessage });
           }
         },
       });
