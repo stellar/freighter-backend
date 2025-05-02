@@ -243,10 +243,10 @@ export async function initApiServer(
           }
 
           const Sdk = getSdk(StellarSdk.Networks[request.query.network]);
-          const { SorobanRpc } = Sdk;
+          const { rpc } = Sdk;
 
           try {
-            const server = new SorobanRpc.Server(networkUrl, {
+            const server = new rpc.Server(networkUrl, {
               allowHttp: networkUrl.startsWith("http://"),
             });
 
