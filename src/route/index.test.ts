@@ -14,6 +14,14 @@ import { ERROR } from "../helper/error";
 import * as StellarHelpers from "../helper/stellar";
 import * as OnrampHelpers from "../helper/onramp";
 import * as HorizonRpcHelpers from "../helper/horizon-rpc";
+import { getStellarRpcUrls } from "../helper/soroban-rpc";
+import { StellarRpcConfig } from "../config";
+
+const mockStellarRpcConfig = {
+  freighterRpcPubnetUrl: "https://rpc-pubnet.stellar.org",
+  freighterRpcTestnetUrl: "https://rpc-testnet.stellar.org",
+  freighterRpcFuturenetUrl: "https://rpc-futurenet.stellar.org",
+} as StellarRpcConfig;
 
 jest.mock("@blockaid/client", () => {
   return class Blockaid {
@@ -1008,11 +1016,12 @@ describe("API routes", () => {
         },
         body: JSON.stringify({
           xdr: TEST_SOROBAN_TX,
-          network: "PUBLIC",
+          network_url: getStellarRpcUrls(mockStellarRpcConfig).TESTNET,
+          network_passphrase: Networks.TESTNET,
         }),
       };
       const response = await fetch(url.href, options);
-      const { data } = await response.json();
+      const data = await response.json();
 
       expect(response.status).toEqual(200);
       expect(data.simulationResponse).toEqual(simResponse);

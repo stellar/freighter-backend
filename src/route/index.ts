@@ -32,7 +32,6 @@ import {
   buildTransfer,
   getContractSpec,
   getIsTokenSpec,
-  getServer,
   getStellarRpcUrls,
   isSacContractExecutable,
 } from "../helper/soroban-rpc";
@@ -1292,10 +1291,11 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
-            required: ["xdr", "network"],
+            required: ["xdr", "network_url", "network_passphrase"],
             properties: {
               xdr: { type: "string" },
-              network: { type: "string" },
+              network_url: { type: "string" },
+              network_passphrase: { type: "string" },
             },
           },
         },
@@ -1303,21 +1303,20 @@ export async function initApiServer(
           request: FastifyRequest<{
             Body: {
               xdr: string;
-              network: NetworkNames;
+              network_url: string;
+              network_passphrase: string;
             };
           }>,
           reply,
         ) => {
-          const { xdr, network } = request.body;
+          const { xdr, network_url, network_passphrase } = request.body;
 
           try {
-            const networkPassphrase = Networks[network];
-            if (!networkPassphrase) {
-              reply.code(400).send({ error: ERROR.UNSUPPORTED_NETWORK });
-            }
-            const Sdk = getSdk(networkPassphrase);
-            const tx = Sdk.TransactionBuilder.fromXDR(xdr, networkPassphrase);
-            const server = await getServer(network, stellarRpcConfig);
+            const Sdk = getSdk(network_passphrase as Networks);
+            const tx = Sdk.TransactionBuilder.fromXDR(xdr, network_passphrase);
+            const server = new Sdk.rpc.Server(network_url, {
+              allowHttp: true,
+            });
             const simulationResponse = await server.simulateTransaction(tx);
             const preparedTransaction = Sdk.rpc
               .assembleTransaction(tx, simulationResponse)
@@ -1328,14 +1327,14 @@ export async function initApiServer(
               simulationResponse,
               preparedTransaction,
             };
-            reply.code(200).send({ data });
+            reply.code(200).send(data);
           } catch (error) {
             let errorMessage = `Unknown error: ${JSON.stringify(error)}`;
             if (error instanceof Error) {
               errorMessage = `Error: ${error.name} - ${error.message}\n${error.stack}`;
             }
             logger.error(errorMessage);
-            reply.code(400).send({ error: errorMessage });
+            reply.code(400).send(errorMessage);
           }
         },
       });
