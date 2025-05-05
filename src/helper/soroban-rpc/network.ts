@@ -28,7 +28,7 @@ const getServer = async (network: NetworkNames, config: StellarRpcConfig) => {
 
   const Sdk = getSdk(StellarSdkNext.Networks[network]);
 
-  return new Sdk.SorobanRpc.Server(serverUrl, {
+  return new Sdk.rpc.Server(serverUrl, {
     allowHttp: serverUrl.startsWith("http://"),
   });
 };
@@ -36,7 +36,7 @@ const getServer = async (network: NetworkNames, config: StellarRpcConfig) => {
 const getTxBuilder = async (
   pubKey: string,
   network: NetworkNames,
-  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server,
+  server: StellarSdk.rpc.Server | StellarSdkNext.rpc.Server,
 ) => {
   const Sdk = getSdk(StellarSdkNext.Networks[network]);
   const sourceAccount = await server.getAccount(pubKey);
@@ -51,19 +51,16 @@ const simulateTx = async <ArgType>(
     StellarSdk.Memo<StellarSdk.MemoType>,
     StellarSdk.Operation[]
   >,
-  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server,
+  server: StellarSdk.rpc.Server | StellarSdkNext.rpc.Server,
   networkPassphrase: StellarSdk.Networks,
 ): Promise<ArgType> => {
   const Sdk = getSdk(networkPassphrase);
   const simulatedTX = await server.simulateTransaction(tx);
-  if (
-    Sdk.SorobanRpc.Api.isSimulationSuccess(simulatedTX) &&
-    simulatedTX.result
-  ) {
+  if (Sdk.rpc.Api.isSimulationSuccess(simulatedTX) && simulatedTX.result) {
     return Sdk.scValToNative(simulatedTX.result.retval);
   }
 
-  if (Sdk.SorobanRpc.Api.isSimulationError(simulatedTX)) {
+  if (Sdk.rpc.Api.isSimulationError(simulatedTX)) {
     throw new Error(simulatedTX.error);
   }
 
@@ -144,7 +141,7 @@ const getLedgerEntries = async (
   id: number = new Date().getDate(),
 ): Promise<{
   error: Error;
-  result: StellarSdk.SorobanRpc.Api.RawGetLedgerEntriesResponse;
+  result: StellarSdk.rpc.Api.RawGetLedgerEntriesResponse;
 }> => {
   let requestBody = {
     jsonrpc: "2.0",

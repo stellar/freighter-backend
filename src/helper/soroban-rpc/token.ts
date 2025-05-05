@@ -188,7 +188,7 @@ const TOKEN_SPEC_DEFINITIONS: { [index: string]: any } = {
 
 const getTokenDecimals = async (
   contractId: string,
-  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server,
+  server: StellarSdk.rpc.Server | StellarSdkNext.rpc.Server,
   builder: StellarSdk.TransactionBuilder,
   network: NetworkNames,
 ) => {
@@ -210,7 +210,7 @@ const getTokenDecimals = async (
 
 const getTokenName = async (
   contractId: string,
-  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server,
+  server: StellarSdk.rpc.Server | StellarSdkNext.rpc.Server,
   builder: StellarSdk.TransactionBuilder,
   network: NetworkNames,
 ) => {
@@ -232,7 +232,7 @@ const getTokenName = async (
 
 const getTokenSymbol = async (
   contractId: string,
-  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server,
+  server: StellarSdk.rpc.Server | StellarSdkNext.rpc.Server,
   builder: StellarSdk.TransactionBuilder,
   network: NetworkNames,
 ) => {
@@ -255,7 +255,7 @@ const getTokenSymbol = async (
 const getTokenBalance = async (
   contractId: string,
   params: StellarSdk.xdr.ScVal[],
-  server: StellarSdk.SorobanRpc.Server | StellarSdkNext.SorobanRpc.Server,
+  server: StellarSdk.rpc.Server | StellarSdkNext.rpc.Server,
   builder: StellarSdk.TransactionBuilder,
   network: NetworkNames,
 ) => {

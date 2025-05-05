@@ -243,10 +243,10 @@ export async function initApiServer(
           }
 
           const Sdk = getSdk(StellarSdk.Networks[request.query.network]);
-          const { SorobanRpc } = Sdk;
+          const { rpc } = Sdk;
 
           try {
-            const server = new SorobanRpc.Server(networkUrl, {
+            const server = new rpc.Server(networkUrl, {
               allowHttp: networkUrl.startsWith("http://"),
             });
 
@@ -1314,12 +1314,12 @@ export async function initApiServer(
           try {
             const Sdk = getSdk(network_passphrase as Networks);
             const tx = Sdk.TransactionBuilder.fromXDR(xdr, network_passphrase);
-            const server = new Sdk.SorobanRpc.Server(network_url);
+            const server = new Sdk.rpc.Server(network_url, {
+              allowHttp: true,
+            });
             const simulationResponse = await server.simulateTransaction(tx);
-            const preparedTransaction = Sdk.SorobanRpc.assembleTransaction(
-              tx,
-              simulationResponse,
-            )
+            const preparedTransaction = Sdk.rpc
+              .assembleTransaction(tx, simulationResponse)
               .build()
               .toXDR();
 
@@ -1329,8 +1329,12 @@ export async function initApiServer(
             };
             reply.code(200).send(data);
           } catch (error) {
-            logger.error(JSON.stringify(error));
-            reply.code(400).send(JSON.stringify(error));
+            let errorMessage = `Unknown error: ${JSON.stringify(error)}`;
+            if (error instanceof Error) {
+              errorMessage = `Error: ${error.name} - ${error.message}\n${error.stack}`;
+            }
+            logger.error(errorMessage);
+            reply.code(400).send(errorMessage);
           }
         },
       });
@@ -1387,7 +1391,7 @@ export async function initApiServer(
           try {
             const Sdk = getSdk(network_passphrase as Networks);
             const _fee = fee || Sdk.BASE_FEE;
-            const server = new Sdk.SorobanRpc.Server(network_url, {
+            const server = new Sdk.rpc.Server(network_url, {
               allowHttp: network_url.startsWith("http://"),
             });
             const sourceAccount = await server.getAccount(pub_key);
@@ -1409,9 +1413,9 @@ export async function initApiServer(
             );
             const simulationResponse = (await server.simulateTransaction(
               tx,
-            )) as StellarSdk.SorobanRpc.Api.SimulateTransactionSuccessResponse;
+            )) as StellarSdk.rpc.Api.SimulateTransactionSuccessResponse;
 
-            const preparedTransaction = Sdk.SorobanRpc.assembleTransaction(
+            const preparedTransaction = Sdk.rpc.assembleTransaction(
               tx,
               simulationResponse,
             );
