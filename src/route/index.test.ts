@@ -976,7 +976,7 @@ describe("API routes", () => {
             TransactionBuilder: {
               fromXDR: (_xdr: string, _networkPassphrase: string) => "",
             },
-            SorobanRpc: {
+            rpc: {
               Server: class Server {
                 constructor(_url: string) {}
                 simulateTransaction = (_tx: string) => simResponse;
