@@ -106,6 +106,7 @@ const main = async () => {
       criticalError,
     },
     stellarRpcConfig,
+    "",
     redis,
   );
 

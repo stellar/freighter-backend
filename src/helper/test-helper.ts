@@ -616,6 +616,7 @@ const mockMercuryClient = new MercuryClient(
     criticalError,
   },
   mockStellarRpcConfig,
+  mockPriceConfig.freighterHorizonUrl,
 );
 jest.mock("@blockaid/client", () => {
   return class Blockaid {};
