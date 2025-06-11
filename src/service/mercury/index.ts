@@ -111,6 +111,7 @@ export class MercuryClient {
   mercuryErrorCounter: Prometheus.Counter<"endpoint">;
   rpcErrorCounter: Prometheus.Counter<"rpc">;
   criticalError: Prometheus.Counter<"message">;
+  freighterHorizonUrl: string;
 
   constructor(
     mercurySession: MercurySession,
@@ -122,6 +123,7 @@ export class MercuryClient {
       criticalError: Prometheus.Counter<"message">;
     },
     rpcConfig: StellarRpcConfig,
+    freighterHorizonUrl: string,
     redisClient?: Redis,
   ) {
     this.mercurySession = mercurySession;
@@ -131,6 +133,7 @@ export class MercuryClient {
     this.mercuryErrorCounter = metrics.mercuryErrorCounter;
     this.rpcErrorCounter = metrics.rpcErrorCounter;
     this.criticalError = metrics.criticalError;
+    this.freighterHorizonUrl = freighterHorizonUrl;
 
     this.tokens = {
       TESTNET: "",
@@ -692,7 +695,8 @@ export class MercuryClient {
   };
 
   getAccountBalancesHorizon = async (pubKey: string, network: NetworkNames) => {
-    const networkUrl = NETWORK_URLS[network];
+    // const networkUrl = NETWORK_URLS[network];
+    const networkUrl = this.freighterHorizonUrl;
     if (!networkUrl) {
       throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
