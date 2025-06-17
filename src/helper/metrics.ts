@@ -48,55 +48,106 @@ export const dataIntegrityCheckFail = new Prometheus.Counter({
 register.registerMetric(dataIntegrityCheckPass);
 register.registerMetric(dataIntegrityCheckFail);
 
+// Whitelist of valid Freighter API routes (without parameters)
+const ROUTE_WHITELIST = [
+  "/ping",
+  "/price-worker-health",
+  "/rpc-health",
+  "/horizon-health",
+  "/feature-flags",
+  "/user-notification",
+  "/account-history",
+  "/account-balances",
+  "/token-details",
+  "/token-spec",
+  "/contract-spec",
+  "/is-sac-contract",
+  "/scan-dapp",
+  "/scan-tx",
+  "/scan-asset",
+  "/scan-asset-bulk",
+  "/report-asset-warning",
+  "/report-transaction-warning",
+  "/token-prices",
+  "/subscription/token",
+  "/subscription/account",
+  "/subscription/token-balance",
+  "/submit-tx",
+  "/simulate-tx",
+  "/simulate-token-transfer",
+  "/onramp/token",
+];
+
 export const httpLabelUrl = (url: string) => {
   const [route, search] = url.split("?");
   const params = new URLSearchParams(search);
   const network = params.get("network") || "unknown";
 
-  if (url.includes("account-history")) {
+  // Extract the path without the /api/v1 prefix
+  const pathMatch = route.match(/^\/api\/v\d+(.*)$/);
+  const path = pathMatch ? pathMatch[1] : route;
+
+  // Check for parameterized routes
+  if (path.includes("/account-history/")) {
     return {
-      route: "account-history",
+      route: "/account-history",
       network,
     };
   }
 
-  if (url.includes("account-balances")) {
+  if (path.includes("/account-balances/")) {
     return {
-      route: "account-balances",
+      route: "/account-balances",
       network,
     };
   }
 
-  if (url.includes("token-details")) {
+  if (path.includes("/token-details/")) {
     return {
-      route: "token-details",
+      route: "/token-details",
       network,
     };
   }
 
-  if (url.includes("token-spec")) {
+  if (path.includes("/token-spec/")) {
     return {
-      route: "token-spec",
+      route: "/token-spec",
       network,
     };
   }
 
-  if (url.includes("contract-spec")) {
+  if (path.includes("/contract-spec/")) {
     return {
-      route: "contract-spec",
+      route: "/contract-spec",
       network,
     };
   }
 
+  if (path.includes("/is-sac-contract/")) {
+    return {
+      route: "/is-sac-contract",
+      network,
+    };
+  }
+
+  // Check if the exact path is in the whitelist
+  if (ROUTE_WHITELIST.includes(path)) {
+    return {
+      route: path,
+      network,
+    };
+  }
+
+  // If not whitelisted, return "other" to prevent metric explosion
   return {
-    route,
+    route: "other",
     network,
   };
 };
 
 export const getHttpRequestDurationLabels = (
   request: FastifyRequest,
-  reply: FastifyReply
+  reply: FastifyReply,
 ) => {
   const { route, network } = httpLabelUrl(request.url);
   return {
