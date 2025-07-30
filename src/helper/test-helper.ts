@@ -683,6 +683,7 @@ async function getDevServer(
     coinbaseConfig,
     priceConfig,
     stellarRpcConfig,
+    "",
   );
 
   await server.listen();
