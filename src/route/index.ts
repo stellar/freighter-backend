@@ -122,9 +122,11 @@ export async function initApiServer(
     return done();
   });
 
-  server.addHook("onRequest", async (req, _) => {
-    req.log.info("req.ip:", req.ip);
-    req.log.info("req.ips:", req.ips);
+  server.addHook("preHandler", async (req, _) => {
+    console.log("req.ip:", req.ip);
+    console.log("req.ips:", req.ips);
+    console.log("raw ip:", req.socket.remoteAddress);
+    console.log("x forwarded for:", req.headers["x-forwarded-for"]);
   });
 
   server.register(
