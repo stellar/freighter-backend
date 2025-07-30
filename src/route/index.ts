@@ -8,6 +8,7 @@ import { Redis } from "ioredis";
 import Prometheus from "prom-client";
 import { Networks } from "stellar-sdk-next";
 import * as StellarSdk from "stellar-sdk";
+import proxyaddr from "proxy-addr";
 
 import { MercuryClient } from "../service/mercury";
 import {
@@ -71,6 +72,7 @@ export async function initApiServer(
   coinbaseConfig: CoinbaseConfig,
   priceConfig: PriceConfig,
   stellarRpcConfig: StellarRpcConfig,
+  trustProxyRange?: string,
   redis?: Redis,
 ) {
   const routeMetricsStore = new WeakMap<
@@ -88,6 +90,7 @@ export async function initApiServer(
 
   const server = Fastify({
     loggerInstance: logger,
+    trustProxy: trustProxyRange && proxyaddr.compile(trustProxyRange),
   });
   server.setValidatorCompiler(({ schema }) => {
     return ajv.compile(schema);

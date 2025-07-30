@@ -15,6 +15,7 @@ const ENV_KEYS = [
   "BLOCKAID_KEY",
   "FREIGHTER_HORIZON_URL",
   "DISABLE_TOKEN_PRICES",
+  "FREIGHTER_TRUST_PROXY_RANGE",
 ];
 
 export interface PriceConfig {
@@ -96,6 +97,9 @@ export function buildConfig(config: Record<string, string | undefined>) {
         process.env.FREIGHTER_RPC_FUTURENET_URL ||
         "https://rpc-futurenet.stellar.org/",
     },
+    trustProxyRange:
+      config.FREIGHTER_TRUST_PROXY_RANGE ||
+      process.env.FREIGHTER_TRUST_PROXY_RANGE,
     priceConfig: <PriceConfig>{
       batchUpdateDelayMs:
         Number(config.PRICE_BATCH_UPDATE_DELAY_MS) ||
