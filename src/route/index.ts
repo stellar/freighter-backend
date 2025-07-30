@@ -122,6 +122,11 @@ export async function initApiServer(
     return done();
   });
 
+  server.addHook("onRequest", async (req, _) => {
+    req.log.info("req.ip:", req.ip);
+    req.log.info("req.ips:", req.ips);
+  });
+
   server.register(
     function (instance, _opts, next) {
       instance.route({
