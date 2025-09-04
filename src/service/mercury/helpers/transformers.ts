@@ -805,7 +805,7 @@ const transformAccountHistory = async (
         transaction_attr: {
           ...baseFields.transaction_attr,
           contractId: Sdk.StrKey.encodeContract(
-            invocation.contractAddress().contractId(),
+            invocation.contractAddress().toXDR(),
           ),
           fnName,
           args: getOpArgs(fnName, invocation.args(), network),
