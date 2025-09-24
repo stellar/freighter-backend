@@ -201,7 +201,7 @@ export class PriceClient {
         return null;
       }
 
-      const isPyUsd = token === PY_USD_TOKEN_KEY;
+      const isPyUsd = token === PYUSD_TOKEN_KEY;
       const currentPrice = new BigNumber(isPyUsd ? 1 : latestPrice.value);
       let percentagePriceChange24h: BigNumber | null = null;
       const oneDayThreshold = PriceClient.ONE_DAY - this.priceOneDayThresholdMs;
