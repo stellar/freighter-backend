@@ -918,14 +918,14 @@ describe("API routes", () => {
       await server.close();
     });
 
-    it("rejects arrays larger than 100 tokens", async () => {
+    it("rejects arrays larger than 1000 tokens", async () => {
       const server = await getDevServer();
       const url = new URL(
         `http://localhost:${(server?.server?.address() as any).port}/api/v1/token-prices`,
       );
 
       // Create array of 101 valid tokens
-      const tokens = Array(101).fill(
+      const tokens = Array(1001).fill(
         "USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
       );
 

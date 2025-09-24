@@ -51,7 +51,7 @@ import { PriceConfig, StellarRpcConfig } from "../config";
 const API_VERSION = "v1";
 const TOKEN_PRICES_BATCH_SIZE = 50;
 const TOKEN_PRICES_MIN_REQUEST_SIZE = 1;
-const TOKEN_PRICES_MAX_REQUEST_SIZE = 100;
+const TOKEN_PRICES_MAX_REQUEST_SIZE = 1000;
 
 export async function initApiServer(
   mercuryClient: MercuryClient,
