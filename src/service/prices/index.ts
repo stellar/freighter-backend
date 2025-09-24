@@ -21,6 +21,9 @@ import {
   MAddEntry,
 } from "./types";
 
+const PYUSD_TOKEN_KEY =
+  "PYUSD:GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5";
+
 /**
  * PriceClient is responsible for fetching, calculating, and caching token prices
  * from the Stellar network. It uses Redis time series for storing historical price data
@@ -198,7 +201,8 @@ export class PriceClient {
         return null;
       }
 
-      const currentPrice = new BigNumber(latestPrice.value);
+      const isPyUsd = token === PYUSD_TOKEN_KEY;
+      const currentPrice = new BigNumber(isPyUsd ? 1 : latestPrice.value);
       let percentagePriceChange24h: BigNumber | null = null;
       const oneDayThreshold = PriceClient.ONE_DAY - this.priceOneDayThresholdMs;
 
