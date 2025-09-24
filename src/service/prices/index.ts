@@ -202,7 +202,14 @@ export class PriceClient {
       }
 
       const isPyUsd = token === PYUSD_TOKEN_KEY;
-      const currentPrice = new BigNumber(isPyUsd ? 1 : latestPrice.value);
+      if (isPyUsd) {
+        return {
+          currentPrice: new BigNumber(1),
+          percentagePriceChange24h: new BigNumber(0),
+        };
+      }
+
+      const currentPrice = new BigNumber(latestPrice.value);
       let percentagePriceChange24h: BigNumber | null = null;
       const oneDayThreshold = PriceClient.ONE_DAY - this.priceOneDayThresholdMs;
 
