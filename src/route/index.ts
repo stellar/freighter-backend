@@ -422,6 +422,7 @@ export async function initApiServer(
             Querystring: {
               ["contract_ids"]: string[];
               ["network"]: NetworkNames;
+              ["is_scan_skipped"]: string;
             };
           }>,
           reply,
@@ -429,7 +430,7 @@ export async function initApiServer(
           try {
             const useMercury = await getUseMercury(mode, useMercuryConf, redis);
             const pubKey = request.params["pubKey"];
-            const { network } = request.query;
+            const { network, is_scan_skipped } = request.query;
 
             const skipSorobanPubnet = network === "PUBLIC" && !useSorobanPublic;
             const contractIds =
@@ -442,7 +443,6 @@ export async function initApiServer(
               network,
               useMercury,
             );
-
             try {
               data.balances = await addScannedStatus(
                 data.balances,
@@ -450,6 +450,7 @@ export async function initApiServer(
                 network,
                 logger,
                 blockaidConfig.useBlockaidAssetScanning,
+                is_scan_skipped === "true",
               );
             } catch (e) {
               const scannedBalances = {} as {

@@ -384,6 +384,38 @@ describe("API routes", () => {
       ).toEqual("Benign");
       await server.close();
     });
+    it("skips scanned status on Pubnet", async () => {
+      const contractIds = [
+        "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+        "CBGTG7XFRY3L6OKAUTR6KGDKUXUQBX3YDJ3QFDYTGVMOM7VV4O7NCODG",
+      ];
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/account-balances/${pubKey}`,
+      );
+      url.searchParams.append("network", "PUBLIC");
+      for (const id of contractIds) {
+        url.searchParams.append("contract_ids", id);
+      }
+      url.searchParams.append("is_scan_skipped", "true");
+      const response = await fetch(url.href);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(
+        data.balances[
+          "BLND:GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
+        ].blockaidData.result_type,
+      ).toEqual("Benign");
+      expect(
+        data.balances[
+          "TST:CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP"
+        ].blockaidData.result_type,
+      ).toEqual("Benign");
+      await server.close();
+    });
     it("doesn't check scanned status on Testnet", async () => {
       const contractIds = [
         "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
