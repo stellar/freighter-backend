@@ -399,7 +399,7 @@ describe("API routes", () => {
       for (const id of contractIds) {
         url.searchParams.append("contract_ids", id);
       }
-      url.searchParams.append("is_scan_skipped", "true");
+      url.searchParams.append("should_skip_scan", "true");
       const response = await fetch(url.href);
       const data = await response.json();
 
