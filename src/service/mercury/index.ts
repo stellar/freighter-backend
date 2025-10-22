@@ -144,7 +144,6 @@ export class MercuryClient {
 
   getRpcServer = async (network_url: string) => {
     let network = "";
-    console.log("network_url", network_url);
     if (network_url === "http://stellar-rpc-pubnet-prd:8000") {
       network = "PUBLIC";
     } else if (network_url === "https://soroban-testnet.stellar.org/") {
