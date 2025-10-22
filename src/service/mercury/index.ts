@@ -142,6 +142,22 @@ export class MercuryClient {
     register.registerMetric(this.criticalError);
   }
 
+  getRpcServer = async (network_url: string) => {
+    let network = "";
+    console.log("network_url", network_url);
+    if (network_url === "http://stellar-rpc-pubnet-prd:8000") {
+      network = "PUBLIC";
+    } else if (network_url === "https://soroban-testnet.stellar.org/") {
+      network = "TESTNET";
+    } else if (network_url === "https://rpc-futurenet.stellar.org/") {
+      network = "FUTURENET";
+    } else {
+      network = "PUBLIC";
+    }
+
+    return getServer(network as NetworkNames, this.rpcConfig);
+  };
+
   tokenBalanceKey = (pubKey: string, network: NetworkNames) => {
     const Sdk = getSdk(StellarSdk.Networks[network]);
     // { "vec": [{ "symbol": "Balance" }, { "Address": <...pubkey...> }] }
