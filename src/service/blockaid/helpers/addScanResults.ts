@@ -24,6 +24,7 @@ export const addScannedStatus = async (
   network: NetworkNames,
   logger: Logger,
   useBlockaidAssetScanning: boolean,
+  isScanSkipped: boolean,
 ) => {
   const scannedBalances = {} as {
     [key: string]: { blockaidData: Blockaid.Token.TokenScanResponse };
@@ -54,7 +55,7 @@ export const addScannedStatus = async (
     };
   }
 
-  if (network === "PUBLIC" && useBlockaidAssetScanning) {
+  if (network === "PUBLIC" && useBlockaidAssetScanning && !isScanSkipped) {
     // we only scan non-native assets on the public network
     try {
       const bulkRes = await blockaidService.scanAssetBulk(keyList);
