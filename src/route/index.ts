@@ -317,8 +317,9 @@ export async function initApiServer(
         url: "/user-notification",
         handler: async (_request, reply) => {
           const response = {
-            enabled: false,
-            message: "",
+            enabled: true,
+            message:
+              "Coinbase Pay update: We’re currently noticing issues adding funds with Coinbase Pay. Please check back soon.",
           };
           reply.code(200).send(response);
         },
@@ -1492,6 +1493,11 @@ export async function initApiServer(
                 .code(400)
                 .send({ error: `Unable to retrieve token: ${error}` });
             }
+
+            // temporarily disable this endpoint
+            return reply.code(200).send({
+              data: { token: null, error: "Coinbase currently disabled" },
+            });
 
             return reply.code(200).send({ data: { token } });
           } catch (error) {
