@@ -1494,11 +1494,6 @@ export async function initApiServer(
                 .send({ error: `Unable to retrieve token: ${error}` });
             }
 
-            // temporarily disable this endpoint
-            return reply.code(200).send({
-              data: { token: null, error: "Coinbase currently disabled" },
-            });
-
             return reply.code(200).send({ data: { token } });
           } catch (error) {
             logger.error(error);
