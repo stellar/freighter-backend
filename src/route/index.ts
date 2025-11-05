@@ -317,9 +317,8 @@ export async function initApiServer(
         url: "/user-notification",
         handler: async (_request, reply) => {
           const response = {
-            enabled: true,
-            message:
-              "Coinbase Pay update: We’re currently noticing issues adding funds with Coinbase Pay. Please check back soon.",
+            enabled: false,
+            message: "",
           };
           reply.code(200).send(response);
         },
