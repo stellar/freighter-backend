@@ -1318,9 +1318,8 @@ export async function initApiServer(
           try {
             const Sdk = getSdk(network_passphrase as Networks);
             const tx = Sdk.TransactionBuilder.fromXDR(xdr, network_passphrase);
-            const server = new Sdk.rpc.Server(network_url, {
-              allowHttp: true,
-            });
+            const server = await mercuryClient.getRpcServer(network_url);
+
             const simulationResponse = await server.simulateTransaction(tx);
             const preparedTransaction = Sdk.rpc
               .assembleTransaction(tx, simulationResponse)
@@ -1395,9 +1394,7 @@ export async function initApiServer(
           try {
             const Sdk = getSdk(network_passphrase as Networks);
             const _fee = fee || Sdk.BASE_FEE;
-            const server = new Sdk.rpc.Server(network_url, {
-              allowHttp: network_url.startsWith("http://"),
-            });
+            const server = await mercuryClient.getRpcServer(network_url);
             const sourceAccount = await server.getAccount(pub_key);
             const builder = new Sdk.TransactionBuilder(sourceAccount, {
               fee: _fee,
