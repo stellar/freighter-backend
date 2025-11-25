@@ -655,7 +655,7 @@ export class MercuryClient {
       );
 
       if (sorobanOperations.length > 0) {
-        const scanPromises = sorobanOperations.map(async (operation: any) => {
+        const scanPromises = sorobanOperations.map(async (operation) => {
           try {
             const txXdr = operation.transaction_attr?.envelope_xdr;
             if (txXdr) {
