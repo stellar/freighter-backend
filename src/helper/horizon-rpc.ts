@@ -1,6 +1,7 @@
 import BigNumber from "bignumber.js";
 import * as StellarSdkNext from "stellar-sdk-next";
 import * as StellarSdk from "stellar-sdk";
+import Blockaid from "@blockaid/client";
 import { getSdk } from "./stellar";
 
 export const BASE_RESERVE = 0.5;
@@ -14,6 +15,11 @@ export enum NETWORK_URLS {
   SANDBOX = "",
   STANDALONE = "",
 }
+
+export type BlockaidAssetDiff =
+  | Blockaid.StellarTransactionScanResponse.StellarSimulationResult.StellarLegacyAssetDiff
+  | Blockaid.StellarTransactionScanResponse.StellarSimulationResult.StellarNativeAssetDiff
+  | Blockaid.StellarTransactionScanResponse.StellarSimulationResult.StellarContractAssetDiff;
 
 export interface Issuer {
   key: string;
@@ -66,6 +72,16 @@ export interface BalanceMap {
   [key: string]: AssetBalance | NativeBalance;
   native: NativeBalance;
 }
+
+export type HorizonOperationRecord =
+  StellarSdkNext.Horizon.ServerApi.OperationRecord & {
+    transaction_attr: {
+      envelope_xdr: string;
+    };
+    asset_diffs?: {
+      [key: string]: BlockaidAssetDiff[];
+    };
+  };
 
 export function getBalanceIdentifier(
   balance: StellarSdk.Horizon.HorizonApi.BalanceLine,
@@ -237,7 +253,7 @@ export const fetchAccountHistory = async (
       .limit(TRANSACTIONS_LIMIT)
       .call();
 
-    return operationsData.records || [];
+    return (operationsData.records as HorizonOperationRecord[]) || [];
   } catch (error) {
     throw new Error(JSON.stringify(error));
   }
