@@ -627,6 +627,7 @@ export class MercuryClient {
     network: NetworkNames,
     useMercury: boolean,
     isFailedIncluded?: boolean,
+    shouldScan: boolean = false,
   ) => {
     if (hasIndexerSupport(network) && useMercury) {
       const response = await this.getAccountHistoryMercury(pubKey, network);
@@ -650,39 +651,41 @@ export class MercuryClient {
     );
 
     if (horizonResponse.data && Array.isArray(horizonResponse.data)) {
-      const sorobanOperations = horizonResponse.data.filter(
-        (operation) => operation.type === "invoke_host_function",
-      );
+      if (shouldScan) {
+        const sorobanOperations = horizonResponse.data.filter(
+          (operation) => operation.type === "invoke_host_function",
+        );
 
-      if (sorobanOperations.length > 0) {
-        const scanPromises = sorobanOperations.map(async (operation) => {
-          try {
-            const txXdr = operation.transaction_attr?.envelope_xdr;
-            if (txXdr) {
-              const scanResult = await this.blockAidService.scanTx(
-                txXdr,
-                "",
-                network,
-              );
-              if (
-                scanResult.data &&
-                scanResult.data.simulation &&
-                scanResult.data.simulation.status === "Success"
-              ) {
-                operation.asset_diffs =
-                  scanResult.data.simulation!.assets_diffs;
+        if (sorobanOperations.length > 0) {
+          const scanPromises = sorobanOperations.map(async (operation) => {
+            try {
+              const txXdr = operation.transaction_attr?.envelope_xdr;
+              if (txXdr) {
+                const scanResult = await this.blockAidService.scanTx(
+                  txXdr,
+                  "",
+                  network,
+                );
+                if (
+                  scanResult.data &&
+                  scanResult.data.simulation &&
+                  scanResult.data.simulation.status === "Success"
+                ) {
+                  operation.asset_diffs =
+                    scanResult.data.simulation!.assets_diffs;
+                }
               }
+            } catch (error) {
+              this.logger.error({
+                msg: "Failed to scan Soroban transaction",
+                transaction_hash: operation.transaction_hash || operation.id,
+                error,
+              });
             }
-          } catch (error) {
-            this.logger.error({
-              msg: "Failed to scan Soroban transaction",
-              transaction_hash: operation.transaction_hash || operation.id,
-              error,
-            });
-          }
-        });
+          });
 
-        await Promise.allSettled(scanPromises);
+          await Promise.allSettled(scanPromises);
+        }
       }
     }
 

@@ -610,6 +610,8 @@ describe("Mercury Service", () => {
         pubKey,
         "TESTNET",
         false, // useMercury=false to force Horizon path
+        undefined, // isFailedIncluded
+        true, // shouldScan
       );
 
       expect(scanTxSpy).toHaveBeenCalledWith(TEST_SOROBAN_TX, "", "TESTNET");
@@ -639,6 +641,8 @@ describe("Mercury Service", () => {
         pubKey,
         "TESTNET",
         false,
+        undefined,
+        true,
       );
 
       // scanTx should only be called once for the Soroban operation
@@ -683,6 +687,8 @@ describe("Mercury Service", () => {
         pubKey,
         "TESTNET",
         false,
+        undefined,
+        true,
       );
 
       // Function should complete successfully
@@ -724,6 +730,8 @@ describe("Mercury Service", () => {
         pubKey,
         "TESTNET",
         false,
+        undefined,
+        true,
       );
 
       // scanTx should be called
@@ -754,6 +762,8 @@ describe("Mercury Service", () => {
         pubKey,
         "TESTNET",
         false,
+        undefined,
+        true,
       );
 
       // Operation should be returned unchanged
@@ -793,6 +803,8 @@ describe("Mercury Service", () => {
         pubKey,
         "TESTNET",
         false,
+        undefined,
+        true,
       );
 
       // All operations should be in response
@@ -833,6 +845,8 @@ describe("Mercury Service", () => {
         pubKey,
         "TESTNET",
         false,
+        undefined,
+        true,
       );
 
       // scanTx should not be called
@@ -841,6 +855,32 @@ describe("Mercury Service", () => {
       // Empty array should be returned
       expect(result.data).toEqual([]);
       expect(result.error).toBeNull();
+    });
+
+    it("skips scanning when shouldScan is false", async () => {
+      const mockOp = createMockSorobanOperation();
+      jest
+        .spyOn(mockMercuryClient, "getAccountHistoryHorizon")
+        .mockResolvedValue({
+          data: [mockOp],
+          error: null,
+        });
+
+      const scanTxSpy = jest.spyOn(mockMercuryClient.blockAidService, "scanTx");
+
+      const result = await mockMercuryClient.getAccountHistory(
+        pubKey,
+        "TESTNET",
+        false,
+        undefined,
+        false, // shouldScan = false
+      );
+
+      // scanTx should NOT be called
+      expect(scanTxSpy).not.toHaveBeenCalled();
+
+      // Operation should be returned without asset_diffs
+      expect((result.data![0] as any).asset_diffs).toBeUndefined();
     });
   });
 });
