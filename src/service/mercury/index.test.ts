@@ -7,6 +7,7 @@ import {
   queryMockResponse,
   pubKey,
   contractDataEntryValXdr,
+  TEST_SOROBAN_TX,
 } from "../../helper/test-helper";
 import { transformAccountBalancesCurrentData } from "./helpers/transformers";
 import { ERROR_MESSAGES } from ".";
@@ -526,6 +527,320 @@ describe("Mercury Service", () => {
       decimals: "7",
       symbol: "TST",
       balance: "1000000",
+    });
+  });
+
+  describe("getAccountHistory - Blockaid Scanning", () => {
+    // Helper to create mock Soroban operations
+    const createMockSorobanOperation = (overrides: any = {}) => ({
+      id: overrides.id || "op-12345",
+      type: "invoke_host_function",
+      transaction_hash: overrides.transaction_hash || "test-hash-123",
+      transaction_attr: {
+        envelope_xdr: overrides.envelope_xdr || TEST_SOROBAN_TX,
+        ...overrides.transaction_attr,
+      },
+      created_at: "2024-01-01T00:00:00Z",
+      source_account: pubKey,
+      ...overrides,
+    });
+
+    // Helper to create mock payment operations
+    const createMockPaymentOperation = (overrides: any = {}) => ({
+      id: overrides.id || "op-payment-1",
+      type: "payment",
+      transaction_hash: "payment-hash",
+      asset_code: "USDC",
+      amount: "100",
+      from: pubKey,
+      to: "GBXXXX",
+      ...overrides,
+    });
+
+    // Mock successful scan response
+    const mockSuccessfulScan = {
+      data: {
+        simulation: {
+          status: "Success",
+          assets_diffs: {
+            native: [
+              {
+                asset: { type: "native" },
+                in: { raw_value: "0" },
+                out: { raw_value: "1000000" },
+              },
+            ],
+          },
+        },
+        validation: {
+          result_type: "Benign",
+        },
+      },
+      error: null,
+    };
+
+    // Mock failed simulation (status !== "Success")
+    const mockNonSuccessScan = {
+      data: {
+        simulation: {
+          status: "Failed",
+          assets_diffs: {},
+        },
+        validation: {
+          result_type: "Benign",
+        },
+      },
+      error: null,
+    };
+
+    it("scans Soroban operations and adds asset_diffs when scan succeeds", async () => {
+      const mockOp = createMockSorobanOperation();
+      jest
+        .spyOn(mockMercuryClient, "getAccountHistoryHorizon")
+        .mockResolvedValue({
+          data: [mockOp],
+          error: null,
+        });
+
+      const scanTxSpy = jest
+        .spyOn(mockMercuryClient.blockAidService, "scanTx")
+        .mockResolvedValue(mockSuccessfulScan as any);
+
+      const result = await mockMercuryClient.getAccountHistory(
+        pubKey,
+        "TESTNET",
+        false, // useMercury=false to force Horizon path
+      );
+
+      expect(scanTxSpy).toHaveBeenCalledWith(TEST_SOROBAN_TX, "", "TESTNET");
+      expect(result.data).toHaveLength(1);
+      expect((result.data![0] as any).asset_diffs).toEqual(
+        mockSuccessfulScan.data.simulation.assets_diffs,
+      );
+    });
+
+    it("only scans invoke_host_function operations", async () => {
+      const mockPayment = createMockPaymentOperation();
+      const mockSoroban = createMockSorobanOperation({ id: "op-soroban-1" });
+      const mockPayment2 = createMockPaymentOperation({ id: "op-payment-2" });
+
+      jest
+        .spyOn(mockMercuryClient, "getAccountHistoryHorizon")
+        .mockResolvedValue({
+          data: [mockPayment, mockSoroban, mockPayment2],
+          error: null,
+        });
+
+      const scanTxSpy = jest
+        .spyOn(mockMercuryClient.blockAidService, "scanTx")
+        .mockResolvedValue(mockSuccessfulScan as any);
+
+      const result = await mockMercuryClient.getAccountHistory(
+        pubKey,
+        "TESTNET",
+        false,
+      );
+
+      // scanTx should only be called once for the Soroban operation
+      expect(scanTxSpy).toHaveBeenCalledTimes(1);
+      expect(scanTxSpy).toHaveBeenCalledWith(TEST_SOROBAN_TX, "", "TESTNET");
+
+      // Payment operations should not have asset_diffs
+      expect((result.data![0] as any).asset_diffs).toBeUndefined();
+      expect((result.data![2] as any).asset_diffs).toBeUndefined();
+
+      // Soroban operation should have asset_diffs
+      expect((result.data![1] as any).asset_diffs).toEqual(
+        mockSuccessfulScan.data.simulation.assets_diffs,
+      );
+    });
+
+    it("continues when scanTx throws an error", async () => {
+      const mockOp1 = createMockSorobanOperation({
+        id: "op-1",
+        transaction_hash: "hash-1",
+      });
+      const mockOp2 = createMockSorobanOperation({
+        id: "op-2",
+        transaction_hash: "hash-2",
+      });
+
+      jest
+        .spyOn(mockMercuryClient, "getAccountHistoryHorizon")
+        .mockResolvedValue({
+          data: [mockOp1, mockOp2],
+          error: null,
+        });
+
+      jest
+        .spyOn(mockMercuryClient.blockAidService, "scanTx")
+        .mockRejectedValueOnce(new Error("Scan failed"))
+        .mockResolvedValueOnce(mockSuccessfulScan as any);
+
+      const loggerSpy = jest.spyOn(mockMercuryClient.logger, "error");
+
+      const result = await mockMercuryClient.getAccountHistory(
+        pubKey,
+        "TESTNET",
+        false,
+      );
+
+      // Function should complete successfully
+      expect(result.data).toHaveLength(2);
+
+      // First operation should not have asset_diffs
+      expect((result.data![0] as any).asset_diffs).toBeUndefined();
+
+      // Second operation should have asset_diffs
+      expect((result.data![1] as any).asset_diffs).toEqual(
+        mockSuccessfulScan.data.simulation.assets_diffs,
+      );
+
+      // Logger should be called with error details
+      expect(loggerSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: "Failed to scan Soroban transaction",
+          transaction_hash: "hash-1",
+        }),
+      );
+    });
+
+    it("does not add asset_diffs when simulation status is not Success", async () => {
+      const mockOp = createMockSorobanOperation();
+      jest
+        .spyOn(mockMercuryClient, "getAccountHistoryHorizon")
+        .mockResolvedValue({
+          data: [mockOp],
+          error: null,
+        });
+
+      const scanTxSpy = jest
+        .spyOn(mockMercuryClient.blockAidService, "scanTx")
+        .mockResolvedValue(mockNonSuccessScan as any);
+
+      const loggerSpy = jest.spyOn(mockMercuryClient.logger, "error");
+
+      const result = await mockMercuryClient.getAccountHistory(
+        pubKey,
+        "TESTNET",
+        false,
+      );
+
+      // scanTx should be called
+      expect(scanTxSpy).toHaveBeenCalledWith(TEST_SOROBAN_TX, "", "TESTNET");
+
+      // Operation should not have asset_diffs
+      expect((result.data![0] as any).asset_diffs).toBeUndefined();
+
+      // No error should be logged (this is expected behavior)
+      expect(loggerSpy).not.toHaveBeenCalled();
+    });
+
+    it("skips scanning when envelope_xdr is missing", async () => {
+      const mockOp = createMockSorobanOperation({
+        transaction_attr: {},
+      });
+
+      jest
+        .spyOn(mockMercuryClient, "getAccountHistoryHorizon")
+        .mockResolvedValue({
+          data: [mockOp],
+          error: null,
+        });
+
+      jest.spyOn(mockMercuryClient.blockAidService, "scanTx");
+
+      const result = await mockMercuryClient.getAccountHistory(
+        pubKey,
+        "TESTNET",
+        false,
+      );
+
+      // Operation should be returned unchanged
+      expect((result.data![0] as any).asset_diffs).toBeUndefined();
+    });
+
+    it("handles mixed success and failure in Promise.allSettled", async () => {
+      const mockOp1 = createMockSorobanOperation({
+        id: "op-1",
+        transaction_hash: "hash-1",
+      });
+      const mockOp2 = createMockSorobanOperation({
+        id: "op-2",
+        transaction_hash: "hash-2",
+      });
+      const mockOp3 = createMockSorobanOperation({
+        id: "op-3",
+        transaction_hash: "hash-3",
+      });
+
+      jest
+        .spyOn(mockMercuryClient, "getAccountHistoryHorizon")
+        .mockResolvedValue({
+          data: [mockOp1, mockOp2, mockOp3],
+          error: null,
+        });
+
+      jest
+        .spyOn(mockMercuryClient.blockAidService, "scanTx")
+        .mockResolvedValueOnce(mockSuccessfulScan as any)
+        .mockRejectedValueOnce(new Error("Scan failed"))
+        .mockResolvedValueOnce(mockSuccessfulScan as any);
+
+      const loggerSpy = jest.spyOn(mockMercuryClient.logger, "error");
+
+      const result = await mockMercuryClient.getAccountHistory(
+        pubKey,
+        "TESTNET",
+        false,
+      );
+
+      // All operations should be in response
+      expect(result.data).toHaveLength(3);
+
+      // Operations 1 and 3 should have asset_diffs
+      expect((result.data![0] as any).asset_diffs).toEqual(
+        mockSuccessfulScan.data.simulation.assets_diffs,
+      );
+      expect((result.data![2] as any).asset_diffs).toEqual(
+        mockSuccessfulScan.data.simulation.assets_diffs,
+      );
+
+      // Operation 2 should not have asset_diffs
+      expect((result.data![1] as any).asset_diffs).toBeUndefined();
+
+      // Logger should be called once for the failure
+      expect(loggerSpy).toHaveBeenCalledTimes(1);
+      expect(loggerSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: "Failed to scan Soroban transaction",
+          transaction_hash: "hash-2",
+        }),
+      );
+    });
+
+    it("handles empty history response", async () => {
+      jest
+        .spyOn(mockMercuryClient, "getAccountHistoryHorizon")
+        .mockResolvedValue({
+          data: [],
+          error: null,
+        });
+
+      const scanTxSpy = jest.spyOn(mockMercuryClient.blockAidService, "scanTx");
+
+      const result = await mockMercuryClient.getAccountHistory(
+        pubKey,
+        "TESTNET",
+        false,
+      );
+
+      // scanTx should not be called
+      expect(scanTxSpy).not.toHaveBeenCalled();
+
+      // Empty array should be returned
+      expect(result.data).toEqual([]);
+      expect(result.error).toBeNull();
     });
   });
 });
