@@ -17,6 +17,7 @@ import {
   getTxBuilder,
   isSacContract,
 } from "../../helper/soroban-rpc";
+import { BlockAidService } from "../blockaid";
 import {
   transformAccountBalancesCurrentData,
   transformAccountHistory,
@@ -108,6 +109,7 @@ export class MercuryClient {
   rpcConfig: StellarRpcConfig;
   redisClient?: Redis;
   logger: Logger;
+  blockAidService: BlockAidService;
   mercuryErrorCounter: Prometheus.Counter<"endpoint">;
   rpcErrorCounter: Prometheus.Counter<"rpc">;
   criticalError: Prometheus.Counter<"message">;
@@ -122,12 +124,14 @@ export class MercuryClient {
       criticalError: Prometheus.Counter<"message">;
     },
     rpcConfig: StellarRpcConfig,
+    blockAidService: BlockAidService,
     redisClient?: Redis,
   ) {
     this.mercurySession = mercurySession;
     this.logger = logger;
     this.redisClient = redisClient;
     this.rpcConfig = rpcConfig;
+    this.blockAidService = blockAidService;
     this.mercuryErrorCounter = metrics.mercuryErrorCounter;
     this.rpcErrorCounter = metrics.rpcErrorCounter;
     this.criticalError = metrics.criticalError;
@@ -644,6 +648,44 @@ export class MercuryClient {
       network,
       isFailedIncluded,
     );
+
+    if (horizonResponse.data && Array.isArray(horizonResponse.data)) {
+      const sorobanOperations = horizonResponse.data.filter(
+        (operation) => operation.type === "invoke_host_function",
+      );
+
+      if (sorobanOperations.length > 0) {
+        const scanPromises = sorobanOperations.map(async (operation: any) => {
+          try {
+            const txXdr = operation.transaction_attr?.envelope_xdr;
+            if (txXdr) {
+              const scanResult = await this.blockAidService.scanTx(
+                txXdr,
+                "",
+                network,
+              );
+              if (
+                scanResult.data &&
+                scanResult.data.simulation &&
+                scanResult.data.simulation.status === "Success"
+              ) {
+                operation.asset_diffs =
+                  scanResult.data.simulation!.assets_diffs;
+              }
+            }
+          } catch (error) {
+            this.logger.error({
+              msg: "Failed to scan Soroban transaction",
+              transaction_hash: operation.transaction_hash || operation.id,
+              error,
+            });
+          }
+        });
+
+        await Promise.allSettled(scanPromises);
+      }
+    }
+
     return horizonResponse;
   };
 
