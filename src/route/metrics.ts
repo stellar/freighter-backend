@@ -7,11 +7,11 @@ import Prometheus from "prom-client";
 
 export async function initMetricsServer(
   register: Prometheus.Registry,
-  redis?: Redis
+  redis?: Redis,
 ) {
   const server = Fastify();
   server.register(rateLimiter, {
-    max: 100,
+    max: 250,
     timeWindow: "1 minute",
     redis,
   });
