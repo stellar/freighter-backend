@@ -606,6 +606,16 @@ const mockStellarRpcConfig = {
   freighterRpcFuturenetUrl: "https://rpc-futurenet.stellar.org",
 } as StellarRpcConfig;
 
+jest.mock("@blockaid/client", () => {
+  return class Blockaid {};
+});
+const blockAidClient = new Blockaid();
+const blockAidService = new BlockAidService(
+  blockAidClient,
+  testLogger,
+  register,
+);
+
 const mockMercuryClient = new MercuryClient(
   mercurySession,
   testLogger,
@@ -616,15 +626,7 @@ const mockMercuryClient = new MercuryClient(
     criticalError,
   },
   mockStellarRpcConfig,
-);
-jest.mock("@blockaid/client", () => {
-  return class Blockaid {};
-});
-const blockAidClient = new Blockaid();
-const blockAidService = new BlockAidService(
-  blockAidClient,
-  testLogger,
-  register,
+  blockAidService,
 );
 
 jest

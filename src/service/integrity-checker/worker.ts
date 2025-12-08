@@ -16,6 +16,9 @@ import {
   rpcErrorCounter,
   criticalError,
 } from "../../helper/metrics";
+import { BlockAidService } from "../blockaid";
+import Blockaid from "@blockaid/client";
+import { fetchWithTimeout } from "../../helper/fetch";
 
 const {
   hostname,
@@ -96,6 +99,11 @@ const main = async () => {
     },
   };
 
+  const blockAidClient = new Blockaid({
+    apiKey: stellarRpcConfig.blockAidKey,
+    fetch: fetchWithTimeout,
+  });
+  const blockAidService = new BlockAidService(blockAidClient, logger, register);
   const integrityCheckMercuryClient = new MercuryClient(
     integrityCheckMercurySession,
     logger,
@@ -106,7 +114,7 @@ const main = async () => {
       criticalError,
     },
     stellarRpcConfig,
-    redis,
+    blockAidService,
   );
 
   const integrityCheckerClient = new IntegrityChecker(

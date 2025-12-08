@@ -150,6 +150,7 @@ async function main() {
       criticalError,
     },
     conf.stellarRpcConfig,
+    blockAidService,
     redis,
   );
 
