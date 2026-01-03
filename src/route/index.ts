@@ -443,6 +443,7 @@ export async function initApiServer(
               network,
               useMercury,
             );
+            console.log("DATA", data);
             try {
               data.balances = await addScannedStatus(
                 data.balances,
