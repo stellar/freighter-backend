@@ -867,7 +867,7 @@ export class MercuryClient {
       if (error && typeof error === "object" && "message" in error) {
         const err = JSON.parse(error.message as string);
         // Not found errors are normal for unfunded accounts, dont alert
-        if (err.name !== "NotFoundError") {
+        if (err.response.status !== 404) {
           horizonError = err;
           this.rpcErrorCounter
             .labels({
