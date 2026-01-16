@@ -11,7 +11,7 @@ export async function initMetricsServer(
 ) {
   const server = Fastify();
   server.register(rateLimiter, {
-    max: 250,
+    max: 350,
     timeWindow: "1 minute",
     redis,
   });
