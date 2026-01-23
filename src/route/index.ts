@@ -317,8 +317,9 @@ export async function initApiServer(
         url: "/user-notification",
         handler: async (_request, reply) => {
           const response = {
-            enabled: false,
-            message: "",
+            enabled: true,
+            message:
+              "Adding funds with Coinbase is experiencing temporary degraded performance",
           };
           reply.code(200).send(response);
         },
