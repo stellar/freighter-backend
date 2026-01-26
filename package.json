@@ -27,7 +27,7 @@
   "license": "Apache-2.0",
   "private": true,
   "engines": {
-    "node": ">=18.12.0"
+    "node": ">=25.3.0"
   },
   "dependencies": {
     "@blockaid/client": "^0.34.0",
@@ -52,6 +52,9 @@
     "stellar-sdk": "yarn:@stellar/stellar-sdk@14.4.3",
     "stellar-sdk-next": "yarn:@stellar/stellar-sdk@14.4.3",
     "yargs": "^17.7.2"
+  },
+  "resolutions": {
+    "jwa": "^2.0.0"
   },
   "devDependencies": {
     "@babel/preset-typescript": "^7.26.0",
