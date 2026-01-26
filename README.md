@@ -6,7 +6,7 @@ Freighter's indexer integration layer and general backend
 
 You will need
 
-- Node (>=20.0): https://nodejs.org/en/download/
+- Node (>=25.3.0): https://nodejs.org/en/download/
 - Yarn (>=v1.22.5): https://classic.yarnpkg.com/en/docs/install
 
 ## Development
