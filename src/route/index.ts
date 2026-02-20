@@ -317,9 +317,8 @@ export async function initApiServer(
         url: "/user-notification",
         handler: async (_request, reply) => {
           const response = {
-            enabled: true,
-            message:
-              "We're currently experiencing issues with our backend services. Some features may be disabled while we work on the issue. Sorry for the inconvenience.",
+            enabled: false,
+            message: "",
           };
           reply.code(200).send(response);
         },
