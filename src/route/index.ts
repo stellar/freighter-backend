@@ -1252,7 +1252,7 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
-            required: ["signed_xdr", "network_url", "network_passphrase"],
+            required: ["signed_xdr", "network_passphrase"],
             properties: {
               signed_xdr: { type: "string" },
               network_url: { type: "string" },
@@ -1264,17 +1264,16 @@ export async function initApiServer(
           request: FastifyRequest<{
             Body: {
               signed_xdr: string;
-              network_url: string;
+              network_url?: string;
               network_passphrase: string;
             };
           }>,
           reply,
         ) => {
-          const { signed_xdr, network_url, network_passphrase } = request.body;
+          const { signed_xdr, network_passphrase } = request.body;
           try {
             const { data, error } = await submitTransaction(
               signed_xdr,
-              network_url,
               network_passphrase,
             );
             if (error) {

@@ -16,6 +16,7 @@ const ENV_KEYS = [
   "FREIGHTER_HORIZON_URL",
   "DISABLE_TOKEN_PRICES",
   "FREIGHTER_TRUST_PROXY_RANGE",
+  "FREIGHTER_RPC_PUBNET_URL",
 ];
 
 export interface PriceConfig {

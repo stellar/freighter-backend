@@ -144,14 +144,14 @@ export class MercuryClient {
 
   getRpcServer = async (network_url: string) => {
     let network = "";
-    if (network_url === "http://stellar-rpc-pubnet-prd:8000") {
+    if (network_url === this.rpcConfig.freighterRpcPubnetUrl) {
       network = "PUBLIC";
-    } else if (network_url === "https://soroban-testnet.stellar.org/") {
+    } else if (network_url === this.rpcConfig.freighterRpcTestnetUrl) {
       network = "TESTNET";
-    } else if (network_url === "https://rpc-futurenet.stellar.org/") {
+    } else if (network_url === this.rpcConfig.freighterRpcFuturenetUrl) {
       network = "FUTURENET";
     } else {
-      network = "PUBLIC";
+      throw new Error("Unrecognized RPC URL");
     }
 
     return getServer(network as NetworkNames, this.rpcConfig);
