@@ -2,6 +2,7 @@ import BigNumber from "bignumber.js";
 import * as StellarSdkNext from "stellar-sdk-next";
 import * as StellarSdk from "stellar-sdk";
 import { getSdk } from "./stellar";
+import { NetworkNames } from "./validate";
 
 export const BASE_RESERVE = 0.5;
 export const BASE_RESERVE_MIN_COUNT = 2;
@@ -243,34 +244,69 @@ export const fetchAccountHistory = async (
   }
 };
 
+const networkPassphraseToName = (passphrase: string): NetworkNames | null => {
+  const entries = Object.entries(StellarSdk.Networks) as [
+    NetworkNames,
+    string,
+  ][];
+  for (const [name, value] of entries) {
+    if (value === passphrase) return name;
+  }
+  return null;
+};
+
+const MAX_SUBMIT_RETRIES = 3;
+
 export const submitTransaction = async (
   signedXDR: string,
-  networkUrl: string,
   networkPassphrase: string,
 ): Promise<{
   data: StellarSdk.Horizon.HorizonApi.SubmitTransactionResponse | null;
   error: unknown;
 }> => {
+  const network = networkPassphraseToName(networkPassphrase);
+  if (!network) {
+    return {
+      data: null,
+      error: `Unknown network passphrase: ${networkPassphrase}`,
+    };
+  }
+
+  const networkUrl = NETWORK_URLS[network];
+  if (!networkUrl) {
+    return {
+      data: null,
+      error: `Unsupported network for transaction submission: ${network}`,
+    };
+  }
+
   const Sdk = getSdk(networkPassphrase as StellarSdk.Networks);
   const tx = Sdk.TransactionBuilder.fromXDR(signedXDR, networkPassphrase);
   const server = new Sdk.Horizon.Server(networkUrl);
 
-  try {
-    const data = await server.submitTransaction(tx);
-    return {
-      data,
-      error: null,
-    };
-  } catch (e: any) {
-    if (e.response?.status === 504) {
-      // in case of 504, keep retrying this tx until submission succeeds or we get a different error
-      // https://developers.stellar.org/api/errors/http-status-codes/horizon-specific/timeout
-      // https://developers.stellar.org/docs/encyclopedia/error-handling
-      return await submitTransaction(signedXDR, networkUrl, networkPassphrase);
+  for (let attempt = 0; attempt <= MAX_SUBMIT_RETRIES; attempt++) {
+    try {
+      const data = await server.submitTransaction(tx);
+      return {
+        data,
+        error: null,
+      };
+    } catch (e: any) {
+      if (e.response?.status === 504 && attempt < MAX_SUBMIT_RETRIES) {
+        // Retry on 504 timeout
+        // https://developers.stellar.org/api/errors/http-status-codes/horizon-specific/timeout
+        // https://developers.stellar.org/docs/encyclopedia/error-handling
+        continue;
+      }
+      return {
+        data: null,
+        error: e?.response?.data,
+      };
     }
-    return {
-      data: null,
-      error: e?.response?.data,
-    };
   }
+
+  return {
+    data: null,
+    error: "Max retries exceeded",
+  };
 };
