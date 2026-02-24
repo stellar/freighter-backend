@@ -257,13 +257,15 @@ const networkPassphraseToName = (passphrase: string): NetworkNames | null => {
 
 const MAX_SUBMIT_RETRIES = 3;
 
+interface SubmitTransactionResult {
+  data: StellarSdk.Horizon.HorizonApi.SubmitTransactionResponse | null;
+  error: string | StellarSdk.Horizon.HorizonApi.ErrorResponseData | null;
+}
+
 export const submitTransaction = async (
   signedXDR: string,
   networkPassphrase: string,
-): Promise<{
-  data: StellarSdk.Horizon.HorizonApi.SubmitTransactionResponse | null;
-  error: unknown;
-}> => {
+): Promise<SubmitTransactionResult> => {
   const network = networkPassphraseToName(networkPassphrase);
   if (!network) {
     return {
@@ -284,6 +286,8 @@ export const submitTransaction = async (
   const tx = Sdk.TransactionBuilder.fromXDR(signedXDR, networkPassphrase);
   const server = new Sdk.Horizon.Server(networkUrl);
 
+  let lastError: StellarSdk.Horizon.HorizonApi.ErrorResponseData | null = null;
+
   for (let attempt = 0; attempt <= MAX_SUBMIT_RETRIES; attempt++) {
     try {
       const data = await server.submitTransaction(tx);
@@ -291,22 +295,27 @@ export const submitTransaction = async (
         data,
         error: null,
       };
-    } catch (e: any) {
-      if (e.response?.status === 504 && attempt < MAX_SUBMIT_RETRIES) {
-        // Retry on 504 timeout
-        // https://developers.stellar.org/api/errors/http-status-codes/horizon-specific/timeout
-        // https://developers.stellar.org/docs/encyclopedia/error-handling
-        continue;
+    } catch (e: unknown) {
+      const response = (
+        e as {
+          response?: {
+            status?: number;
+            data?: StellarSdk.Horizon.HorizonApi.ErrorResponseData;
+          };
+        }
+      ).response;
+      lastError = response?.data ?? null;
+      if (response?.status !== 504) {
+        break;
       }
-      return {
-        data: null,
-        error: e?.response?.data,
-      };
+      // Retry on 504 timeout
+      // https://developers.stellar.org/api/errors/http-status-codes/horizon-specific/timeout
+      // https://developers.stellar.org/docs/encyclopedia/error-handling
     }
   }
 
   return {
     data: null,
-    error: "Max retries exceeded",
+    error: lastError,
   };
 };
