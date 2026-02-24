@@ -151,7 +151,7 @@ export class MercuryClient {
     } else if (network_url === this.rpcConfig.freighterRpcFuturenetUrl) {
       network = "FUTURENET";
     } else {
-      network = "PUBLIC";
+      throw new Error("Unrecognized RPC URL");
     }
 
     return getServer(network as NetworkNames, this.rpcConfig);
