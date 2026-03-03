@@ -28,7 +28,11 @@ import {
   NetworkNames,
   isValidTokenString,
 } from "../helper/validate";
-import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
+import {
+  NETWORK_URLS,
+  networkPassphraseToName,
+  submitTransaction,
+} from "../helper/horizon-rpc";
 import {
   buildTransfer,
   getContractSpec,
@@ -1383,9 +1387,7 @@ export async function initApiServer(
 
           try {
             const Sdk = getSdk(network_passphrase as Networks);
-            const networkName = Object.entries(Networks).find(
-              ([, value]) => value === network_passphrase,
-            )?.[0] as NetworkNames | undefined;
+            const networkName = networkPassphraseToName(network_passphrase);
             if (!networkName) {
               throw new Error(
                 `Unknown network passphrase: ${network_passphrase}`,
