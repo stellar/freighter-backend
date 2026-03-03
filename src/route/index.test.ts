@@ -1160,4 +1160,144 @@ describe("API routes", () => {
       await server.close();
     });
   });
+
+  describe("/simulate-token-transfer", () => {
+    const simResponse = "simulated xdr";
+    const preparedTransactionXdr = "assembled tx xdr";
+    const contractId =
+      "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP";
+
+    beforeEach(() => {
+      jest
+        .spyOn(StellarHelpers, "getSdk")
+        .mockImplementation((_networkPassphrase: Networks) => {
+          return {
+            BASE_FEE: "100",
+            TimeoutInfinite: 0,
+            Address: class {
+              constructor(_address: string) {}
+              toScVal() {
+                return {};
+              }
+            },
+            XdrLargeInt: class {
+              constructor(_type: string, _value: string) {}
+              toI128() {
+                return {};
+              }
+            },
+            TransactionBuilder: class {
+              constructor(_account: any, _opts: any) {}
+              addOperation(_op: any) {
+                return this;
+              }
+              setTimeout(_t: any) {
+                return this;
+              }
+              addMemo(_t: any) {
+                return this;
+              }
+              build() {
+                return "mock-raw-tx";
+              }
+            },
+            Contract: class {
+              constructor(_contractId: string) {}
+              call(_method: string, ..._args: any[]) {
+                return {};
+              }
+            },
+            Memo: {
+              text: (_t: string) => ({}),
+            },
+            rpc: {
+              Server: class {
+                constructor(_url: string, _opts?: any) {}
+                getAccount(_key: string) {
+                  return Promise.resolve({});
+                }
+                simulateTransaction(_tx: any) {
+                  return Promise.resolve(simResponse);
+                }
+              },
+              assembleTransaction: (_tx: any, _simResponse: any) => {
+                return {
+                  build: () => ({
+                    toXDR: () => preparedTransactionXdr,
+                    operations: [{ type: "payment" }],
+                  }),
+                };
+              },
+            },
+          } as any;
+        });
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("can simulate a token transfer", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/simulate-token-transfer`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: contractId,
+          pub_key: pubKey,
+          memo: "",
+          params: {
+            publicKey: pubKey,
+            destination: pubKey,
+            amount: "1000000",
+          },
+          network_passphrase: Networks.TESTNET,
+        }),
+      };
+      const response = await fetch(url.href, options);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(data.simulationResponse).toEqual(simResponse);
+      expect(data.preparedTransaction).toEqual(preparedTransactionXdr);
+      await server.close();
+    });
+
+    it("returns an error for an unknown network passphrase", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/simulate-token-transfer`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: contractId,
+          pub_key: pubKey,
+          memo: "",
+          params: {
+            publicKey: pubKey,
+            destination: pubKey,
+            amount: "1000000",
+          },
+          network_passphrase: "unknown-passphrase",
+        }),
+      };
+      const response = await fetch(url.href, options);
+
+      expect(response.status).toEqual(400);
+      await server.close();
+    });
+  });
 });

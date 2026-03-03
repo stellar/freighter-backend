@@ -28,11 +28,16 @@ import {
   NetworkNames,
   isValidTokenString,
 } from "../helper/validate";
-import { NETWORK_URLS, submitTransaction } from "../helper/horizon-rpc";
+import {
+  NETWORK_URLS,
+  networkPassphraseToName,
+  submitTransaction,
+} from "../helper/horizon-rpc";
 import {
   buildTransfer,
   getContractSpec,
   getIsTokenSpec,
+  getServer,
   getStellarRpcUrls,
   isSacContractExecutable,
 } from "../helper/soroban-rpc";
@@ -1352,7 +1357,6 @@ export async function initApiServer(
               "pub_key",
               "memo",
               "params",
-              "network_url",
               "network_passphrase",
             ],
             properties: {
@@ -1361,7 +1365,6 @@ export async function initApiServer(
               memo: { type: "string" },
               fee: { type: "string" },
               params: { type: "object" },
-              network_url: { type: "string" },
               network_passphrase: { type: "string" },
             },
           },
@@ -1374,26 +1377,24 @@ export async function initApiServer(
               memo: string;
               fee?: string;
               params: Record<string, string>;
-              network_url: string;
               network_passphrase: string;
             };
           }>,
           reply,
         ) => {
-          const {
-            address,
-            pub_key,
-            memo,
-            fee,
-            params,
-            network_url,
-            network_passphrase,
-          } = request.body;
+          const { address, pub_key, memo, fee, params, network_passphrase } =
+            request.body;
 
           try {
             const Sdk = getSdk(network_passphrase as Networks);
+            const networkName = networkPassphraseToName(network_passphrase);
+            if (!networkName) {
+              throw new Error(
+                `Unknown network passphrase: ${network_passphrase}`,
+              );
+            }
             const _fee = fee || Sdk.BASE_FEE;
-            const server = await mercuryClient.getRpcServer(network_url);
+            const server = await getServer(networkName, stellarRpcConfig);
             const sourceAccount = await server.getAccount(pub_key);
             const builder = new Sdk.TransactionBuilder(sourceAccount, {
               fee: _fee,
