@@ -244,7 +244,7 @@ export const fetchAccountHistory = async (
   }
 };
 
-const networkPassphraseToName = (passphrase: string): NetworkNames | null => {
+export const networkPassphraseToName = (passphrase: string): NetworkNames | null => {
   const entries = Object.entries(StellarSdk.Networks) as [
     NetworkNames,
     string,
