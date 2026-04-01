@@ -78,7 +78,8 @@ export class PriceClient {
 
   /**
    * The time period (in milliseconds) for which to retain price data in Redis time series.
-   * Currently set to 1 day in milliseconds to support 24-hour price change calculations while managing storage usage.
+   * Currently set to 25 hours in milliseconds to support 24-hour price change calculations while managing storage usage.
+   * The extra hour of retention helps avoid gaps when computing 24-hour price changes from the time series data.
    */
   private static readonly RETENTION_PERIOD = 25 * 60 * 60 * 1000;
 
