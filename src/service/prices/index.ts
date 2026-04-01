@@ -80,7 +80,7 @@ export class PriceClient {
    * The time period (in milliseconds) for which to retain price data in Redis time series.
    * Currently set to 1 day in milliseconds to support 24-hour price change calculations while managing storage usage.
    */
-  private static readonly RETENTION_PERIOD = 24 * 60 * 60 * 1000;
+  private static readonly RETENTION_PERIOD = 25 * 60 * 60 * 1000;
 
   /**
    * Delay (in milliseconds) between processing batches of tokens during price updates.
@@ -104,7 +104,7 @@ export class PriceClient {
    * The time delta (in milliseconds) to adjust the 1 day threshold by.
    * Default set to 5 minutes to account for slight timing variations.
    */
-  private static readonly DEFAULT_ONE_DAY_THRESHOLD_MS = 300000;
+  private static readonly DEFAULT_ONE_DAY_THRESHOLD_MS = 1800000;
 
   /**
    * Maximum number of tokens to fetch and track prices for initially.
