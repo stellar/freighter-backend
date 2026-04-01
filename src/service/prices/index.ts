@@ -104,7 +104,14 @@ export class PriceClient {
    * The time delta (in milliseconds) to adjust the 1 day threshold by.
    * Default set to 5 minutes to account for slight timing variations.
    */
-  private static readonly DEFAULT_ONE_DAY_THRESHOLD_MS = 1800000;
+  private static readonly DEFAULT_ONE_DAY_THRESHOLD_MS = 300000;
+
+  /**
+   * Tolerance window (in milliseconds) for the revRange lookup when searching
+   * for a historical price point. Wider than the history gate threshold to
+   * tolerate gaps in price updates within the retained data.
+   */
+  private static readonly PRICE_LOOKUP_TOLERANCE_MS = 1800000; // 30 minutes
 
   /**
    * Maximum number of tokens to fetch and track prices for initially.
@@ -211,27 +218,31 @@ export class PriceClient {
 
       const currentPrice = new BigNumber(latestPrice.value);
       let percentagePriceChange24h: BigNumber | null = null;
-      const oneDayThreshold = PriceClient.ONE_DAY - this.priceOneDayThresholdMs;
+      const minHistoryRequired =
+        PriceClient.ONE_DAY - this.priceOneDayThresholdMs;
 
-      // When calculating the 24h price change, we want to make sure the token has been tracked for at least 24 hours.
+      // Ensure the token has been tracked for at least ~24 hours before computing a 24h change.
       const firstEntry = await this.redisClient.ts.range(tsKey, "-", "+", {
         COUNT: 1,
       });
       if (
         firstEntry &&
         firstEntry.length > 0 &&
-        latestPrice.timestamp - oneDayThreshold >= firstEntry[0].timestamp
+        latestPrice.timestamp - minHistoryRequired >= firstEntry[0].timestamp
       ) {
-        // revRange traverses the time series in reverse chronological order.
-        // We use the "-" symbol to indicate the earliest/oldest timestamp of the time series.
-        // We dont use the exact 1 day calculation but use an offset of few minutes to account for slight timing variations.
-        const dayAgo = latestPrice.timestamp - oneDayThreshold;
+        // Use a wider tolerance for the lookup to tolerate gaps in price updates.
+        // The history gate above guarantees data ≥ ~24h old exists, so the wider
+        // lookup window will reliably find a price point.
+        const lookupCutoff =
+          latestPrice.timestamp -
+          PriceClient.ONE_DAY +
+          PriceClient.PRICE_LOOKUP_TOLERANCE_MS;
         const oldPrices = await this.redisClient.ts.revRange(
           tsKey,
-          "-", // Indicates the earliest/oldest timestamp of the time series
-          dayAgo, // Indicates the timestamp roughly 24 hours ago from the latest price.
+          "-",
+          lookupCutoff,
           {
-            COUNT: 1, // Get the single most recent entry at or before dayAgo
+            COUNT: 1,
           },
         );
 
@@ -256,7 +267,7 @@ export class PriceClient {
         );
         this.logger.info(`Earliest entry: ${JSON.stringify(firstEntry)}`);
         this.logger.info(
-          `Time difference: ${latestPrice.timestamp - firstEntry[0].timestamp}, 1 day threshold: ${oneDayThreshold}`,
+          `Time difference: ${latestPrice.timestamp - firstEntry[0].timestamp}, 1 day threshold: ${minHistoryRequired}`,
         );
       }
 

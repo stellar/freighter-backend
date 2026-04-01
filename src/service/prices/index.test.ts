@@ -69,7 +69,7 @@ describe("Token Price Client", () => {
       // Use PriceClient static properties if available, otherwise redefine
       const ONE_DAY = 24 * 60 * 60 * 1000;
       const ONE_MINUTE = 60 * 1000;
-      const twentyFourHoursAgo = mockNow - (ONE_DAY - 5 * ONE_MINUTE);
+      const lookupCutoff = mockNow - ONE_DAY + 30 * ONE_MINUTE;
       const muchOlderTimestamp = mockNow - 2 * ONE_DAY; // Timestamp > 24h ago
 
       // Mock ts.get to return current price data
@@ -89,7 +89,7 @@ describe("Token Price Client", () => {
       // Mock ts.revRange for the oldPrices check
       mockRedisClient.ts.revRange.mockResolvedValue([
         {
-          timestamp: twentyFourHoursAgo, // Simulate finding a price exactly 24h ago
+          timestamp: lookupCutoff, // Simulate finding a price at the lookup cutoff
           value: mockHistoricalPrice,
         },
       ]);
@@ -112,7 +112,7 @@ describe("Token Price Client", () => {
       expect(mockRedisClient.ts.revRange).toHaveBeenCalledWith(
         token,
         "-",
-        twentyFourHoursAgo, // Match the timestamp used in getPrice
+        lookupCutoff, // Match the lookup cutoff used in getPrice
         { COUNT: 1 },
       );
       // Check the counter increment
