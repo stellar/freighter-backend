@@ -109,10 +109,10 @@ export class PriceClient {
 
   /**
    * Tolerance window (in milliseconds) for the revRange lookup when searching
-   * for a historical price point. Wider than the history gate threshold to
-   * tolerate gaps in price updates within the retained data.
+   * for a historical price point. Set to 30 minutes, wider than the history
+   * gate threshold, to tolerate gaps in price updates within the retained data.
    */
-  private static readonly PRICE_LOOKUP_TOLERANCE_MS = 1800000; // 30 minutes
+  private static readonly PRICE_LOOKUP_TOLERANCE_MS = 30 * 60 * 1000;
 
   /**
    * Maximum number of tokens to fetch and track prices for initially.
