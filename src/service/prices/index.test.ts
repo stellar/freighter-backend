@@ -161,6 +161,73 @@ describe("Token Price Client", () => {
       );
     });
 
+    it("should return null when history is just under the 24h gate (23h54m)", async () => {
+      const mockCurrentPrice = 50000;
+      const mockNow = Date.now();
+      const ONE_DAY = 24 * 60 * 60 * 1000;
+      const ONE_MINUTE = 60 * 1000;
+      // First entry is 23h54m ago — 1 minute short of the 23h55m gate
+      const justUnderGate = mockNow - (ONE_DAY - 6 * ONE_MINUTE);
+
+      mockRedisClient.ts.get.mockResolvedValue({
+        timestamp: mockNow,
+        value: mockCurrentPrice,
+      });
+
+      mockRedisClient.ts.range.mockResolvedValue([
+        { timestamp: justUnderGate, value: 48000 },
+      ]);
+
+      const token = "BOUNDARY:GUNDER";
+      const result = await priceClient.getPrice(token);
+
+      expect(result).not.toBeNull();
+      expect(result?.currentPrice.toNumber()).toBe(mockCurrentPrice);
+      expect(result?.percentagePriceChange24h).toBeNull();
+      expect(mockRedisClient.ts.revRange).not.toHaveBeenCalled();
+    });
+
+    it("should compute 24h change when history just passes the gate (23h56m)", async () => {
+      const mockCurrentPrice = 50000;
+      const mockHistoricalPrice = 45000;
+      const mockNow = Date.now();
+      const ONE_DAY = 24 * 60 * 60 * 1000;
+      const ONE_MINUTE = 60 * 1000;
+      // First entry is 23h56m ago — 1 minute past the 23h55m gate
+      const justOverGate = mockNow - (ONE_DAY - 4 * ONE_MINUTE);
+      // Lookup cutoff uses the wider 30min tolerance: mockNow - 24h + 30min
+      const lookupCutoff = mockNow - ONE_DAY + 30 * ONE_MINUTE;
+
+      mockRedisClient.ts.get.mockResolvedValue({
+        timestamp: mockNow,
+        value: mockCurrentPrice,
+      });
+
+      mockRedisClient.ts.range.mockResolvedValue([
+        { timestamp: justOverGate, value: 48000 },
+      ]);
+
+      mockRedisClient.ts.revRange.mockResolvedValue([
+        { timestamp: lookupCutoff, value: mockHistoricalPrice },
+      ]);
+
+      const token = "BOUNDARY:GOVER";
+      const result = await priceClient.getPrice(token);
+
+      expect(result).not.toBeNull();
+      expect(result?.currentPrice.toNumber()).toBe(mockCurrentPrice);
+      expect(result?.percentagePriceChange24h?.toFixed(2)).toBe("11.11");
+
+      // Verify the lookup uses the wider PRICE_LOOKUP_TOLERANCE_MS (30min),
+      // NOT the history gate's DEFAULT_ONE_DAY_THRESHOLD_MS (5min)
+      expect(mockRedisClient.ts.revRange).toHaveBeenCalledWith(
+        token,
+        "-",
+        lookupCutoff,
+        { COUNT: 1 },
+      );
+    });
+
     it("should handle new token request", async () => {
       // Setup mock - ts.get throws error for non-existent key
       mockRedisClient.ts.get.mockRejectedValue(new Error("Key does not exist"));
