@@ -8,11 +8,11 @@ For the Stellar organization's general contribution guidelines, see the
 
 ## Prerequisites
 
-| Tool   | Version   | Install                                                      |
-| ------ | --------- | ------------------------------------------------------------ |
-| Node.js | >= 25.3.0 | [nodejs.org](https://nodejs.org) or `nvm install 25`         |
-| Yarn   | >= 1.22.5 | `npm install --global yarn`                                  |
-| Docker | Latest    | [docker.com](https://docs.docker.com/get-docker/) (for Redis) |
+| Tool    | Version   | Install                                                       |
+| ------- | --------- | ------------------------------------------------------------- |
+| Node.js | >= 18.0.0 | [nodejs.org](https://nodejs.org) or `nvm install 22`          |
+| Yarn    | >= 1.22.5 | `npm install --global yarn`                                   |
+| Docker  | Latest    | [docker.com](https://docs.docker.com/get-docker/) (for Redis) |
 
 ## Getting Started
 
@@ -52,24 +52,24 @@ variables can be left as `not-set` — the app uses an in-memory store by defaul
 
 **Required for full functionality:**
 
-| Variable            | Purpose                                        | How to obtain                       |
-| ------------------- | ---------------------------------------------- | ----------------------------------- |
-| `MODE`              | `development` or `production`                  | Set to `development` for local dev  |
-| `HOSTNAME`          | Redis hostname                                 | `localhost`                         |
-| `REDIS_PORT`        | Redis port                                     | `6379` (Docker Compose default)     |
-| `REDIS_CONNECTION_NAME` | Redis connection name                      | Any string (e.g., `freighter-dev`)  |
-| `FREIGHTER_RPC_PUBNET_URL` | Stellar pubnet RPC endpoint             | Your pubnet RPC URL                 |
-| `FREIGHTER_TRUST_PROXY_RANGE` | Trusted proxy IP range               | `127.0.0.1/32` for local dev       |
+| Variable                      | Purpose                       | How to obtain                      |
+| ----------------------------- | ----------------------------- | ---------------------------------- |
+| `MODE`                        | `development` or `production` | Set to `development` for local dev |
+| `HOSTNAME`                    | Redis hostname                | `localhost`                        |
+| `REDIS_PORT`                  | Redis port                    | `6379` (Docker Compose default)    |
+| `REDIS_CONNECTION_NAME`       | Redis connection name         | Any string (e.g., `freighter-dev`) |
+| `FREIGHTER_RPC_PUBNET_URL`    | Stellar pubnet RPC endpoint   | Your pubnet RPC URL                |
+| `FREIGHTER_TRUST_PROXY_RANGE` | Trusted proxy IP range        | `127.0.0.1/32` for local dev       |
 
 **Optional — features degrade gracefully:**
 
-| Variable              | Purpose                    | Notes                                |
-| --------------------- | -------------------------- | ------------------------------------ |
-| `AUTH_EMAIL` / `AUTH_PASS` | Mercury indexer auth    | Only needed if `USE_MERCURY=true`    |
-| `SENTRY_KEY`          | Error tracking             | Leave as `not-set` for local dev     |
-| `BLOCKAID_KEY`        | Transaction scanning       | Leave as `not-set` for local dev     |
-| `COINBASE_API_KEY` / `COINBASE_API_SECRET` | Pricing data | Leave as `not-set` for local dev     |
-| `FREIGHTER_HORIZON_URL` | Stellar Horizon endpoint | Defaults to public Horizon if unset  |
+| Variable                                   | Purpose                  | Notes                               |
+| ------------------------------------------ | ------------------------ | ----------------------------------- |
+| `AUTH_EMAIL` / `AUTH_PASS`                 | Mercury indexer auth     | Only needed if `USE_MERCURY=true`   |
+| `SENTRY_KEY`                               | Error tracking           | Leave as `not-set` for local dev    |
+| `BLOCKAID_KEY`                             | Transaction scanning     | Leave as `not-set` for local dev    |
+| `COINBASE_API_KEY` / `COINBASE_API_SECRET` | Pricing data             | Leave as `not-set` for local dev    |
+| `FREIGHTER_HORIZON_URL`                    | Stellar Horizon endpoint | Defaults to public Horizon if unset |
 
 ## Key Commands
 

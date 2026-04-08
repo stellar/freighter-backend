@@ -9,7 +9,7 @@ initial setup.
 Run every check and collect results. Report all at once.
 
 ```bash
-# Node.js >= 25.3.0
+# Node.js >= 18.0.0
 node --version 2>&1 || which node
 
 # Yarn
@@ -27,7 +27,7 @@ docker compose version 2>&1 || which docker-compose
 ```
 Freighter Backend V1 — Prerequisites Check
 ============================================
-  Node.js        v25.x.x        >= 25.3.0 required   OK
+  Node.js        v22.x.x        >= 18.0.0 required   OK
   Yarn           1.22.x         >= 1.22.5 required    OK
   Docker         27.x.x         any (for Redis)       OK
   Docker Compose 2.x.x          any                   OK
@@ -39,7 +39,7 @@ Present missing tools and ask the user to confirm before installing.
 
 **Auto-installable (run after user confirms):**
 
-- **nvm + Node.js 25**: `nvm install 25`
+- **nvm + Node.js**: `nvm install 22` (or any version >= 18)
 - **Yarn**: `npm install --global yarn`
 - **Docker**: `brew install --cask docker` (macOS) or follow
   [docs.docker.com](https://docs.docker.com/engine/install/) (Linux)
@@ -58,14 +58,14 @@ make sure all required environment variables are set in `.env`.
 For local development with `yarn start`, most values can stay as `not-set` — the
 app uses an in-memory store. Set these for basic operation:
 
-| Variable                       | Value for local dev                  |
-| ------------------------------ | ------------------------------------ |
-| `MODE`                         | `development`                        |
-| `HOSTNAME`                     | `localhost`                          |
-| `REDIS_PORT`                   | `6379`                               |
-| `REDIS_CONNECTION_NAME`        | `freighter-dev`                      |
-| `FREIGHTER_RPC_PUBNET_URL`     | Your pubnet RPC URL                  |
-| `FREIGHTER_TRUST_PROXY_RANGE`  | `127.0.0.1/32`                       |
+| Variable                      | Value for local dev |
+| ----------------------------- | ------------------- |
+| `MODE`                        | `development`       |
+| `HOSTNAME`                    | `localhost`         |
+| `REDIS_PORT`                  | `6379`              |
+| `REDIS_CONNECTION_NAME`       | `freighter-dev`     |
+| `FREIGHTER_RPC_PUBNET_URL`    | Your pubnet RPC URL |
+| `FREIGHTER_TRUST_PROXY_RANGE` | `127.0.0.1/32`      |
 
 ## Step 5: Run initial setup
 

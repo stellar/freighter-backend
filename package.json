@@ -27,7 +27,7 @@
   "license": "Apache-2.0",
   "private": true,
   "engines": {
-    "node": ">=25.3.0"
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@blockaid/client": "^0.34.0",
