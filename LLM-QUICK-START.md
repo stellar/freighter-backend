@@ -19,7 +19,7 @@ yarn --version 2>&1 || which yarn
 docker --version 2>&1 || which docker
 
 # Docker Compose
-docker compose version 2>&1 || which docker-compose
+docker compose version 2>&1 || docker-compose --version 2>&1
 ```
 
 ## Step 2: Present results
@@ -66,6 +66,10 @@ app uses an in-memory store. Set these for basic operation:
 | `REDIS_CONNECTION_NAME`       | `freighter-dev`     |
 | `FREIGHTER_RPC_PUBNET_URL`    | Your pubnet RPC URL |
 | `FREIGHTER_TRUST_PROXY_RANGE` | `127.0.0.1/32`      |
+
+> **Warning:** `FREIGHTER_TRUST_PROXY_RANGE` must NOT be left as `not-set` — it
+> is passed to `proxy-addr` which throws on invalid range strings. Set it to an
+> empty value or a valid CIDR like `127.0.0.1/32`.
 
 ## Step 5: Run initial setup
 

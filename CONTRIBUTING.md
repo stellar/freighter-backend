@@ -49,6 +49,9 @@ node build/index.js
 
 Copy `.env-EXAMPLE` to `.env`. For local development with `yarn start`, most
 variables can be left as `not-set` — the app uses an in-memory store by default.
+**Exception:** `FREIGHTER_TRUST_PROXY_RANGE` must be empty or a valid
+`proxy-addr` range (e.g., `127.0.0.1/32`). Leaving it as `not-set` will crash
+the server.
 
 **Required for full functionality:**
 
