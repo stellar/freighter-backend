@@ -14,14 +14,6 @@ import { ERROR } from "../helper/error";
 import * as StellarHelpers from "../helper/stellar";
 import * as OnrampHelpers from "../helper/onramp";
 import * as HorizonRpcHelpers from "../helper/horizon-rpc";
-import { getStellarRpcUrls } from "../helper/soroban-rpc";
-import { StellarRpcConfig } from "../config";
-
-const mockStellarRpcConfig = {
-  freighterRpcPubnetUrl: "https://rpc-pubnet.stellar.org",
-  freighterRpcTestnetUrl: "https://rpc-testnet.stellar.org",
-  freighterRpcFuturenetUrl: "https://rpc-futurenet.stellar.org",
-} as StellarRpcConfig;
 
 jest.mock("@blockaid/client", () => {
   return class Blockaid {
@@ -996,6 +988,74 @@ describe("API routes", () => {
       await server.close();
     });
   });
+  describe("/submit-tx", () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("can submit a transaction", async () => {
+      jest
+        .spyOn(HorizonRpcHelpers, "submitTransaction")
+        .mockResolvedValue({ data: { hash: "tx-hash" }, error: null } as any);
+
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/submit-tx`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          signed_xdr: TEST_SOROBAN_TX,
+          network_passphrase: Networks.TESTNET,
+        }),
+      };
+      const response = await fetch(url.href, options);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(data).toEqual({ hash: "tx-hash" });
+      await server.close();
+    });
+
+    it("ignores network_url when passed for backwards compatibility", async () => {
+      jest
+        .spyOn(HorizonRpcHelpers, "submitTransaction")
+        .mockResolvedValue({ data: { hash: "tx-hash" }, error: null } as any);
+
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/submit-tx`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          signed_xdr: TEST_SOROBAN_TX,
+          network_url: "https://some-user-provided-url.com",
+          network_passphrase: Networks.TESTNET,
+        }),
+      };
+      const response = await fetch(url.href, options);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(data).toEqual({ hash: "tx-hash" });
+      expect(HorizonRpcHelpers.submitTransaction).toHaveBeenCalledWith(
+        TEST_SOROBAN_TX,
+        Networks.TESTNET,
+      );
+      await server.close();
+    });
+  });
   describe("/simulate-tx", () => {
     const simResponse = "simulated xdr";
     const preparedTransaction = "assembled tx xdr";
@@ -1048,7 +1108,6 @@ describe("API routes", () => {
         },
         body: JSON.stringify({
           xdr: TEST_SOROBAN_TX,
-          network_url: getStellarRpcUrls(mockStellarRpcConfig).TESTNET,
           network_passphrase: Networks.TESTNET,
         }),
       };
@@ -1058,6 +1117,56 @@ describe("API routes", () => {
       expect(response.status).toEqual(200);
       expect(data.simulationResponse).toEqual(simResponse);
       expect(data.preparedTransaction).toEqual(preparedTransaction);
+      await server.close();
+    });
+
+    it("ignores network_url when passed for backwards compatibility", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/simulate-tx`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          xdr: TEST_SOROBAN_TX,
+          network_url: "https://some-user-provided-url.com",
+          network_passphrase: Networks.TESTNET,
+        }),
+      };
+      const response = await fetch(url.href, options);
+      const data = await response.json();
+
+      expect(response.status).toEqual(200);
+      expect(data.simulationResponse).toEqual(simResponse);
+      expect(data.preparedTransaction).toEqual(preparedTransaction);
+      await server.close();
+    });
+
+    it("returns an error for an unknown network passphrase", async () => {
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/simulate-tx`,
+      );
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          xdr: TEST_SOROBAN_TX,
+          network_passphrase: "unknown-passphrase",
+        }),
+      };
+      const response = await fetch(url.href, options);
+
+      expect(response.status).toEqual(400);
       await server.close();
     });
 
