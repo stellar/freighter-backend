@@ -1260,8 +1260,6 @@ export async function initApiServer(
             required: ["signed_xdr", "network_passphrase"],
             properties: {
               signed_xdr: { type: "string" },
-              // network_url is accepted for backwards compatibility but ignored
-              network_url: { type: "string" },
               network_passphrase: { type: "string" },
             },
           },
@@ -1302,8 +1300,6 @@ export async function initApiServer(
             required: ["xdr", "network_passphrase"],
             properties: {
               xdr: { type: "string" },
-              // network_url is accepted for backwards compatibility but ignored
-              network_url: { type: "string" },
               network_passphrase: { type: "string" },
             },
           },

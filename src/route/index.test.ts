@@ -1021,40 +1021,6 @@ describe("API routes", () => {
       expect(data).toEqual({ hash: "tx-hash" });
       await server.close();
     });
-
-    it("ignores network_url when passed for backwards compatibility", async () => {
-      jest
-        .spyOn(HorizonRpcHelpers, "submitTransaction")
-        .mockResolvedValue({ data: { hash: "tx-hash" }, error: null } as any);
-
-      const server = await getDevServer();
-      const url = new URL(
-        `http://localhost:${
-          (server?.server?.address() as any).port
-        }/api/v1/submit-tx`,
-      );
-      const options = {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          signed_xdr: TEST_SOROBAN_TX,
-          network_url: "https://some-user-provided-url.com",
-          network_passphrase: Networks.TESTNET,
-        }),
-      };
-      const response = await fetch(url.href, options);
-      const data = await response.json();
-
-      expect(response.status).toEqual(200);
-      expect(data).toEqual({ hash: "tx-hash" });
-      expect(HorizonRpcHelpers.submitTransaction).toHaveBeenCalledWith(
-        TEST_SOROBAN_TX,
-        Networks.TESTNET,
-      );
-      await server.close();
-    });
   });
   describe("/simulate-tx", () => {
     const simResponse = "simulated xdr";
@@ -1108,33 +1074,6 @@ describe("API routes", () => {
         },
         body: JSON.stringify({
           xdr: TEST_SOROBAN_TX,
-          network_passphrase: Networks.TESTNET,
-        }),
-      };
-      const response = await fetch(url.href, options);
-      const data = await response.json();
-
-      expect(response.status).toEqual(200);
-      expect(data.simulationResponse).toEqual(simResponse);
-      expect(data.preparedTransaction).toEqual(preparedTransaction);
-      await server.close();
-    });
-
-    it("ignores network_url when passed for backwards compatibility", async () => {
-      const server = await getDevServer();
-      const url = new URL(
-        `http://localhost:${
-          (server?.server?.address() as any).port
-        }/api/v1/simulate-tx`,
-      );
-      const options = {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          xdr: TEST_SOROBAN_TX,
-          network_url: "https://some-user-provided-url.com",
           network_passphrase: Networks.TESTNET,
         }),
       };
