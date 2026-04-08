@@ -1260,6 +1260,7 @@ export async function initApiServer(
             required: ["signed_xdr", "network_passphrase"],
             properties: {
               signed_xdr: { type: "string" },
+              // network_url is accepted for backwards compatibility but ignored
               network_url: { type: "string" },
               network_passphrase: { type: "string" },
             },
@@ -1269,7 +1270,6 @@ export async function initApiServer(
           request: FastifyRequest<{
             Body: {
               signed_xdr: string;
-              network_url?: string;
               network_passphrase: string;
             };
           }>,
@@ -1299,9 +1299,10 @@ export async function initApiServer(
         schema: {
           body: {
             type: "object",
-            required: ["xdr", "network_url", "network_passphrase"],
+            required: ["xdr", "network_passphrase"],
             properties: {
               xdr: { type: "string" },
+              // network_url is accepted for backwards compatibility but ignored
               network_url: { type: "string" },
               network_passphrase: { type: "string" },
             },
@@ -1311,18 +1312,23 @@ export async function initApiServer(
           request: FastifyRequest<{
             Body: {
               xdr: string;
-              network_url: string;
               network_passphrase: string;
             };
           }>,
           reply,
         ) => {
-          const { xdr, network_url, network_passphrase } = request.body;
+          const { xdr, network_passphrase } = request.body;
 
           try {
             const Sdk = getSdk(network_passphrase as Networks);
+            const networkName = networkPassphraseToName(network_passphrase);
+            if (!networkName) {
+              throw new Error(
+                `Unknown network passphrase: ${network_passphrase}`,
+              );
+            }
             const tx = Sdk.TransactionBuilder.fromXDR(xdr, network_passphrase);
-            const server = await mercuryClient.getRpcServer(network_url);
+            const server = await getServer(networkName, stellarRpcConfig);
 
             const simulationResponse = await server.simulateTransaction(tx);
             const preparedTransaction = Sdk.rpc
