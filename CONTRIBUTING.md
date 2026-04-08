@@ -10,7 +10,7 @@ For the Stellar organization's general contribution guidelines, see the
 
 | Tool    | Version   | Install                                                       |
 | ------- | --------- | ------------------------------------------------------------- |
-| Node.js | >= 18.0.0 | [nodejs.org](https://nodejs.org) or `nvm install 22`          |
+| Node.js | >= 25.3.0 | [nodejs.org](https://nodejs.org) or `nvm install 25`          |
 | Yarn    | >= 1.22.5 | `npm install --global yarn`                                   |
 | Docker  | Latest    | [docker.com](https://docs.docker.com/get-docker/) (for Redis) |
 

@@ -9,7 +9,7 @@ initial setup.
 Run every check and collect results. Report all at once.
 
 ```bash
-# Node.js >= 18.0.0
+# Node.js >= 25.3.0
 node --version 2>&1 || which node
 
 # Yarn
@@ -27,7 +27,7 @@ docker compose version 2>&1 || which docker-compose
 ```
 Freighter Backend V1 — Prerequisites Check
 ============================================
-  Node.js        v22.x.x        >= 18.0.0 required   OK
+  Node.js        v25.x.x        >= 25.3.0 required   OK
   Yarn           1.22.x         >= 1.22.5 required    OK
   Docker         27.x.x         any (for Redis)       OK
   Docker Compose 2.x.x          any                   OK
@@ -39,7 +39,7 @@ Present missing tools and ask the user to confirm before installing.
 
 **Auto-installable (run after user confirms):**
 
-- **nvm + Node.js**: `nvm install 22` (or any version >= 18)
+- **nvm + Node.js**: `nvm install 25` (or any version >= 25.3.0)
 - **Yarn**: `npm install --global yarn`
 - **Docker**: `brew install --cask docker` (macOS) or follow
   [docs.docker.com](https://docs.docker.com/engine/install/) (Linux)
