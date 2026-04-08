@@ -52,15 +52,20 @@ Check if `.env` exists. If not:
 cp .env-EXAMPLE .env
 ```
 
+Copying `.env-EXAMPLE` is only the starting point. Before the app will boot,
+make sure all required environment variables are set in `.env`.
+
 For local development with `yarn start`, most values can stay as `not-set` — the
 app uses an in-memory store. Set these for basic operation:
 
-| Variable              | Value for local dev       |
-| --------------------- | ------------------------- |
-| `MODE`                | `development`             |
-| `HOSTNAME`            | `localhost`               |
-| `REDIS_PORT`          | `6379`                    |
-| `REDIS_CONNECTION_NAME` | `freighter-dev`         |
+| Variable                       | Value for local dev                  |
+| ------------------------------ | ------------------------------------ |
+| `MODE`                         | `development`                        |
+| `HOSTNAME`                     | `localhost`                          |
+| `REDIS_PORT`                   | `6379`                               |
+| `REDIS_CONNECTION_NAME`        | `freighter-dev`                      |
+| `FREIGHTER_RPC_PUBNET_URL`     | Your pubnet RPC URL                  |
+| `FREIGHTER_TRUST_PROXY_RANGE`  | `127.0.0.1/32`                       |
 
 ## Step 5: Run initial setup
 
