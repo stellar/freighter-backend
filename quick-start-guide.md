@@ -1,4 +1,4 @@
-# Freighter Backend V1 — LLM Quick Start
+# Freighter Backend V1 — Quick Start Guide
 
 Evaluate the contributor's machine against all prerequisites for
 freighter-backend (TypeScript/Fastify), install what's missing, and run the
