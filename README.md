@@ -36,7 +36,7 @@ For full operational details, start with [the docs index](./docs/README.md) or j
 
 ## Mercury Details
 
-This project integrates with Mercury, an indexer for Stellar/Soroban. You can find general developer documentation in [their repo docs](https://github.com/xycloo/merury-developers-documentation/blob/main/src/SUMMARY.md).
+This project integrates with Mercury, an indexer for Stellar/Soroban. You can find general developer documentation in [their repo docs](https://github.com/xycloo/mercury-developers-documentation/blob/main/src/SUMMARY.md).
 
 For full integration details, see [the Mercury docs](./docs/mercury.md).
 
