@@ -19,7 +19,7 @@ yarn --version 2>&1 || which yarn
 docker --version 2>&1 || which docker
 
 # Docker Compose
-docker compose version 2>&1 || docker-compose --version 2>&1
+docker compose version 2>&1 || docker-compose version 2>&1
 ```
 
 ## Step 2: Present results
