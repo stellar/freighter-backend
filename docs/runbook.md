@@ -57,21 +57,21 @@ Notes:
 
 The current config validation is strict. These values are required at process start even if the related feature is turned off at runtime.
 
-| Variable                                                                         | Purpose                         | Notes                                                             |
-| -------------------------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------- |
-| `MODE`                                                                           | Base runtime mode               | `development` or `production`                                     |
-| `HOSTNAME`                                                                       | Redis hostname                  | Used by Redis clients in production                               |
-| `REDIS_CONNECTION_NAME`                                                          | Redis client connection name    | Shared by main process and workers                                |
-| `REDIS_PORT`                                                                     | Redis port                      | Numeric                                                           |
-| `USE_MERCURY`                                                                    | Initial Mercury runtime flag    | Persisted into Redis on startup                                   |
-| `DISABLE_TOKEN_PRICES`                                                           | Price-worker feature flag       | Provide explicit `true` or `false`                                |
-| `FREIGHTER_TRUST_PROXY_RANGE`                                                    | Fastify proxy trust range       | Treated as optional by the server, but still validated at startup |
-| `FREIGHTER_HORIZON_URL`                                                          | Horizon URL used by price logic | Also used by price-worker health checks                           |
-| `FREIGHTER_RPC_PUBNET_URL`                                                       | Public Soroban RPC URL          | Required for RPC-backed routes                                    |
-| `BLOCKAID_KEY`                                                                   | Blockaid API key                | Needed for scan routes                                            |
-| `AUTH_EMAIL` / `AUTH_PASS`                                                       | Mercury pubnet credentials      | Required by current config validation                             |
-| `AUTH_EMAIL_TESTNET` / `AUTH_PASS_TESTNET`                                       | Mercury testnet credentials     | Required by current config validation                             |
-| `MERCURY_INTEGRITY_CHECK_ACCOUNT_EMAIL` / `MERCURY_INTEGRITY_CHECK_ACCOUNT_PASS` | Integrity-check Mercury account | Used by the worker when Mercury is enabled                        |
+| Variable                                                                         | Purpose                         | Notes                                                                                                                                                           |
+| -------------------------------------------------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MODE`                                                                           | Base runtime mode               | `development` or `production`                                                                                                                                   |
+| `HOSTNAME`                                                                       | Redis hostname                  | Used by Redis clients in production                                                                                                                             |
+| `REDIS_CONNECTION_NAME`                                                          | Redis client connection name    | Shared by main process and workers                                                                                                                              |
+| `REDIS_PORT`                                                                     | Redis port                      | Numeric                                                                                                                                                         |
+| `USE_MERCURY`                                                                    | Initial Mercury runtime flag    | Persisted into Redis on startup                                                                                                                                 |
+| `DISABLE_TOKEN_PRICES`                                                           | Price-worker feature flag       | Provide explicit `true` or `false`                                                                                                                              |
+| `FREIGHTER_TRUST_PROXY_RANGE`                                                    | Fastify proxy trust range       | May be empty/unset, but if provided it must be a valid CIDR range — any non-empty invalid value is passed to `proxy-addr` and will crash the process at startup |
+| `FREIGHTER_HORIZON_URL`                                                          | Horizon URL used by price logic | Also used by price-worker health checks                                                                                                                         |
+| `FREIGHTER_RPC_PUBNET_URL`                                                       | Public Soroban RPC URL          | Required for RPC-backed routes                                                                                                                                  |
+| `BLOCKAID_KEY`                                                                   | Blockaid API key                | Needed for scan routes                                                                                                                                          |
+| `AUTH_EMAIL` / `AUTH_PASS`                                                       | Mercury pubnet credentials      | Required by current config validation                                                                                                                           |
+| `AUTH_EMAIL_TESTNET` / `AUTH_PASS_TESTNET`                                       | Mercury testnet credentials     | Required by current config validation                                                                                                                           |
+| `MERCURY_INTEGRITY_CHECK_ACCOUNT_EMAIL` / `MERCURY_INTEGRITY_CHECK_ACCOUNT_PASS` | Integrity-check Mercury account | Used by the worker when Mercury is enabled                                                                                                                      |
 
 ### Feature-specific configuration
 
@@ -91,14 +91,14 @@ The current config validation is strict. These values are required at process st
 
 ## Health checks
 
-| Check            | URL                                         | Healthy behavior                     | Important nuance                                                                                          |
-| ---------------- | ------------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| Process liveness | `GET /api/v1/ping`                          | `200 Alive!`                         | Confirms the main process is answering HTTP                                                               |
+| Check            | URL                                         | Healthy behavior                     | Important nuance                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------- | ------------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Process liveness | `GET /api/v1/ping`                          | `200 Alive!`                         | Confirms the main process is answering HTTP                                                                                                                                                                                                                                                                                                                           |
 | Price worker     | `GET /api/v1/price-worker-health`           | `200 {"status":"healthy"}`           | Returns `503` when Redis is missing, Horizon is unhealthy, cache bootstrap failed, or price data is stale. Also returns `503` when `DISABLE_TOKEN_PRICES=true` because the worker does not run and `price_cache_initialized`/`price_worker_last_update` are never set—this is expected and not an incident. Only monitor this endpoint when token prices are enabled. |
-| Soroban RPC      | `GET /api/v1/rpc-health?network=PUBLIC`     | `200` with RPC health payload        | Can return `200` with `{"status":"unhealthy"}` in the body on failures                                    |
-| Horizon          | `GET /api/v1/horizon-health?network=PUBLIC` | `200` with Horizon `/health` payload | Returns `500` with null health fields on failures                                                         |
-| Feature flags    | `GET /api/v1/feature-flags`                 | `200 {"useSorobanPublic":true}`      | Does not expose the runtime `USE_MERCURY` Redis flag                                                      |
-| Metrics          | `GET /metrics` on port `9090`               | Prometheus text payload              | Separate server and separate rate limiter                                                                 |
+| Soroban RPC      | `GET /api/v1/rpc-health?network=PUBLIC`     | `200` with RPC health payload        | Can return `200` with `{"status":"unhealthy"}` in the body on failures                                                                                                                                                                                                                                                                                                |
+| Horizon          | `GET /api/v1/horizon-health?network=PUBLIC` | `200` with Horizon `/health` payload | Returns `500` with null health fields on failures                                                                                                                                                                                                                                                                                                                     |
+| Feature flags    | `GET /api/v1/feature-flags`                 | `200 {"useSorobanPublic":true}`      | Does not expose the runtime `USE_MERCURY` Redis flag                                                                                                                                                                                                                                                                                                                  |
+| Metrics          | `GET /metrics` on port `9090`               | Prometheus text payload              | Separate server and separate rate limiter                                                                                                                                                                                                                                                                                                                             |
 
 ## Verification checklist after startup
 
@@ -164,6 +164,20 @@ Response:
 1. Confirm the main process is still running.
 2. Check whether port `9090` is bound and reachable.
 3. Treat metrics-server failures separately from application-port failures.
+
+## Testing
+
+Run the unit test suite with:
+
+```bash
+yarn test
+```
+
+### Mercury integrity test
+
+To exercise Mercury data integrity against Horizon, configure your env with `USE_MERCURY=true` and `MODE=production`. The integrity-check worker will continuously process new blocks, query both Mercury and Horizon for the same operation, normalize both responses into a common schema, and compare them for correctness.
+
+On an integrity failure the `USE_MERCURY` Redis flag flips to `false` and the application falls back to serving requests from Horizon / RPC.
 
 ## Related docs
 
