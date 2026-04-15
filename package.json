@@ -36,7 +36,7 @@
     "@fastify/rate-limit": "^10.2.1",
     "@redis/time-series": "^1.0.0",
     "@sentry/node": "^8.45.0",
-    "@stellar/js-xdr": "^4.0.0",
+    "@stellar/js-xdr": "4.0.0",
     "@urql/core": "^5.0.8",
     "ajv": "^8.17.0",
     "axios": "^1.7.9",

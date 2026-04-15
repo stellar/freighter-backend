@@ -1118,7 +1118,7 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
-"@stellar/js-xdr@^4.0.0":
+"@stellar/js-xdr@4.0.0", "@stellar/js-xdr@^4.0.0":
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/@stellar/js-xdr/-/js-xdr-4.0.0.tgz#5c4bd396a71ea3aef7a91dee885cf8dd2e10c5cf"
   integrity sha512-+NmNa7Tk5BI5XFdy/6xGTqAN4J9a9KgCrCGhj2uEUTCBhLkch0M+QbKzNH8zEnejWe0p8w+0q5hUVX6L3OzoVA==
