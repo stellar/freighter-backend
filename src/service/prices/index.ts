@@ -413,6 +413,17 @@ export class PriceClient {
    */
   private async addBatchToCache(tokenBatch: TokenKey[]): Promise<void> {
     const prices = await this.calculateBatchPrices(tokenBatch);
+
+    // Defense-in-depth: if a token in the batch failed price calculation and
+    // its TS key has no samples, treat it as an orphan (e.g. created before
+    // the addNewTokenToCache reorder fix) and evict it so the worker stops
+    // retrying it indefinitely.
+    const succeeded = new Set(prices.map((p) => p.token));
+    const failed = tokenBatch.filter((token) => !succeeded.has(token));
+    if (failed.length > 0) {
+      await this.evictOrphans(failed);
+    }
+
     if (prices.length === 0) {
       this.logger.warn("No prices calculated for batch");
       return;
@@ -426,6 +437,38 @@ export class PriceClient {
       }),
     );
     await this.redisClient!.ts.mAdd(mAddEntries);
+  }
+
+  private async evictOrphans(tokens: TokenKey[]): Promise<void> {
+    if (!this.redisClient) {
+      return;
+    }
+    for (const token of tokens) {
+      const tsKey = this.getTimeSeriesKey(token);
+      let hasSamples = false;
+      try {
+        const latest = await this.redisClient.ts.get(tsKey);
+        hasSamples = !!latest;
+      } catch (e) {
+        // Key does not exist — still want to drop the sorted-set entry.
+        hasSamples = false;
+      }
+
+      if (hasSamples) {
+        continue;
+      }
+
+      try {
+        await this.redisClient.zRem(
+          PriceClient.TOKEN_COUNTER_SORTED_SET_KEY,
+          tsKey,
+        );
+        await this.redisClient.del(tsKey);
+        this.logger.warn(`Evicted orphan token ${token} from price cache`);
+      } catch (e) {
+        this.logger.error(ensureError(e, `evicting orphan ${token}`));
+      }
+    }
   }
 
   /**
@@ -582,36 +625,39 @@ export class PriceClient {
   private addNewTokenToCache = async (
     token: TokenKey,
   ): Promise<TokenPriceData | null> => {
+    if (!this.redisClient) {
+      throw new Error("Redis client not initialized");
+    }
+
+    // Calculate the price first so a failed calculation never persists an
+    // orphan TS key or token_counter entry that the worker would retry forever.
+    let result: PriceCalculationResult;
     try {
-      if (!this.redisClient) {
-        throw new Error("Redis client not initialized");
-      }
-
-      let tsKey: string;
-      try {
-        tsKey = this.getTimeSeriesKey(token);
-        await this.createTimeSeries(tsKey);
-      } catch (e) {
-        throw new Error(`creating time series for ${token}`);
-      }
-
-      const { timestamp, price } = await this.calculatePriceInUSD(token);
-
-      try {
-        await this.redisClient.ts.add(tsKey, timestamp, price.toNumber());
-      } catch (e) {
-        throw new Error(`adding price to time series for ${token}`);
-      }
-
-      return {
-        currentPrice: price,
-        percentagePriceChange24h: null,
-      } as TokenPriceData;
+      result = await this.calculatePriceInUSD(token);
     } catch (e) {
-      const error = ensureError(e, `adding new token to cache for ${token}`);
-      this.logger.error(error);
+      this.logger.error(ensureError(e, `calculating price for ${token}`));
       return null;
     }
+
+    const tsKey = this.getTimeSeriesKey(token);
+    try {
+      await this.createTimeSeries(tsKey);
+      await this.redisClient.ts.add(
+        tsKey,
+        result.timestamp,
+        result.price.toNumber(),
+      );
+    } catch (e) {
+      this.logger.error(
+        ensureError(e, `adding new token to cache for ${token}`),
+      );
+      return null;
+    }
+
+    return {
+      currentPrice: result.price,
+      percentagePriceChange24h: null,
+    };
   };
 
   /**

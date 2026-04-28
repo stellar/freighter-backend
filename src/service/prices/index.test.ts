@@ -2,7 +2,7 @@ import { PriceClient } from "./index";
 import { testLogger } from "../../helper/test-helper";
 import { TokenPriceData } from "./types";
 import BigNumber from "bignumber.js";
-import { PriceCalculationError } from "./errors";
+import { PathsNotFoundError, PriceCalculationError } from "./errors";
 describe("Token Price Client", () => {
   let priceClient: PriceClient;
   const mockRedisClient: any = {
@@ -16,6 +16,8 @@ describe("Token Price Client", () => {
     },
     zIncrBy: jest.fn(),
     zRange: jest.fn(),
+    zRem: jest.fn(),
+    del: jest.fn(),
     set: jest.fn(),
     multi: jest.fn(),
     get: jest.fn(),
@@ -267,9 +269,7 @@ describe("Token Price Client", () => {
       expect(result).toBeNull();
       expect(testLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: expect.stringContaining(
-            `adding new token to cache for ${token}`,
-          ),
+          message: expect.stringContaining(`calculating price for ${token}`),
         }),
       );
 
@@ -281,6 +281,31 @@ describe("Token Price Client", () => {
         expect.stringContaining(
           `Token in cache but no latest price found for ${token}`,
         ),
+      );
+    });
+
+    it("should NOT persist Redis state when price calculation fails for new token", async () => {
+      // Issue #306: addNewTokenToCache must not create a TS key or increment
+      // the token_counter sorted set when calculatePriceInUSD rejects.
+      mockRedisClient.ts.get.mockRejectedValue(new Error("Key does not exist"));
+
+      const token =
+        "FAKE:GBVK6IBOJOX44RFGUZHVH6P3RP4QYLEPZHMTCG2RMQ6GUKQTWAFXKW3J";
+      jest
+        .spyOn(priceClient as any, "calculatePriceInUSD")
+        .mockRejectedValue(new PathsNotFoundError(token));
+
+      const result = await priceClient.getPrice(token);
+
+      expect(result).toBeNull();
+      // No orphan TS key
+      expect(mockRedisClient.ts.create).not.toHaveBeenCalled();
+      expect(mockRedisClient.ts.add).not.toHaveBeenCalled();
+      // No orphan sorted-set entry
+      expect(mockRedisClient.zIncrBy).not.toHaveBeenCalledWith(
+        "token_counter",
+        expect.anything(),
+        expect.stringContaining("FAKE:"),
       );
     });
 
@@ -479,6 +504,61 @@ describe("Token Price Client", () => {
       expect(testLogger.warn).toHaveBeenCalledWith(
         "No prices calculated for batch",
       );
+    });
+
+    it("addBatchToCache should evict orphan tokens whose TS has no samples and price calc failed", async () => {
+      // Issue #306 defense-in-depth: if a token in the batch fails price
+      // calculation AND its TS has zero samples, treat it as an orphan and
+      // remove it from token_counter + delete the empty TS key.
+      jest
+        .spyOn(priceClient as any, "calculatePriceInUSD")
+        .mockImplementation((token: any) => {
+          if (token === "GOOD:TOKEN") {
+            return Promise.resolve({
+              timestamp: 111,
+              price: new BigNumber(100),
+            });
+          }
+          return Promise.reject(new PathsNotFoundError(token as string));
+        });
+
+      // Orphan TS has no samples — ts.get returns null
+      mockRedisClient.ts.get.mockResolvedValue(null);
+
+      await priceClient["addBatchToCache"](["GOOD:TOKEN", "ORPHAN:TOKEN"]);
+
+      expect(mockRedisClient.zRem).toHaveBeenCalledWith(
+        "token_counter",
+        "ORPHAN:TOKEN",
+      );
+      expect(mockRedisClient.del).toHaveBeenCalledWith("ORPHAN:TOKEN");
+      // Good token's price still added
+      expect(mockRedisClient.ts.mAdd).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: "GOOD:TOKEN",
+            timestamp: 111,
+            value: 100,
+          }),
+        ]),
+      );
+    });
+
+    it("addBatchToCache should NOT evict tokens with existing samples on transient calc failure", async () => {
+      jest
+        .spyOn(priceClient as any, "calculatePriceInUSD")
+        .mockRejectedValue(new Error("transient horizon error"));
+
+      // TS has at least one sample — token is healthy, just transient failure
+      mockRedisClient.ts.get.mockResolvedValue({
+        timestamp: 1234,
+        value: 99,
+      });
+
+      await priceClient["addBatchToCache"](["HEALTHY:TOKEN"]);
+
+      expect(mockRedisClient.zRem).not.toHaveBeenCalled();
+      expect(mockRedisClient.del).not.toHaveBeenCalled();
     });
 
     it("getTimeSeriesKey should handle native asset correctly", async () => {
