@@ -445,16 +445,37 @@ export class PriceClient {
     }
     for (const token of tokens) {
       const tsKey = this.getTimeSeriesKey(token);
-      let hasSamples = false;
+      let shouldEvict = false;
       try {
         const latest = await this.redisClient.ts.get(tsKey);
-        hasSamples = !!latest;
+        shouldEvict = !latest;
       } catch (e) {
-        // Key does not exist — still want to drop the sorted-set entry.
-        hasSamples = false;
+        // ts.get failed — only treat as orphan if the key truly does not
+        // exist. A transient Redis error must not evict a healthy token.
+        try {
+          const exists = await this.redisClient.exists(tsKey);
+          if (exists) {
+            this.logger.error(
+              ensureError(
+                e,
+                `checking time-series samples for ${token}; key exists so skipping orphan eviction`,
+              ),
+            );
+            continue;
+          }
+          shouldEvict = true;
+        } catch (existsError) {
+          this.logger.error(
+            ensureError(
+              existsError,
+              `verifying time-series existence for ${token}; skipping orphan eviction`,
+            ),
+          );
+          continue;
+        }
       }
 
-      if (hasSamples) {
+      if (!shouldEvict) {
         continue;
       }
 
@@ -629,17 +650,20 @@ export class PriceClient {
       throw new Error("Redis client not initialized");
     }
 
+    // Normalize first so "native" is handled the same as "XLM" downstream —
+    // calculatePriceInUSD only special-cases "XLM", and the TS key uses "XLM".
+    const tsKey = this.getTimeSeriesKey(token);
+
     // Calculate the price first so a failed calculation never persists an
     // orphan TS key or token_counter entry that the worker would retry forever.
     let result: PriceCalculationResult;
     try {
-      result = await this.calculatePriceInUSD(token);
+      result = await this.calculatePriceInUSD(tsKey);
     } catch (e) {
       this.logger.error(ensureError(e, `calculating price for ${token}`));
       return null;
     }
 
-    const tsKey = this.getTimeSeriesKey(token);
     try {
       await this.createTimeSeries(tsKey);
       await this.redisClient.ts.add(
