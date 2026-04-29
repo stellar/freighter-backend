@@ -1475,6 +1475,13 @@ export async function initApiServer(
           reply,
         ) => {
           const { address } = request.body;
+          // Forwarded to Coinbase to bind the resulting Onramp session to the
+          // requesting client. Relies on FREIGHTER_TRUST_PROXY_RANGE matching
+          // the actual upstream proxy CIDR — currently the EKS pod range. If
+          // Cloudflare (or any new hop) is ever added in front of this service,
+          // that env var must include its egress ranges or request.ip will
+          // silently resolve to the proxy and defeat the IP binding.
+          const clientIp = request.ip;
           if (
             !coinbaseConfig.coinbaseApiKey ||
             !coinbaseConfig.coinbaseApiSecret
@@ -1485,6 +1492,7 @@ export async function initApiServer(
           try {
             const { data, error } = await fetchOnrampSessionToken({
               address,
+              clientIp,
               coinbaseConfig,
             });
 

@@ -48,9 +48,11 @@ export const generateJWT = ({
 
 export const fetchOnrampSessionToken = async ({
   address,
+  clientIp,
   coinbaseConfig,
 }: {
   address: string;
+  clientIp?: string;
   coinbaseConfig: {
     coinbaseApiKey: string;
     coinbaseApiSecret: string;
@@ -65,6 +67,7 @@ export const fetchOnrampSessionToken = async ({
       },
       body: JSON.stringify({
         addresses: [{ address, blockchains: ["stellar"], assets: ["XLM"] }],
+        ...(clientIp ? { clientIp } : {}),
       }),
     };
     const res = await fetch(`https://${requestHost}${requestPath}`, options);

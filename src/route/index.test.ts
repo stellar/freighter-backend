@@ -1110,14 +1110,16 @@ describe("API routes", () => {
     });
 
     it("can fetch an onramp token", async () => {
-      jest.spyOn(OnrampHelpers, "fetchOnrampSessionToken").mockReturnValueOnce(
-        Promise.resolve({
-          data: {
-            token: "token",
-          },
-          error: null,
-        }),
-      );
+      const fetchSpy = jest
+        .spyOn(OnrampHelpers, "fetchOnrampSessionToken")
+        .mockReturnValueOnce(
+          Promise.resolve({
+            data: {
+              token: "token",
+            },
+            error: null,
+          }),
+        );
 
       const server = await getDevServer();
       const url = new URL(
@@ -1139,6 +1141,12 @@ describe("API routes", () => {
 
       expect(response.status).toEqual(200);
       expect(resJson.data.token).toEqual("token");
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: "GFOO",
+          clientIp: expect.any(String),
+        }),
+      );
       await server.close();
     });
     it("does not fetch a token without Coinbase config", async () => {
