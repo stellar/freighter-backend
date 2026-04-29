@@ -305,6 +305,66 @@ describe("Token Price Client", () => {
       expect(mockRedisClient.zIncrBy).not.toHaveBeenCalled();
     });
 
+    it("should clean up partial state when ts.add fails after createTimeSeries", async () => {
+      // If ts.add throws after createTimeSeries has already run ts.create +
+      // zIncrBy, addNewTokenToCache must compensate so we don't leave an
+      // orphan TS key + token_counter entry for the next evictOrphans tick.
+      mockRedisClient.ts.get.mockRejectedValue(new Error("Key does not exist"));
+
+      const token =
+        "FAKE:GBVK6IBOJOX44RFGUZHVH6P3RP4QYLEPZHMTCG2RMQ6GUKQTWAFXKW3J";
+      jest.spyOn(priceClient as any, "calculatePriceInUSD").mockResolvedValue({
+        timestamp: 222,
+        price: new BigNumber(0.12),
+      });
+
+      mockRedisClient.ts.add.mockRejectedValueOnce(new Error("redis blip"));
+
+      const result = await priceClient.getPrice(token);
+
+      expect(result).toBeNull();
+      // createTimeSeries did run, so both writes happened…
+      expect(mockRedisClient.ts.create).toHaveBeenCalledWith(
+        token,
+        expect.any(Object),
+      );
+      expect(mockRedisClient.zIncrBy).toHaveBeenCalledWith(
+        "token_counter",
+        1,
+        token,
+      );
+      // …and the catch arm must have undone them.
+      expect(mockRedisClient.zRem).toHaveBeenCalledWith("token_counter", token);
+      expect(mockRedisClient.del).toHaveBeenCalledWith(token);
+    });
+
+    it("should not throw if compensating cleanup itself fails", async () => {
+      // Cleanup is best-effort: a failure in zRem/del must not mask the
+      // original ts.add error or surface as an unhandled rejection.
+      mockRedisClient.ts.get.mockRejectedValue(new Error("Key does not exist"));
+
+      const token =
+        "FAKE:GBVK6IBOJOX44RFGUZHVH6P3RP4QYLEPZHMTCG2RMQ6GUKQTWAFXKW3J";
+      jest.spyOn(priceClient as any, "calculatePriceInUSD").mockResolvedValue({
+        timestamp: 222,
+        price: new BigNumber(0.12),
+      });
+
+      mockRedisClient.ts.add.mockRejectedValueOnce(new Error("redis blip"));
+      mockRedisClient.zRem.mockRejectedValueOnce(new Error("still flaky"));
+
+      const result = await priceClient.getPrice(token);
+
+      expect(result).toBeNull();
+      expect(testLogger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            `cleaning up partial cache state for ${token}`,
+          ),
+        }),
+      );
+    });
+
     it("should normalize 'native' to XLM when populating a cache miss", async () => {
       // calculatePriceInUSD only special-cases "XLM"; passing the raw "native"
       // would throw InvalidTokenFormatError. addNewTokenToCache must normalize

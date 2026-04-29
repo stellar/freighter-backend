@@ -656,6 +656,23 @@ export class PriceClient {
       this.logger.error(
         ensureError(e, `adding new token to cache for ${token}`),
       );
+      // Compensate for partial state: createTimeSeries writes both the TS
+      // key and the token_counter entry, so a failed ts.add would otherwise
+      // leave an orphan until the next evictOrphans pass on the worker tick.
+      try {
+        await this.redisClient.zRem(
+          PriceClient.TOKEN_COUNTER_SORTED_SET_KEY,
+          tsKey,
+        );
+        await this.redisClient.del(tsKey);
+      } catch (cleanupErr) {
+        this.logger.warn(
+          ensureError(
+            cleanupErr,
+            `cleaning up partial cache state for ${token}`,
+          ),
+        );
+      }
       return null;
     }
 
