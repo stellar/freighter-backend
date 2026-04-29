@@ -1482,6 +1482,18 @@ export async function initApiServer(
           // that env var must include its egress ranges or request.ip will
           // silently resolve to the proxy and defeat the IP binding.
           const clientIp = request.ip;
+          // TODO(remove): temporary diagnostic to verify trustProxy chain
+          // resolves request.ip to the real client IP rather than an
+          // intra-cluster hop. Drop once verified.
+          logger.info(
+            {
+              clientIp,
+              xff: request.headers["x-forwarded-for"],
+              xRealIp: request.headers["x-real-ip"],
+              socketRemote: request.socket.remoteAddress,
+            },
+            "onramp.token request",
+          );
           if (
             !coinbaseConfig.coinbaseApiKey ||
             !coinbaseConfig.coinbaseApiSecret
