@@ -445,37 +445,18 @@ export class PriceClient {
     }
     for (const token of tokens) {
       const tsKey = this.getTimeSeriesKey(token);
-      let shouldEvict = false;
+      let hasSamples = false;
       try {
         const latest = await this.redisClient.ts.get(tsKey);
-        shouldEvict = !latest;
+        hasSamples = !!latest;
       } catch (e) {
-        // ts.get failed — only treat as orphan if the key truly does not
-        // exist. A transient Redis error must not evict a healthy token.
-        try {
-          const exists = await this.redisClient.exists(tsKey);
-          if (exists) {
-            this.logger.error(
-              ensureError(
-                e,
-                `checking time-series samples for ${token}; key exists so skipping orphan eviction`,
-              ),
-            );
-            continue;
-          }
-          shouldEvict = true;
-        } catch (existsError) {
-          this.logger.error(
-            ensureError(
-              existsError,
-              `verifying time-series existence for ${token}; skipping orphan eviction`,
-            ),
-          );
-          continue;
-        }
+        // ts.get on a missing key throws — treat as no samples and evict.
+        // Mirrors the pattern used by getPrice (any error → cache miss path).
+        // Transient-error defense belongs at the client layer, not here.
+        hasSamples = false;
       }
 
-      if (!shouldEvict) {
+      if (hasSamples) {
         continue;
       }
 

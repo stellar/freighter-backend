@@ -21,7 +21,6 @@ describe("Token Price Client", () => {
     set: jest.fn(),
     multi: jest.fn(),
     get: jest.fn(),
-    exists: jest.fn(),
   };
 
   beforeEach(() => {
@@ -582,32 +581,12 @@ describe("Token Price Client", () => {
       expect(mockRedisClient.del).not.toHaveBeenCalled();
     });
 
-    it("addBatchToCache should NOT evict when ts.get errors but key still exists", async () => {
-      // Defense against transient Redis errors: a failing ts.get must not by
-      // itself trigger eviction — the key may still exist with valid samples.
-      jest
-        .spyOn(priceClient as any, "calculatePriceInUSD")
-        .mockRejectedValue(new PathsNotFoundError("HEALTHY:TOKEN"));
-
-      mockRedisClient.ts.get.mockRejectedValue(
-        new Error("transient redis error"),
-      );
-      mockRedisClient.exists.mockResolvedValue(1);
-
-      await priceClient["addBatchToCache"](["HEALTHY:TOKEN"]);
-
-      expect(mockRedisClient.exists).toHaveBeenCalledWith("HEALTHY:TOKEN");
-      expect(mockRedisClient.zRem).not.toHaveBeenCalled();
-      expect(mockRedisClient.del).not.toHaveBeenCalled();
-    });
-
-    it("addBatchToCache should evict when ts.get errors and exists confirms key is gone", async () => {
+    it("addBatchToCache should evict when ts.get throws for missing key", async () => {
       jest
         .spyOn(priceClient as any, "calculatePriceInUSD")
         .mockRejectedValue(new PathsNotFoundError("ORPHAN:TOKEN"));
 
-      mockRedisClient.ts.get.mockRejectedValue(new Error("key may not exist"));
-      mockRedisClient.exists.mockResolvedValue(0);
+      mockRedisClient.ts.get.mockRejectedValue(new Error("key does not exist"));
 
       await priceClient["addBatchToCache"](["ORPHAN:TOKEN"]);
 
