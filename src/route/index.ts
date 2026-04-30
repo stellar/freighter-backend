@@ -46,7 +46,11 @@ import { getSdk } from "../helper/stellar";
 import { getUseMercury } from "../helper/mercury";
 import { getHttpRequestDurationLabels } from "../helper/metrics";
 import { mode } from "../helper/env";
-import { fetchOnrampSessionToken, CoinbaseConfig } from "../helper/onramp";
+import {
+  fetchOnrampSessionToken,
+  isLikelyInternalIp,
+  CoinbaseConfig,
+} from "../helper/onramp";
 import Blockaid from "@blockaid/client";
 import { PriceClient } from "../service/prices";
 import { TokenPriceData } from "../service/prices/types";
@@ -1477,23 +1481,22 @@ export async function initApiServer(
           const { address } = request.body;
           // Forwarded to Coinbase to bind the resulting Onramp session to the
           // requesting client. Relies on FREIGHTER_TRUST_PROXY_RANGE matching
-          // the actual upstream proxy CIDR — currently the EKS pod range. If
-          // Cloudflare (or any new hop) is ever added in front of this service,
-          // that env var must include its egress ranges or request.ip will
-          // silently resolve to the proxy and defeat the IP binding.
-          const clientIp = request.ip;
-          // TODO(remove): temporary diagnostic to verify trustProxy chain
-          // resolves request.ip to the real client IP rather than an
-          // intra-cluster hop. Drop once verified.
-          logger.info(
-            {
-              clientIp,
-              xff: request.headers["x-forwarded-for"],
-              xRealIp: request.headers["x-real-ip"],
-              socketRemote: request.socket.remoteAddress,
-            },
-            "onramp.token request",
-          );
+          // the actual upstream proxy CIDR. If request.ip looks like an
+          // intra-cluster address, the trust chain is misconfigured — drop
+          // clientIp (Coinbase rejects private addresses) and surface a warn.
+          const rawIp = request.ip;
+          const clientIp = isLikelyInternalIp(rawIp) ? undefined : rawIp;
+          if (!clientIp) {
+            logger.warn(
+              {
+                rawIp,
+                xff: request.headers["x-forwarded-for"],
+                xRealIp: request.headers["x-real-ip"],
+                socketRemote: request.socket.remoteAddress,
+              },
+              "onramp.token: request.ip resolved to private/internal address; FREIGHTER_TRUST_PROXY_RANGE likely misconfigured. Skipping clientIp.",
+            );
+          }
           if (
             !coinbaseConfig.coinbaseApiKey ||
             !coinbaseConfig.coinbaseApiSecret

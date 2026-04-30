@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { fetchOnrampSessionToken } from "./onramp";
+import { fetchOnrampSessionToken, isLikelyInternalIp } from "./onramp";
 
 const coinbaseConfig = {
   coinbaseApiKey: "test-key",
@@ -67,5 +67,51 @@ describe("fetchOnrampSessionToken", () => {
     const body = JSON.parse(options.body);
 
     expect(body).not.toHaveProperty("clientIp");
+  });
+
+  it("surfaces Coinbase's response body in the top-level error on 4xx", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: "invalid clientIp" }),
+      text: async () => '{"error":"invalid clientIp"}',
+    });
+
+    const result = await fetchOnrampSessionToken({
+      address: "GFOO",
+      clientIp: "10.0.0.1",
+      coinbaseConfig,
+    });
+
+    expect(result.data.token).toBe("");
+    expect(result.error).toMatch(/Coinbase 400/);
+    expect(result.error).toMatch(/invalid clientIp/);
+  });
+});
+
+describe("isLikelyInternalIp", () => {
+  it.each([
+    ["::1"],
+    ["127.0.0.1"],
+    ["10.0.0.1"],
+    ["10.255.255.255"],
+    ["172.16.0.1"],
+    ["172.22.89.212"],
+    ["172.31.255.255"],
+    ["192.168.1.1"],
+    ["169.254.1.1"],
+    [""],
+  ])("classifies %s as internal", (ip) => {
+    expect(isLikelyInternalIp(ip)).toBe(true);
+  });
+
+  it.each([
+    ["8.8.8.8"],
+    ["203.0.113.42"],
+    ["172.15.0.1"],
+    ["172.32.0.1"],
+    ["1.1.1.1"],
+  ])("classifies %s as public", (ip) => {
+    expect(isLikelyInternalIp(ip)).toBe(false);
   });
 });

@@ -12,6 +12,19 @@ export interface CoinbaseConfig {
   coinbaseApiSecret: string;
 }
 
+// RFC1918 private, loopback, and link-local addresses (IPv4 and IPv4-mapped
+// IPv6). Used to avoid forwarding intra-cluster IPs to Coinbase when the
+// trustProxy chain is misconfigured — Coinbase rejects private addresses,
+// so dropping clientIp keeps the endpoint functional while we surface the
+// misconfiguration via a warning log at the call site.
+export const isLikelyInternalIp = (ip: string): boolean => {
+  if (!ip) return true;
+  if (ip === "::1" || ip.startsWith("127.")) return true;
+  return /(?:^|:)(10\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)/.test(
+    ip,
+  );
+};
+
 export const generateJWT = ({
   coinbaseConfig,
 }: {
@@ -76,7 +89,20 @@ export const fetchOnrampSessionToken = async ({
       if (res.status >= 500 && res.status < 600) {
         throw new Error("Server error when requesting token");
       }
-      return { data: { token: "", error: "Error fetching token request" } };
+      let detail = "";
+      try {
+        detail = JSON.stringify(await res.json());
+      } catch {
+        try {
+          detail = await res.text();
+        } catch {
+          // swallow
+        }
+      }
+      return {
+        data: { token: "" },
+        error: `Coinbase ${res.status}${detail ? `: ${detail}` : ""}`,
+      };
     }
 
     const resJson = await res.json();

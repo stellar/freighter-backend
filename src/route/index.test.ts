@@ -1141,10 +1141,13 @@ describe("API routes", () => {
 
       expect(response.status).toEqual(200);
       expect(resJson.data.token).toEqual("token");
+      // Local test traffic comes from a loopback address, which is
+      // classified as internal and dropped (Coinbase rejects private IPs).
+      // Real client traffic in prod resolves to a public IP and is forwarded.
       expect(fetchSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           address: "GFOO",
-          clientIp: expect.any(String),
+          clientIp: undefined,
         }),
       );
       await server.close();
