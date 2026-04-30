@@ -73,7 +73,6 @@ describe("fetchOnrampSessionToken", () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 400,
-      json: async () => ({ error: "invalid clientIp" }),
       text: async () => '{"error":"invalid clientIp"}',
     });
 
@@ -100,6 +99,10 @@ describe("isLikelyInternalIp", () => {
     ["172.31.255.255"],
     ["192.168.1.1"],
     ["169.254.1.1"],
+    ["fe80::1"],
+    ["fc00::1"],
+    ["fd12:3456:789a::1"],
+    ["::ffff:10.0.0.1"],
     [""],
   ])("classifies %s as internal", (ip) => {
     expect(isLikelyInternalIp(ip)).toBe(true);
@@ -111,6 +114,7 @@ describe("isLikelyInternalIp", () => {
     ["172.15.0.1"],
     ["172.32.0.1"],
     ["1.1.1.1"],
+    ["2001:db8::1"],
   ])("classifies %s as public", (ip) => {
     expect(isLikelyInternalIp(ip)).toBe(false);
   });

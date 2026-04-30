@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import * as crypto from "crypto";
+import proxyaddr from "proxy-addr";
 
 const requestMethod = "POST";
 const requestHost = "api.developer.coinbase.com";
@@ -12,17 +13,20 @@ export interface CoinbaseConfig {
   coinbaseApiSecret: string;
 }
 
-// RFC1918 private, loopback, and link-local addresses (IPv4 and IPv4-mapped
-// IPv6). Used to avoid forwarding intra-cluster IPs to Coinbase when the
-// trustProxy chain is misconfigured — Coinbase rejects private addresses,
-// so dropping clientIp keeps the endpoint functional while we surface the
-// misconfiguration via a warning log at the call site.
+// Loopback, link-local, and unique-local (RFC1918 + IPv6 ULA) addresses.
+// Used to avoid forwarding intra-cluster IPs to Coinbase when the trustProxy
+// chain is misconfigured — Coinbase rejects private addresses, so dropping
+// clientIp keeps the endpoint functional while we surface the misconfiguration
+// via a warning log at the call site.
+const internalAddr = proxyaddr.compile([
+  "loopback",
+  "linklocal",
+  "uniquelocal",
+]);
+
 export const isLikelyInternalIp = (ip: string): boolean => {
   if (!ip) return true;
-  if (ip === "::1" || ip.startsWith("127.")) return true;
-  return /(?:^|:)(10\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)/.test(
-    ip,
-  );
+  return internalAddr(ip, 0);
 };
 
 export const generateJWT = ({
@@ -91,13 +95,9 @@ export const fetchOnrampSessionToken = async ({
       }
       let detail = "";
       try {
-        detail = JSON.stringify(await res.json());
+        detail = await res.text();
       } catch {
-        try {
-          detail = await res.text();
-        } catch {
-          // swallow
-        }
+        // body unreadable
       }
       return {
         data: { token: "" },
