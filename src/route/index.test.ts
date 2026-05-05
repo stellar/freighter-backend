@@ -113,6 +113,27 @@ jest.mock("@blockaid/client", () => {
   };
 });
 
+describe("initApiServer boot-time validation", () => {
+  it.each([
+    ["whitespace-only", "   "],
+    ["empty list separators", ", , ,"],
+  ])(
+    "throws when FREIGHTER_TRUST_PROXY_RANGE is %s",
+    async (_label, badRange) => {
+      await expect(
+        getDevServer(
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          true,
+          badRange,
+        ),
+      ).rejects.toThrow(/FREIGHTER_TRUST_PROXY_RANGE/);
+    },
+  );
+});
+
 describe("API routes", () => {
   describe("/account-history/:pubKey", () => {
     it("can fetch an account history for a pub key", async () => {
@@ -1109,7 +1130,7 @@ describe("API routes", () => {
       await server.close();
     });
 
-    it("can fetch an onramp token", async () => {
+    it("can fetch an onramp token and binds it to the forwarded client IP", async () => {
       const fetchSpy = jest
         .spyOn(OnrampHelpers, "fetchOnrampSessionToken")
         .mockReturnValueOnce(
@@ -1131,6 +1152,7 @@ describe("API routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Forwarded-For": "203.0.113.42",
         },
         body: JSON.stringify({
           address: "GFOO",
@@ -1141,15 +1163,40 @@ describe("API routes", () => {
 
       expect(response.status).toEqual(200);
       expect(resJson.data.token).toEqual("token");
-      // Local test traffic comes from a loopback address, which is
-      // classified as internal and dropped (Coinbase rejects private IPs).
-      // Real client traffic in prod resolves to a public IP and is forwarded.
       expect(fetchSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           address: "GFOO",
-          clientIp: undefined,
+          clientIp: "203.0.113.42",
         }),
       );
+      await server.close();
+    });
+    it("fails closed with 400 when client IP resolves to an internal address", async () => {
+      const fetchSpy = jest.spyOn(OnrampHelpers, "fetchOnrampSessionToken");
+
+      const server = await getDevServer();
+      const url = new URL(
+        `http://localhost:${
+          (server?.server?.address() as any).port
+        }/api/v1/onramp/token`,
+      );
+      // No X-Forwarded-For — request.ip resolves to loopback and we refuse
+      // rather than mint an unbound Coinbase session.
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: "GFOO",
+        }),
+      };
+      const response = await fetch(url.href, options);
+      const resJson = await response.json();
+
+      expect(response.status).toEqual(400);
+      expect(resJson.error).toMatch(/client IP/i);
+      expect(fetchSpy).not.toHaveBeenCalled();
       await server.close();
     });
     it("does not fetch a token without Coinbase config", async () => {
@@ -1203,6 +1250,7 @@ describe("API routes", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Forwarded-For": "203.0.113.42",
         },
         body: JSON.stringify({
           address: "GFOO",

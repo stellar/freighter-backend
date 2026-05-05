@@ -14,10 +14,10 @@ export interface CoinbaseConfig {
 }
 
 // Loopback, link-local, and unique-local (RFC1918 + IPv6 ULA) addresses.
-// Used to avoid forwarding intra-cluster IPs to Coinbase when the trustProxy
-// chain is misconfigured — Coinbase rejects private addresses, so dropping
-// clientIp keeps the endpoint functional while we surface the misconfiguration
-// via a warning log at the call site.
+// Used to detect when the trustProxy chain is misconfigured — request.ip
+// resolving to one of these classes means Fastify never reached the real
+// public client. The /onramp/token call site refuses with 400 in that case
+// rather than mint an unbound Coinbase session.
 const internalAddr = proxyaddr.compile([
   "loopback",
   "linklocal",
@@ -69,7 +69,7 @@ export const fetchOnrampSessionToken = async ({
   coinbaseConfig,
 }: {
   address: string;
-  clientIp?: string;
+  clientIp: string;
   coinbaseConfig: {
     coinbaseApiKey: string;
     coinbaseApiSecret: string;
@@ -84,8 +84,9 @@ export const fetchOnrampSessionToken = async ({
       },
       body: JSON.stringify({
         addresses: [{ address, blockchains: ["stellar"], assets: ["XLM"] }],
-        ...(clientIp ? { clientIp } : {}),
+        clientIp,
       }),
+      signal: AbortSignal.timeout(10_000),
     };
     const res = await fetch(`https://${requestHost}${requestPath}`, options);
 

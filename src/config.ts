@@ -100,7 +100,8 @@ export function buildConfig(config: Record<string, string | undefined>) {
     },
     trustProxyRange:
       config.FREIGHTER_TRUST_PROXY_RANGE ||
-      process.env.FREIGHTER_TRUST_PROXY_RANGE,
+      process.env.FREIGHTER_TRUST_PROXY_RANGE ||
+      "loopback,linklocal,uniquelocal",
     priceConfig: <PriceConfig>{
       batchUpdateDelayMs:
         Number(config.PRICE_BATCH_UPDATE_DELAY_MS) ||

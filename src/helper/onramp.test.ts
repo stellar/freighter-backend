@@ -22,7 +22,7 @@ describe("fetchOnrampSessionToken", () => {
     jest.restoreAllMocks();
   });
 
-  it("forwards clientIp into the Coinbase request body when provided", async () => {
+  it("forwards clientIp into the Coinbase request body", async () => {
     await fetchOnrampSessionToken({
       address: "GFOO",
       clientIp: "203.0.113.42",
@@ -41,32 +41,15 @@ describe("fetchOnrampSessionToken", () => {
     });
   });
 
-  it("omits clientIp from the body when not provided", async () => {
+  it("attaches an AbortSignal so the outbound fetch can time out", async () => {
     await fetchOnrampSessionToken({
       address: "GFOO",
+      clientIp: "203.0.113.42",
       coinbaseConfig,
     });
 
     const [, options] = fetchMock.mock.calls[0];
-    const body = JSON.parse(options.body);
-
-    expect(body).not.toHaveProperty("clientIp");
-    expect(body.addresses).toEqual([
-      { address: "GFOO", blockchains: ["stellar"], assets: ["XLM"] },
-    ]);
-  });
-
-  it("omits clientIp from the body when passed an empty string", async () => {
-    await fetchOnrampSessionToken({
-      address: "GFOO",
-      clientIp: "",
-      coinbaseConfig,
-    });
-
-    const [, options] = fetchMock.mock.calls[0];
-    const body = JSON.parse(options.body);
-
-    expect(body).not.toHaveProperty("clientIp");
+    expect(options.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("surfaces Coinbase's response body in the top-level error on 4xx", async () => {

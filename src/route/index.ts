@@ -97,9 +97,26 @@ export async function initApiServer(
   });
   register.registerMetric(httpRequestDurationMicroseconds);
 
+  const trustProxySubnets = trustProxyRange
+    ? trustProxyRange
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+  if (trustProxyRange && trustProxySubnets.length === 0) {
+    throw new Error(
+      `FREIGHTER_TRUST_PROXY_RANGE is set to ${JSON.stringify(
+        trustProxyRange,
+      )} which parsed to no subnets. Either unset it (default applies) or ` +
+        `provide a valid CIDR / classification (e.g. "loopback,linklocal,uniquelocal" or "172.16.0.0/12").`,
+    );
+  }
   const server = Fastify({
     loggerInstance: logger,
-    trustProxy: trustProxyRange && proxyaddr.compile(trustProxyRange),
+    trustProxy:
+      trustProxySubnets.length > 0
+        ? proxyaddr.compile(trustProxySubnets)
+        : false,
   });
   server.setValidatorCompiler(({ schema }) => {
     return ajv.compile(schema);
@@ -1463,6 +1480,12 @@ export async function initApiServer(
       instance.route({
         method: "POST",
         url: "/onramp/token",
+        config: {
+          rateLimit: {
+            max: 20,
+            timeWindow: "1 minute",
+          },
+        },
         schema: {
           body: {
             type: "object",
@@ -1479,14 +1502,18 @@ export async function initApiServer(
           reply,
         ) => {
           const { address } = request.body;
+          if (
+            !coinbaseConfig.coinbaseApiKey ||
+            !coinbaseConfig.coinbaseApiSecret
+          ) {
+            return reply.code(400).send({ error: "Coinbase config not set" });
+          }
           // Forwarded to Coinbase to bind the resulting Onramp session to the
-          // requesting client. Relies on FREIGHTER_TRUST_PROXY_RANGE matching
-          // the actual upstream proxy CIDR. If request.ip looks like an
-          // intra-cluster address, the trust chain is misconfigured — drop
-          // clientIp (Coinbase rejects private addresses) and surface a warn.
+          // requesting client. If request.ip resolves to an intra-cluster
+          // address, FREIGHTER_TRUST_PROXY_RANGE doesn't match the actual
+          // proxy chain — refuse rather than issue an unbound session.
           const rawIp = request.ip;
-          const clientIp = isLikelyInternalIp(rawIp) ? undefined : rawIp;
-          if (!clientIp) {
+          if (isLikelyInternalIp(rawIp)) {
             logger.warn(
               {
                 rawIp,
@@ -1494,15 +1521,14 @@ export async function initApiServer(
                 xRealIp: request.headers["x-real-ip"],
                 socketRemote: request.socket.remoteAddress,
               },
-              "onramp.token: request.ip resolved to private/internal address; FREIGHTER_TRUST_PROXY_RANGE likely misconfigured. Skipping clientIp.",
+              "onramp.token: request.ip resolved to private/internal address; FREIGHTER_TRUST_PROXY_RANGE likely misconfigured. Refusing to issue an unbound Coinbase session.",
             );
+            return reply.code(400).send({
+              error:
+                "Could not determine client IP for Coinbase session binding",
+            });
           }
-          if (
-            !coinbaseConfig.coinbaseApiKey ||
-            !coinbaseConfig.coinbaseApiSecret
-          ) {
-            return reply.code(400).send({ error: "Coinbase config not set" });
-          }
+          const clientIp = rawIp;
 
           try {
             const { data, error } = await fetchOnrampSessionToken({

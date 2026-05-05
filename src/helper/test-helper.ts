@@ -667,6 +667,7 @@ async function getDevServer(
   priceConfig = mockPriceConfig,
   stellarRpcConfig = mockStellarRpcConfig,
   useMercury = true,
+  trustProxyRange = "loopback,linklocal,uniquelocal",
 ) {
   register.clear();
 
@@ -683,7 +684,7 @@ async function getDevServer(
     coinbaseConfig,
     priceConfig,
     stellarRpcConfig,
-    "",
+    trustProxyRange,
   );
 
   await server.listen();
