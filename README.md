@@ -44,9 +44,9 @@ For full integration details, see [the Mercury docs](./docs/mercury.md).
 
 This project connects to Coinbase to generate a session token. In order to retrieve this locally, enter Coinbase API key and Coinbase API secret in `.env`. These values can be generated in the Coinbase Developer Platform in `API Keys`.
 
-### Required `.env` keys for the onramp endpoint
+### `FREIGHTER_TRUST_PROXY_RANGE` configuration
 
-The application's startup config check (`ENV_KEYS` in `src/config.ts`) requires `FREIGHTER_TRUST_PROXY_RANGE` to be **declared** in `.env` (or in `process.env`). Removing the key entirely will crash the process at startup with `Error: ENV variables required: FREIGHTER_TRUST_PROXY_RANGE`. The shipped `.env-EXAMPLE` already includes it as `FREIGHTER_TRUST_PROXY_RANGE=` (declared with an empty value), which is what you want for most local setups — leaving the value empty falls through to the built-in default of `loopback,linklocal,uniquelocal`. Set a specific CIDR (e.g. `172.16.0.0/12`) only if your deployment fronts the backend with a proxy in a known IP range.
+`FREIGHTER_TRUST_PROXY_RANGE` is optional. If unset or empty, the application falls back to the built-in default of `loopback,linklocal,uniquelocal`, which covers typical k8s / load-balancer topologies. Set it explicitly to a CIDR (e.g. `172.16.0.0/12`) only when you want to restrict trust to a specific upstream proxy range. Any non-empty invalid value crashes startup via `proxy-addr`.
 
 ### Testing `/onramp/token` locally
 
