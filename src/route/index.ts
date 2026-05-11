@@ -122,7 +122,7 @@ export async function initApiServer(
     return ajv.compile(schema);
   });
   server.register(rateLimiter, {
-    max: 100,
+    max: 300,
     timeWindow: "1 minute",
     redis,
   });
