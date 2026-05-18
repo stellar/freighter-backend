@@ -122,7 +122,7 @@ export async function initApiServer(
     return ajv.compile(schema);
   });
   server.register(rateLimiter, {
-    max: 300,
+    max: 3500,
     timeWindow: "1 minute",
     redis,
   });
@@ -1482,7 +1482,7 @@ export async function initApiServer(
         url: "/onramp/token",
         config: {
           rateLimit: {
-            max: 20,
+            max: 100,
             timeWindow: "1 minute",
           },
         },
