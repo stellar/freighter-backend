@@ -1,6 +1,8 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import Prometheus from "prom-client";
 
+import { isNetwork } from "./validate";
+
 export enum WorkerMessage {
   INTEGRITY_CHECK_PASS = "integrityCheckPass",
   INTEGRITY_CHECK_FAIL = "integrityCheckFail",
@@ -81,7 +83,12 @@ const ROUTE_WHITELIST = [
 export const httpLabelUrl = (url: string) => {
   const [route, search] = url.split("?");
   const params = new URLSearchParams(search);
-  const network = params.get("network") || "unknown";
+  const rawNetwork = params.get("network");
+  // Canonicalize to the finite set of known Stellar networks. The metrics hook
+  // runs on every response (including validation failures) and reads the raw
+  // query string, so without this bound any unauthenticated caller could inject
+  // unbounded `network` label values and blow up Prometheus cardinality.
+  const network = rawNetwork && isNetwork(rawNetwork) ? rawNetwork : "unknown";
 
   // Extract the path without the /api/v1 prefix
   const pathMatch = route.match(/^\/api\/v\d+(.*)$/);

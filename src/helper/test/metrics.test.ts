@@ -54,4 +54,22 @@ describe("httpLabelUrl", () => {
     expect(labels.network).toEqual("unknown");
     expect(labels.route).toEqual("/rpc-health");
   });
+
+  it("should bucket unknown network values to 'unknown' to bound cardinality", () => {
+    const labels = httpLabelUrl("/api/v1/rpc-health?network=REL_ATTACK_12345");
+    expect(labels.network).toEqual("unknown");
+    expect(labels.route).toEqual("/rpc-health");
+  });
+
+  it("should preserve all known Stellar networks", () => {
+    for (const network of ["PUBLIC", "TESTNET", "FUTURENET"]) {
+      const labels = httpLabelUrl(`/api/v1/rpc-health?network=${network}`);
+      expect(labels.network).toEqual(network);
+    }
+  });
+
+  it("should bucket an empty network value to 'unknown'", () => {
+    const labels = httpLabelUrl("/api/v1/rpc-health?network=");
+    expect(labels.network).toEqual("unknown");
+  });
 });
