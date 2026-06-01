@@ -152,13 +152,21 @@ export const httpLabelUrl = (url: string) => {
   };
 };
 
+// HTTP methods the API actually serves. Bucketing anything else as "other"
+// keeps the `method` label bounded as defense-in-depth: the HTTP parser already
+// rejects unrecognized methods, but this avoids relying on that behavior.
+const METHOD_WHITELIST = ["GET", "POST", "OPTIONS", "HEAD"];
+
+export const httpLabelMethod = (method: string) =>
+  METHOD_WHITELIST.includes(method) ? method : "other";
+
 export const getHttpRequestDurationLabels = (
   request: FastifyRequest,
   reply: FastifyReply,
 ) => {
   const { route, network } = httpLabelUrl(request.url);
   return {
-    method: request.method,
+    method: httpLabelMethod(request.method),
     route,
     network,
     status: reply.statusCode,

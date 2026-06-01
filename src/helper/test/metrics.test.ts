@@ -1,4 +1,4 @@
-import { httpLabelUrl } from "../metrics";
+import { httpLabelUrl, httpLabelMethod } from "../metrics";
 
 describe("httpLabelUrl", () => {
   it("should return an account-history label for relevant routes", () => {
@@ -62,14 +62,38 @@ describe("httpLabelUrl", () => {
   });
 
   it("should preserve all known Stellar networks", () => {
-    for (const network of ["PUBLIC", "TESTNET", "FUTURENET"]) {
+    for (const network of [
+      "PUBLIC",
+      "TESTNET",
+      "FUTURENET",
+      "SANDBOX",
+      "STANDALONE",
+    ]) {
       const labels = httpLabelUrl(`/api/v1/rpc-health?network=${network}`);
       expect(labels.network).toEqual(network);
     }
   });
 
+  it("should bucket a case-variant network value to 'unknown'", () => {
+    const labels = httpLabelUrl("/api/v1/rpc-health?network=public");
+    expect(labels.network).toEqual("unknown");
+  });
+
   it("should bucket an empty network value to 'unknown'", () => {
     const labels = httpLabelUrl("/api/v1/rpc-health?network=");
     expect(labels.network).toEqual("unknown");
+  });
+});
+
+describe("httpLabelMethod", () => {
+  it("should preserve the methods the API serves", () => {
+    for (const method of ["GET", "POST", "OPTIONS", "HEAD"]) {
+      expect(httpLabelMethod(method)).toEqual(method);
+    }
+  });
+
+  it("should bucket unrecognized methods to 'other' to bound cardinality", () => {
+    expect(httpLabelMethod("PROPFIND")).toEqual("other");
+    expect(httpLabelMethod("CUSTOMMETHODabc123")).toEqual("other");
   });
 });
