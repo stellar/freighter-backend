@@ -1,10 +1,12 @@
 import * as StellarSdk from "stellar-sdk";
+import { Keypair } from "stellar-sdk";
 import "@blockaid/client";
 import {
   getDevServer,
   queryMockResponse,
   pubKey,
   TEST_SOROBAN_TX,
+  makeOnrampProof,
 } from "../helper/test-helper";
 import { transformAccountHistory } from "../service/mercury/helpers/transformers";
 import { query } from "../service/mercury/queries";
@@ -1130,45 +1132,68 @@ describe("API routes", () => {
       await server.close();
     });
 
-    it("can fetch an onramp token and binds it to the forwarded client IP", async () => {
+    it("mints a token for the signed principal and ignores any body address", async () => {
       const fetchSpy = jest
         .spyOn(OnrampHelpers, "fetchOnrampSessionToken")
-        .mockReturnValueOnce(
-          Promise.resolve({
-            data: {
-              token: "token",
-            },
-            error: null,
-          }),
-        );
+        .mockResolvedValueOnce({ data: { token: "token" }, error: null });
 
+      const kp = Keypair.random();
       const server = await getDevServer();
-      const url = new URL(
-        `http://localhost:${
-          (server?.server?.address() as any).port
-        }/api/v1/onramp/token`,
-      );
-      const options = {
+      const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Forwarded-For": "203.0.113.42",
+          Authorization: makeOnrampProof(kp, { body: {} }),
         },
-        body: JSON.stringify({
-          address: "GFOO",
-        }),
-      };
-      const response = await fetch(url.href, options);
+        body: JSON.stringify({}),
+      });
       const resJson = await response.json();
 
       expect(response.status).toEqual(200);
       expect(resJson.data.token).toEqual("token");
       expect(fetchSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: "GFOO",
+          address: kp.publicKey(),
           clientIp: "203.0.113.42",
         }),
       );
+      await server.close();
+    });
+
+    it("allows an unsigned legacy request during the dual window", async () => {
+      jest
+        .spyOn(OnrampHelpers, "fetchOnrampSessionToken")
+        .mockResolvedValueOnce({ data: { token: "token" }, error: null });
+
+      const server = await getDevServer();
+      const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Forwarded-For": "203.0.113.42",
+        },
+        body: JSON.stringify({ address: "GFOO" }),
+      });
+      expect(response.status).toEqual(200);
+      await server.close();
+    });
+
+    it("rejects a request with a present-but-invalid proof even in dual mode", async () => {
+      const server = await getDevServer();
+      const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Forwarded-For": "203.0.113.42",
+          Authorization: "Stellar garbage.signature",
+        },
+        body: JSON.stringify({}),
+      });
+      expect(response.status).toEqual(401);
       await server.close();
     });
     it("fails closed with 400 when client IP resolves to an internal address", async () => {

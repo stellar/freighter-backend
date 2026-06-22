@@ -171,6 +171,7 @@ async function main() {
     conf.coinbaseConfig,
     conf.priceConfig,
     conf.stellarRpcConfig,
+    conf.onrampAuthMode,
     conf.trustProxyRange,
     redis,
   );

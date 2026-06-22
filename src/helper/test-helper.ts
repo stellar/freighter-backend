@@ -669,6 +669,7 @@ async function getDevServer(
   stellarRpcConfig = mockStellarRpcConfig,
   useMercury = true,
   trustProxyRange = "loopback,linklocal,uniquelocal",
+  onrampAuthMode: "dual" | "enforce" = "dual",
 ) {
   register.clear();
 
@@ -685,6 +686,7 @@ async function getDevServer(
     coinbaseConfig,
     priceConfig,
     stellarRpcConfig,
+    onrampAuthMode,
     trustProxyRange,
   );
 

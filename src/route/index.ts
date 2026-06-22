@@ -51,6 +51,11 @@ import {
   isLikelyInternalIp,
   CoinbaseConfig,
 } from "../helper/onramp";
+import {
+  verifyOnrampProof,
+  enforcePrincipalRateLimit,
+} from "../helper/onramp-auth";
+import { onrampTokenRequestsCounter } from "../helper/metrics";
 import Blockaid from "@blockaid/client";
 import { PriceClient } from "../service/prices";
 import { TokenPriceData } from "../service/prices/types";
@@ -81,6 +86,7 @@ export async function initApiServer(
   coinbaseConfig: CoinbaseConfig,
   priceConfig: PriceConfig,
   stellarRpcConfig: StellarRpcConfig,
+  onrampAuthMode: "dual" | "enforce",
   trustProxyRange?: string,
   redis?: Redis,
 ) {
@@ -1477,7 +1483,7 @@ export async function initApiServer(
         },
       });
 
-      instance.route({
+      instance.route<{ Body: { address?: string } }>({
         method: "POST",
         url: "/onramp/token",
         config: {
@@ -1488,30 +1494,69 @@ export async function initApiServer(
         },
         schema: {
           body: {
+            // `address` kept optional so legacy unsigned clients pass schema during the
+            // dual-accept window. It is IGNORED for signed requests (destination = proof sub).
             type: "object",
-            required: ["address"],
             properties: {
               address: { type: "string" },
             },
+            additionalProperties: false,
           },
         },
+        preHandler: async (request, reply) => {
+          const result = verifyOnrampProof({
+            authorization: request.headers.authorization,
+            method: request.method,
+            path: request.url.split("?")[0],
+            body: request.body ?? {},
+            nowSeconds: Math.floor(Date.now() / 1000),
+          });
+
+          if (!result.ok) {
+            // Dual-accept window: a request with NO proof is allowed on the legacy path.
+            // A present-but-invalid proof is ALWAYS rejected.
+            if (onrampAuthMode === "dual" && !request.headers.authorization) {
+              onrampTokenRequestsCounter.inc({ auth: "unsigned" });
+              return;
+            }
+            onrampTokenRequestsCounter.inc({ auth: "rejected" });
+            return reply.code(result.status).send({ error: result.error });
+          }
+
+          const allowed = await enforcePrincipalRateLimit(redis, result.sub);
+          if (!allowed) {
+            onrampTokenRequestsCounter.inc({ auth: "rejected" });
+            return reply
+              .code(429)
+              .send({ error: "Too many onramp token requests" });
+          }
+
+          onrampTokenRequestsCounter.inc({ auth: "signed" });
+          (
+            request as FastifyRequest & { onrampPrincipal?: string }
+          ).onrampPrincipal = result.sub;
+        },
         handler: async (
-          request: FastifyRequest<{
-            Body: { address: string };
-          }>,
+          request: FastifyRequest<{ Body: { address?: string } }>,
           reply,
         ) => {
-          const { address } = request.body;
           if (
             !coinbaseConfig.coinbaseApiKey ||
             !coinbaseConfig.coinbaseApiSecret
           ) {
             return reply.code(400).send({ error: "Coinbase config not set" });
           }
-          // Forwarded to Coinbase to bind the resulting Onramp session to the
-          // requesting client. If request.ip resolves to an intra-cluster
-          // address, FREIGHTER_TRUST_PROXY_RANGE doesn't match the actual
-          // proxy chain — refuse rather than issue an unbound session.
+
+          // Destination: ALWAYS the proven principal when signed. During the dual window
+          // an unsigned legacy request falls back to its body `address`.
+          const principal = (
+            request as FastifyRequest & { onrampPrincipal?: string }
+          ).onrampPrincipal;
+          const address = principal ?? request.body?.address;
+          if (!address) {
+            return reply.code(400).send({ error: "Missing address" });
+          }
+
           const rawIp = request.ip;
           if (isLikelyInternalIp(rawIp)) {
             logger.warn(
@@ -1536,15 +1581,22 @@ export async function initApiServer(
               clientIp,
               coinbaseConfig,
             });
-
             const { token } = data;
-
             if (!token) {
               return reply
                 .code(400)
                 .send({ error: `Unable to retrieve token: ${error}` });
             }
-
+            // Abuse-investigation record. No secret material, no signature bytes.
+            logger.info(
+              {
+                principal: address,
+                destination: address,
+                authMode: onrampAuthMode,
+                signed: Boolean(principal),
+              },
+              "onramp.token: minted Coinbase session token",
+            );
             return reply.code(200).send({ data: { token } });
           } catch (error) {
             logger.error(error);
