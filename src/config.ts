@@ -16,6 +16,7 @@ const ENV_KEYS = [
   "FREIGHTER_HORIZON_URL",
   "DISABLE_TOKEN_PRICES",
   "FREIGHTER_RPC_PUBNET_URL",
+  "ONRAMP_AUTH_MODE",
 ];
 
 export interface PriceConfig {
@@ -146,6 +147,9 @@ export function buildConfig(config: Record<string, string | undefined>) {
       coinbaseApiSecret:
         config.COINBASE_API_SECRET || process.env.COINBASE_API_SECRET!,
     },
+    onrampAuthMode: (config.ONRAMP_AUTH_MODE ||
+      process.env.ONRAMP_AUTH_MODE ||
+      "dual") as "dual" | "enforce",
   };
 }
 
