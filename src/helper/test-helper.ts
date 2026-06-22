@@ -1,6 +1,6 @@
 import { Client, fetchExchange } from "@urql/core";
 import pino from "pino";
-import { nativeToScVal } from "stellar-sdk";
+import { Keypair, nativeToScVal } from "stellar-sdk";
 import Prometheus from "prom-client";
 import Blockaid from "@blockaid/client";
 
@@ -12,6 +12,7 @@ import { hasIndexerSupport } from "./mercury";
 import { BlockAidService } from "../service/blockaid";
 import { PriceClient } from "../service/prices";
 import { PriceConfig, StellarRpcConfig } from "../config";
+import { canonicalizeJson, sha256Hex, encodeSep53Message } from "./onramp-auth";
 
 export const TEST_SOROBAN_TX =
   "AAAAAgAAAACM6IR9GHiRoVVAO78JJNksy2fKDQNs2jBn8bacsRLcrDucaFsAAAWIAAAAMQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAGAAAAAAAAAABHkEVdJ+UfDnWpBr/qF582IEoDQ0iW0WPzO9CEUdvvh8AAAAIdHJhbnNmZXIAAAADAAAAEgAAAAAAAAAAjOiEfRh4kaFVQDu/CSTZLMtnyg0DbNowZ/G2nLES3KwAAAASAAAAAAAAAADoFl2ACT9HZkbCeuaT9MAIdStpdf58wM3P24nl738AnQAAAAoAAAAAAAAAAAAAAAAAAAAFAAAAAQAAAAAAAAAAAAAAAR5BFXSflHw51qQa/6hefNiBKA0NIltFj8zvQhFHb74fAAAACHRyYW5zZmVyAAAAAwAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtysAAAAEgAAAAAAAAAA6BZdgAk/R2ZGwnrmk/TACHUraXX+fMDNz9uJ5e9/AJ0AAAAKAAAAAAAAAAAAAAAAAAAABQAAAAAAAAABAAAAAAAAAAIAAAAGAAAAAR5BFXSflHw51qQa/6hefNiBKA0NIltFj8zvQhFHb74fAAAAFAAAAAEAAAAHa35L+/RxV6EuJOVk78H5rCN+eubXBWtsKrRxeLnnpRAAAAACAAAABgAAAAEeQRV0n5R8OdakGv+oXnzYgSgNDSJbRY/M70IRR2++HwAAABAAAAABAAAAAgAAAA8AAAAHQmFsYW5jZQAAAAASAAAAAAAAAACM6IR9GHiRoVVAO78JJNksy2fKDQNs2jBn8bacsRLcrAAAAAEAAAAGAAAAAR5BFXSflHw51qQa/6hefNiBKA0NIltFj8zvQhFHb74fAAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAOgWXYAJP0dmRsJ65pP0wAh1K2l1/nzAzc/bieXvfwCdAAAAAQBkcwsAACBwAAABKAAAAAAAAB1kAAAAAA==";
@@ -690,6 +691,23 @@ async function getDevServer(
   await server.listen();
   return server;
 }
+export const makeOnrampProof = (
+  kp: Keypair,
+  opts: { path?: string; body?: unknown; exp?: number } = {},
+): string => {
+  const body = opts.body ?? {};
+  const claims = {
+    sub: kp.publicKey(),
+    method: "POST",
+    path: opts.path ?? "/api/v1/onramp/token",
+    body_hash: sha256Hex(canonicalizeJson(body)),
+    exp: opts.exp ?? Math.floor(Date.now() / 1000) + 15,
+  };
+  const canonical = canonicalizeJson(claims);
+  const sig = kp.sign(encodeSep53Message(canonical));
+  return `Stellar ${Buffer.from(canonical, "utf8").toString("base64url")}.${sig.toString("base64url")}`;
+};
+
 export {
   pubKey,
   mockMercuryClient,
