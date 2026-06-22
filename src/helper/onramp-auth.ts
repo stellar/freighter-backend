@@ -153,3 +153,20 @@ export const verifyOnrampProof = (params: {
 
   return { ok: true, sub: claims.sub };
 };
+
+import type { Redis } from "ioredis";
+
+export const ONRAMP_PRINCIPAL_RATE_LIMIT = 100; // per 60s
+
+export const enforcePrincipalRateLimit = async (
+  redis: Redis | undefined,
+  sub: string,
+): Promise<boolean> => {
+  if (!redis) return true;
+  const key = `onramp:rl:${sub}`;
+  const count = await redis.incr(key);
+  if (count === 1) {
+    await redis.expire(key, 60);
+  }
+  return count <= ONRAMP_PRINCIPAL_RATE_LIMIT;
+};

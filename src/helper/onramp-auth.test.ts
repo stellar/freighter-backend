@@ -177,3 +177,35 @@ describe("verifyOnrampProof", () => {
     });
   });
 });
+
+import {
+  enforcePrincipalRateLimit,
+  ONRAMP_PRINCIPAL_RATE_LIMIT,
+} from "./onramp-auth";
+
+describe("enforcePrincipalRateLimit", () => {
+  const sub = "GABC";
+
+  it("allows and sets TTL on first hit", async () => {
+    const redis = {
+      incr: jest.fn().mockResolvedValue(1),
+      expire: jest.fn().mockResolvedValue(1),
+    };
+    const ok = await enforcePrincipalRateLimit(redis as any, sub);
+    expect(ok).toBe(true);
+    expect(redis.incr).toHaveBeenCalledWith(`onramp:rl:${sub}`);
+    expect(redis.expire).toHaveBeenCalledWith(`onramp:rl:${sub}`, 60);
+  });
+
+  it("blocks once over the limit", async () => {
+    const redis = {
+      incr: jest.fn().mockResolvedValue(ONRAMP_PRINCIPAL_RATE_LIMIT + 1),
+      expire: jest.fn(),
+    };
+    expect(await enforcePrincipalRateLimit(redis as any, sub)).toBe(false);
+  });
+
+  it("allows when redis is undefined (dev/test)", async () => {
+    expect(await enforcePrincipalRateLimit(undefined, sub)).toBe(true);
+  });
+});
