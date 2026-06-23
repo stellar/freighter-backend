@@ -695,11 +695,11 @@ async function getDevServer(
 }
 export const makeOnrampProof = (
   kp: Keypair,
-  opts: { path?: string; body?: unknown; exp?: number } = {},
+  opts: { path?: string; body?: unknown; exp?: number; sub?: string } = {},
 ): string => {
   const body = opts.body ?? {};
   const claims = {
-    sub: kp.publicKey(),
+    sub: opts.sub ?? kp.publicKey(),
     method: "POST",
     path: opts.path ?? "/api/v1/onramp/token",
     body_hash: sha256Hex(canonicalizeJson(body)),

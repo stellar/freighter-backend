@@ -1291,6 +1291,55 @@ describe("API routes", () => {
       );
       await server.close();
     });
+
+    it("returns 401 for an unsigned request in enforce mode (the ticket repro)", async () => {
+      const server = await getDevServer(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "enforce",
+      );
+      const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Forwarded-For": "203.0.113.42",
+        },
+        body: JSON.stringify({ address: "GFOO" }),
+      });
+      expect(response.status).toEqual(401);
+      await server.close();
+    });
+
+    it("returns 400 for a valid signature over an invalid StrKey in enforce mode", async () => {
+      const kp = Keypair.random();
+      const server = await getDevServer(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "enforce",
+      );
+      const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Forwarded-For": "203.0.113.42",
+          // real signature by kp, but claims.sub is an invalid StrKey → must be 400
+          Authorization: makeOnrampProof(kp, { body: {}, sub: "not-a-key" }),
+        },
+        body: JSON.stringify({}),
+      });
+      expect(response.status).toEqual(400);
+      await server.close();
+    });
   });
 
   describe("/simulate-token-transfer", () => {
