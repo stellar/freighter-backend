@@ -51,6 +51,15 @@ export function buildConfig(config: Record<string, string | undefined>) {
     throw new Error(ERROR.INVALID_ENV(missingKeys.join()));
   }
 
+  const onrampAuthModeRaw =
+    config.ONRAMP_AUTH_MODE || process.env.ONRAMP_AUTH_MODE || "dual";
+  if (onrampAuthModeRaw !== "dual" && onrampAuthModeRaw !== "enforce") {
+    throw new Error(
+      `ENV configuration invalid - ONRAMP_AUTH_MODE must be "dual" or "enforce", got "${onrampAuthModeRaw}"`,
+    );
+  }
+  const onrampAuthMode: "dual" | "enforce" = onrampAuthModeRaw;
+
   return {
     blockAidKey: config.BLOCKAID_KEY || process.env.BLOCKAID_KEY!,
     hostname: config.HOSTNAME || process.env.HOSTNAME!,
@@ -147,9 +156,7 @@ export function buildConfig(config: Record<string, string | undefined>) {
       coinbaseApiSecret:
         config.COINBASE_API_SECRET || process.env.COINBASE_API_SECRET!,
     },
-    onrampAuthMode: (config.ONRAMP_AUTH_MODE ||
-      process.env.ONRAMP_AUTH_MODE ||
-      "dual") as "dual" | "enforce",
+    onrampAuthMode,
   };
 }
 
