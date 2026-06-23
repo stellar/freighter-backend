@@ -45,12 +45,19 @@ export const dataIntegrityCheckFail = new Prometheus.Counter({
   registers: [register],
 });
 
-export const onrampTokenRequestsCounter = new Prometheus.Counter({
-  name: "freighter_backend_onramp_token_requests_total",
-  help: "Count of /onramp/token requests by auth outcome",
-  labelNames: ["auth"], // "signed" | "unsigned" | "rejected"
+export const onrampAuthRequestsCounter = new Prometheus.Counter({
+  name: "freighter_backend_onramp_auth_requests_total",
+  help: "Onramp /token requests by auth result and reason",
+  labelNames: ["result", "reason"], // result: authenticated|anonymous|rejected
   registers: [register],
 });
+
+export const recordOnrampAuth = (
+  result: "authenticated" | "anonymous" | "rejected",
+  reason: string,
+): void => {
+  onrampAuthRequestsCounter.inc({ result, reason });
+};
 
 register.registerMetric(dataIntegrityCheckPass);
 register.registerMetric(dataIntegrityCheckFail);

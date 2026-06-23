@@ -1162,7 +1162,7 @@ describe("API routes", () => {
       await server.close();
     });
 
-    it("allows an unsigned legacy request during the dual window", async () => {
+    it("allows an unsigned legacy request in permissive mode", async () => {
       jest
         .spyOn(OnrampHelpers, "fetchOnrampSessionToken")
         .mockResolvedValueOnce({ data: { token: "token" }, error: null });
@@ -1181,7 +1181,7 @@ describe("API routes", () => {
       await server.close();
     });
 
-    it("rejects a request with a present-but-invalid proof even in dual mode", async () => {
+    it("rejects a request with a present-but-invalid proof even in permissive mode", async () => {
       const server = await getDevServer();
       const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
       const response = await fetch(url, {
@@ -1292,7 +1292,7 @@ describe("API routes", () => {
       await server.close();
     });
 
-    it("returns 401 for an unsigned request in enforce mode (the ticket repro)", async () => {
+    it("returns 401 for an unsigned request in strict mode (the ticket repro)", async () => {
       const server = await getDevServer(
         undefined,
         undefined,
@@ -1300,7 +1300,7 @@ describe("API routes", () => {
         undefined,
         undefined,
         undefined,
-        "enforce",
+        "strict",
       );
       const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
       const response = await fetch(url, {
@@ -1315,7 +1315,7 @@ describe("API routes", () => {
       await server.close();
     });
 
-    it("returns 400 for a valid signature over an invalid StrKey in enforce mode", async () => {
+    it("returns 400 for a valid signature over an invalid StrKey in strict mode", async () => {
       const kp = Keypair.random();
       const server = await getDevServer(
         undefined,
@@ -1324,7 +1324,7 @@ describe("API routes", () => {
         undefined,
         undefined,
         undefined,
-        "enforce",
+        "strict",
       );
       const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
       const response = await fetch(url, {

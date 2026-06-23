@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { hash, Keypair } from "stellar-sdk";
 import { isPubKey } from "./validate";
+import { ONRAMP_AUTH_REASON, VerifyOnrampProofResult } from "../auth/errors";
 
 export const SIGN_MESSAGE_PREFIX = "Stellar Signed Message:\n";
 
@@ -41,10 +42,6 @@ interface OnrampProofClaims {
   exp: number;
 }
 
-export type VerifyOnrampProofResult =
-  | { ok: true; sub: string }
-  | { ok: false; status: 400 | 401; error: string };
-
 export const verifyOnrampProof = (params: {
   authorization?: string;
   method: string;
@@ -58,6 +55,7 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
+      reason: ONRAMP_AUTH_REASON.NO_TOKEN,
       error: "Missing onramp authorization proof",
     };
   }
@@ -70,6 +68,7 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
+      reason: ONRAMP_AUTH_REASON.MALFORMED,
       error: "Malformed onramp authorization proof",
     };
   }
@@ -84,6 +83,7 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
+      reason: ONRAMP_AUTH_REASON.MALFORMED,
       error: "Malformed onramp authorization proof",
     };
   }
@@ -97,13 +97,19 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
+      reason: ONRAMP_AUTH_REASON.MALFORMED,
       error: "Malformed onramp authorization proof",
     };
   }
 
   // StrKey validation BEFORE any downstream (Coinbase) call.
   if (!isPubKey(claims.sub)) {
-    return { ok: false, status: 400, error: "Invalid Stellar address" };
+    return {
+      ok: false,
+      status: 400,
+      reason: ONRAMP_AUTH_REASON.BAD_CLAIMS,
+      error: "Invalid Stellar address",
+    };
   }
 
   if (
@@ -113,6 +119,7 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
+      reason: ONRAMP_AUTH_REASON.EXPIRED,
       error: "Expired onramp authorization proof",
     };
   }
@@ -121,6 +128,7 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
+      reason: ONRAMP_AUTH_REASON.BAD_CLAIMS,
       error: "Onramp proof does not match request",
     };
   }
@@ -129,6 +137,7 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
+      reason: ONRAMP_AUTH_REASON.BAD_CLAIMS,
       error: "Onramp proof does not match request body",
     };
   }
@@ -147,6 +156,7 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
+      reason: ONRAMP_AUTH_REASON.BAD_SIGNATURE,
       error: "Invalid onramp authorization proof",
     };
   }

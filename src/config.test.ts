@@ -18,17 +18,17 @@ const fullEnv: Record<string, string> = {
   FREIGHTER_HORIZON_URL: "https://horizon.stellar.org",
   DISABLE_TOKEN_PRICES: "false",
   FREIGHTER_RPC_PUBNET_URL: "https://rpc.stellar.org",
-  ONRAMP_AUTH_MODE: "dual",
+  ONRAMP_AUTH_MODE: "permissive",
 };
 
 describe("buildConfig onrampAuthMode validation", () => {
-  it('accepts "enforce"', () => {
-    const conf = buildConfig({ ...fullEnv, ONRAMP_AUTH_MODE: "enforce" });
-    expect(conf.onrampAuthMode).toBe("enforce");
+  it('accepts "strict"', () => {
+    const conf = buildConfig({ ...fullEnv, ONRAMP_AUTH_MODE: "strict" });
+    expect(conf.onrampAuthMode).toBe("strict");
   });
-  it('defaults to "dual" when unset', () => {
+  it("defaults to permissive when unset", () => {
     const conf = buildConfig({ ...fullEnv, ONRAMP_AUTH_MODE: undefined });
-    expect(conf.onrampAuthMode).toBe("dual");
+    expect(conf.onrampAuthMode).toBe("permissive");
   });
   it("throws on an invalid value", () => {
     expect(() =>

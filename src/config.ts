@@ -1,4 +1,5 @@
 import { ERROR } from "./helper/error";
+import { parseMode, AuthMode } from "./auth/mode";
 
 const ENV_KEYS = [
   "AUTH_EMAIL",
@@ -51,14 +52,9 @@ export function buildConfig(config: Record<string, string | undefined>) {
     throw new Error(ERROR.INVALID_ENV(missingKeys.join()));
   }
 
-  const onrampAuthModeRaw =
-    config.ONRAMP_AUTH_MODE || process.env.ONRAMP_AUTH_MODE || "dual";
-  if (onrampAuthModeRaw !== "dual" && onrampAuthModeRaw !== "enforce") {
-    throw new Error(
-      `ENV configuration invalid - ONRAMP_AUTH_MODE must be "dual" or "enforce", got "${onrampAuthModeRaw}"`,
-    );
-  }
-  const onrampAuthMode: "dual" | "enforce" = onrampAuthModeRaw;
+  const onrampAuthMode: AuthMode = parseMode(
+    config.ONRAMP_AUTH_MODE || process.env.ONRAMP_AUTH_MODE,
+  );
 
   return {
     blockAidKey: config.BLOCKAID_KEY || process.env.BLOCKAID_KEY!,

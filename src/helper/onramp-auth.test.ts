@@ -6,6 +6,7 @@ import {
 } from "./onramp-auth";
 import { hash, Keypair } from "stellar-sdk";
 import { verifyOnrampProof } from "./onramp-auth";
+import { ONRAMP_AUTH_REASON } from "../auth/errors";
 
 describe("onramp-auth primitives", () => {
   it("canonicalizes objects with sorted keys and no whitespace", () => {
@@ -84,6 +85,7 @@ describe("verifyOnrampProof", () => {
     ).toMatchObject({
       ok: false,
       status: 401,
+      reason: ONRAMP_AUTH_REASON.NO_TOKEN,
     });
   });
 
@@ -109,6 +111,7 @@ describe("verifyOnrampProof", () => {
     ).toMatchObject({
       ok: false,
       status: 400,
+      reason: ONRAMP_AUTH_REASON.BAD_CLAIMS,
     });
   });
 
@@ -119,6 +122,7 @@ describe("verifyOnrampProof", () => {
     ).toMatchObject({
       ok: false,
       status: 401,
+      reason: ONRAMP_AUTH_REASON.EXPIRED,
     });
   });
 
@@ -174,6 +178,7 @@ describe("verifyOnrampProof", () => {
     ).toMatchObject({
       ok: false,
       status: 401,
+      reason: ONRAMP_AUTH_REASON.BAD_SIGNATURE,
     });
   });
 });

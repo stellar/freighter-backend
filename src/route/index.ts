@@ -55,7 +55,9 @@ import {
   verifyOnrampProof,
   enforcePrincipalRateLimit,
 } from "../helper/onramp-auth";
-import { onrampTokenRequestsCounter } from "../helper/metrics";
+import { recordOnrampAuth } from "../helper/metrics";
+import { ONRAMP_AUTH_REASON } from "../auth/errors";
+import { AuthMode } from "../auth/mode";
 import Blockaid from "@blockaid/client";
 import { PriceClient } from "../service/prices";
 import { TokenPriceData } from "../service/prices/types";
@@ -86,7 +88,7 @@ export async function initApiServer(
   coinbaseConfig: CoinbaseConfig,
   priceConfig: PriceConfig,
   stellarRpcConfig: StellarRpcConfig,
-  onrampAuthMode: "dual" | "enforce",
+  onrampAuthMode: AuthMode,
   trustProxyRange?: string,
   redis?: Redis,
 ) {
@@ -1494,8 +1496,8 @@ export async function initApiServer(
         },
         schema: {
           body: {
-            // `address` kept optional so legacy unsigned clients pass schema during the
-            // dual-accept window. It is IGNORED for signed requests (destination = proof sub).
+            // `address` kept optional so legacy unsigned clients pass schema in
+            // permissive mode. It is IGNORED for signed requests (destination = proof sub).
             type: "object",
             properties: {
               address: { type: "string" },
@@ -1513,25 +1515,28 @@ export async function initApiServer(
           });
 
           if (!result.ok) {
-            // Dual-accept window: a request with NO proof is allowed on the legacy path.
-            // A present-but-invalid proof is ALWAYS rejected.
-            if (onrampAuthMode === "dual" && !request.headers.authorization) {
-              onrampTokenRequestsCounter.inc({ auth: "unsigned" });
+            // Permissive: a request with NO proof passes through anonymously (legacy path);
+            // any present-but-invalid proof is ALWAYS rejected.
+            if (
+              onrampAuthMode === "permissive" &&
+              result.reason === ONRAMP_AUTH_REASON.NO_TOKEN
+            ) {
+              recordOnrampAuth("anonymous", ONRAMP_AUTH_REASON.NO_TOKEN);
               return;
             }
-            onrampTokenRequestsCounter.inc({ auth: "rejected" });
+            recordOnrampAuth("rejected", result.reason);
             return reply.code(result.status).send({ error: result.error });
           }
 
           const allowed = await enforcePrincipalRateLimit(redis, result.sub);
           if (!allowed) {
-            onrampTokenRequestsCounter.inc({ auth: "rejected" });
+            recordOnrampAuth("rejected", ONRAMP_AUTH_REASON.RATE_LIMITED);
             return reply
               .code(429)
               .send({ error: "Too many onramp token requests" });
           }
 
-          onrampTokenRequestsCounter.inc({ auth: "signed" });
+          recordOnrampAuth("authenticated", "ok");
           (
             request as FastifyRequest & { onrampPrincipal?: string }
           ).onrampPrincipal = result.sub;
@@ -1547,7 +1552,7 @@ export async function initApiServer(
             return reply.code(400).send({ error: "Coinbase config not set" });
           }
 
-          // Destination: ALWAYS the proven principal when signed. During the dual window
+          // Destination: ALWAYS the proven principal when signed. In permissive mode
           // an unsigned legacy request falls back to its body `address`.
           const principal = (
             request as FastifyRequest & { onrampPrincipal?: string }
