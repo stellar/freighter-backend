@@ -41,6 +41,6 @@ export const onrampAuthPreHandler =
       return reply.code(429).send({ error: "Too many onramp token requests" });
     }
 
-    recordOnrampAuth("authenticated", "ok");
+    recordOnrampAuth("authenticated", ONRAMP_AUTH_REASON.OK);
     setOnrampPrincipal(request, result.sub);
   };

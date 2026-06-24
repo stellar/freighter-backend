@@ -1,5 +1,6 @@
 // Mirrors freighter-backend-v2 internal/auth/errors.go reason constants.
 export const ONRAMP_AUTH_REASON = {
+  OK: "ok", // success marker for the authenticated result (mirrors backend-v2)
   NO_TOKEN: "no_token",
   EXPIRED: "expired",
   BAD_SIGNATURE: "bad_signature",
