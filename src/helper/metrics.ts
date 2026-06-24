@@ -2,6 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import Prometheus from "prom-client";
 
 import { OnrampAuthReason } from "../auth/errors";
+import { isNetwork } from "./validate";
 
 export enum WorkerMessage {
   INTEGRITY_CHECK_PASS = "integrityCheckPass",
@@ -97,7 +98,12 @@ const ROUTE_WHITELIST = [
 export const httpLabelUrl = (url: string) => {
   const [route, search] = url.split("?");
   const params = new URLSearchParams(search);
-  const network = params.get("network") || "unknown";
+  const rawNetwork = params.get("network");
+  // Canonicalize to the finite set of known Stellar networks. The metrics hook
+  // runs on every response (including validation failures) and reads the raw
+  // query string, so without this bound any unauthenticated caller could inject
+  // unbounded `network` label values and blow up Prometheus cardinality.
+  const network = rawNetwork && isNetwork(rawNetwork) ? rawNetwork : "unknown";
 
   // Extract the path without the /api/v1 prefix
   const pathMatch = route.match(/^\/api\/v\d+(.*)$/);
@@ -161,13 +167,21 @@ export const httpLabelUrl = (url: string) => {
   };
 };
 
+// HTTP methods the API actually serves. Bucketing anything else as "other"
+// keeps the `method` label bounded as defense-in-depth: the HTTP parser already
+// rejects unrecognized methods, but this avoids relying on that behavior.
+const METHOD_WHITELIST = ["GET", "POST", "OPTIONS", "HEAD"];
+
+export const httpLabelMethod = (method: string) =>
+  METHOD_WHITELIST.includes(method) ? method : "other";
+
 export const getHttpRequestDurationLabels = (
   request: FastifyRequest,
   reply: FastifyReply,
 ) => {
   const { route, network } = httpLabelUrl(request.url);
   return {
-    method: request.method,
+    method: httpLabelMethod(request.method),
     route,
     network,
     status: reply.statusCode,
