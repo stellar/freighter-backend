@@ -37,17 +37,7 @@ Out of scope (separate work):
 - **Per-principal rate limiting** — considered and **dropped**: keying on the proven `sub` is
   sybil-bypassable (fresh keypair → fresh `sub`), so it adds no real security over the pre-existing
   per-IP limit. Aggregate quota protection, if needed, is a separate control.
-- **CORS origin-restriction** — the actual fix for the browser-origin phishing vector (see Scope note).
-
-## Scope note — what this does and does not close
-
-This requires cryptographic proof of control over the destination and removes the anonymous,
-arbitrary-destination minting path. It is an **authentication / identity layer**, not a turnkey
-anti-phishing control. In particular it does **not** close the browser-origin phishing vector where an
-attacker mints a session for _their own_ address through a victim's browser (the destination is one
-the attacker legitimately controls, so a valid proof exists; `strict` mode doesn't change that).
-Closing that requires restricting CORS to known Freighter origins so a third-party page can't read a
-minted token — orthogonal to this design, tracked separately.
+- Additional endpoint hardening, tracked separately in the private security ticket.
 
 ## Rollout model (why two modes)
 
@@ -160,13 +150,11 @@ const canonicalizeJson = (value: unknown): string => {
 
 ## Cross-protocol hardening
 
-The onramp proof reuses the SEP-53 primitive that the clients' public `signMessage` dApp API also
-exposes. Without separation, a connected dApp could get a user to sign the bare claims and forge a
-proof (bounded — only mints for the user's _own_ address; no fund redirection). The
-`ONRAMP_AUTH_DOMAIN` tag, folded into the signed bytes and required by the verifier, makes onramp
-proofs recognizable and distinct. The **load-bearing** half is client-side: the public `signMessage`
-path must refuse to sign any message beginning with the tag, so proofs can only originate from the
-internal onramp signer (lands with the client PRs).
+The onramp proof and the clients' public `signMessage` dApp API use the same SEP-53 signing
+primitive. To keep the two signing domains separate, `ONRAMP_AUTH_DOMAIN` is folded into the signed
+bytes and required by the verifier, so an onramp proof is distinct from a generic signed message. The
+clients' public `signMessage` path additionally refuses to sign messages beginning with the tag, so
+onramp proofs originate only from the internal onramp signer (lands with the client PRs).
 
 ## Porting to freighter-backend-v2 (Go)
 
