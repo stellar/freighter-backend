@@ -12,7 +12,11 @@ import { hasIndexerSupport } from "./mercury";
 import { BlockAidService } from "../service/blockaid";
 import { PriceClient } from "../service/prices";
 import { PriceConfig, StellarRpcConfig } from "../config";
-import { canonicalizeJson, sha256Hex, encodeSep53Message } from "./onramp-auth";
+import {
+  canonicalizeJson,
+  sha256Hex,
+  encodeSep53Message,
+} from "../auth/verifier";
 import { AuthMode } from "../auth/mode";
 
 export const TEST_SOROBAN_TX =

@@ -51,12 +51,8 @@ import {
   isLikelyInternalIp,
   CoinbaseConfig,
 } from "../helper/onramp";
-import {
-  verifyOnrampProof,
-  enforcePrincipalRateLimit,
-} from "../helper/onramp-auth";
-import { recordOnrampAuth } from "../helper/metrics";
-import { ONRAMP_AUTH_REASON } from "../auth/errors";
+import { onrampAuthPreHandler } from "../auth/middleware";
+import { getOnrampPrincipal } from "../auth/context";
 import { AuthMode } from "../auth/mode";
 import Blockaid from "@blockaid/client";
 import { PriceClient } from "../service/prices";
@@ -1505,42 +1501,7 @@ export async function initApiServer(
             additionalProperties: false,
           },
         },
-        preHandler: async (request, reply) => {
-          const result = verifyOnrampProof({
-            authorization: request.headers.authorization,
-            method: request.method,
-            path: request.url.split("?")[0],
-            body: request.body ?? {},
-            nowSeconds: Math.floor(Date.now() / 1000),
-          });
-
-          if (!result.ok) {
-            // Permissive: a request with NO proof passes through anonymously (legacy path);
-            // any present-but-invalid proof is ALWAYS rejected.
-            if (
-              onrampAuthMode === "permissive" &&
-              result.reason === ONRAMP_AUTH_REASON.NO_TOKEN
-            ) {
-              recordOnrampAuth("anonymous", ONRAMP_AUTH_REASON.NO_TOKEN);
-              return;
-            }
-            recordOnrampAuth("rejected", result.reason);
-            return reply.code(result.status).send({ error: result.error });
-          }
-
-          const allowed = await enforcePrincipalRateLimit(redis, result.sub);
-          if (!allowed) {
-            recordOnrampAuth("rejected", ONRAMP_AUTH_REASON.RATE_LIMITED);
-            return reply
-              .code(429)
-              .send({ error: "Too many onramp token requests" });
-          }
-
-          recordOnrampAuth("authenticated", "ok");
-          (
-            request as FastifyRequest & { onrampPrincipal?: string }
-          ).onrampPrincipal = result.sub;
-        },
+        preHandler: onrampAuthPreHandler({ mode: onrampAuthMode, redis }),
         handler: async (
           request: FastifyRequest<{ Body: { address?: string } }>,
           reply,
@@ -1554,9 +1515,7 @@ export async function initApiServer(
 
           // Destination: ALWAYS the proven principal when signed. In permissive mode
           // an unsigned legacy request falls back to its body `address`.
-          const principal = (
-            request as FastifyRequest & { onrampPrincipal?: string }
-          ).onrampPrincipal;
+          const principal = getOnrampPrincipal(request);
           const address = principal ?? request.body?.address;
           if (!address) {
             return reply.code(400).send({ error: "Missing address" });
