@@ -3,9 +3,10 @@ import {
   sha256Hex,
   encodeSep53Message,
   SIGN_MESSAGE_PREFIX,
+  ONRAMP_AUTH_DOMAIN,
+  verifyOnrampProof,
 } from "./verifier";
 import { hash, Keypair } from "stellar-sdk";
-import { verifyOnrampProof } from "./verifier";
 import { ONRAMP_AUTH_REASON } from "./errors";
 
 describe("onramp-auth primitives", () => {
@@ -58,7 +59,7 @@ const mintProof = (
     exp: overrides.exp ?? NOW + 15,
   };
   const canonical = canonicalizeJson(claims);
-  const sig = kp.sign(encodeSep53Message(canonical));
+  const sig = kp.sign(encodeSep53Message(ONRAMP_AUTH_DOMAIN + canonical));
   const header = `Stellar ${Buffer.from(canonical, "utf8").toString(
     "base64url",
   )}.${sig.toString("base64url")}`;
@@ -175,6 +176,34 @@ describe("verifyOnrampProof", () => {
     const { header, body } = mintProof(attacker, { sub: kp.publicKey() });
     expect(
       verifyOnrampProof({ ...base, authorization: header, body }),
+    ).toMatchObject({
+      ok: false,
+      status: 401,
+      reason: ONRAMP_AUTH_REASON.BAD_SIGNATURE,
+    });
+  });
+
+  it("rejects a proof whose signature does not cover the onramp domain tag (cross-protocol confusion)", () => {
+    const kp2 = Keypair.random();
+    const claims = {
+      sub: kp2.publicKey(),
+      method: "POST",
+      path: PATH,
+      body_hash: sha256Hex(canonicalizeJson({})),
+      exp: NOW + 15,
+    };
+    const canonical = canonicalizeJson(claims);
+    // Signed WITHOUT ONRAMP_AUTH_DOMAIN — i.e. a generic SEP-53 message signature.
+    const sig = kp2.sign(encodeSep53Message(canonical));
+    const header = `Stellar ${Buffer.from(canonical, "utf8").toString("base64url")}.${sig.toString("base64url")}`;
+    expect(
+      verifyOnrampProof({
+        authorization: header,
+        method: "POST",
+        path: PATH,
+        body: {},
+        nowSeconds: NOW,
+      }),
     ).toMatchObject({
       ok: false,
       status: 401,

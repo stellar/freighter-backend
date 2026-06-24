@@ -34,6 +34,12 @@ export const ONRAMP_PROOF_SCHEME = "Stellar";
 export const ONRAMP_PROOF_MAX_AGE_S = 15;
 export const ONRAMP_PROOF_SKEW_S = 2;
 
+// Domain separator folded into the signed bytes so an onramp proof cannot be
+// produced via the generic SEP-53 signMessage dApp API (cross-protocol
+// signature confusion). The clients' public signMessage path refuses to sign
+// messages carrying this tag; only the internal onramp signer emits it.
+export const ONRAMP_AUTH_DOMAIN = "freighter:onramp-auth:v1\n";
+
 interface OnrampProofClaims {
   sub: string;
   method: string;
@@ -144,7 +150,7 @@ export const verifyOnrampProof = (params: {
 
   let verified = false;
   try {
-    const digest = encodeSep53Message(canonicalPayload);
+    const digest = encodeSep53Message(ONRAMP_AUTH_DOMAIN + canonicalPayload);
     verified = Keypair.fromPublicKey(claims.sub).verify(
       digest,
       Buffer.from(sigB64, "base64url"),

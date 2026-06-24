@@ -16,6 +16,7 @@ import {
   canonicalizeJson,
   sha256Hex,
   encodeSep53Message,
+  ONRAMP_AUTH_DOMAIN,
 } from "../auth/verifier";
 import { AuthMode } from "../auth/mode";
 
@@ -711,7 +712,7 @@ export const makeOnrampProof = (
     exp: opts.exp ?? Math.floor(Date.now() / 1000) + 15,
   };
   const canonical = canonicalizeJson(claims);
-  const sig = kp.sign(encodeSep53Message(canonical));
+  const sig = kp.sign(encodeSep53Message(ONRAMP_AUTH_DOMAIN + canonical));
   return `Stellar ${Buffer.from(canonical, "utf8").toString("base64url")}.${sig.toString("base64url")}`;
 };
 
