@@ -1,7 +1,8 @@
 import { buildConfig } from "./config";
 
-// fullEnv: every ENV_KEYS entry set to a dummy value so buildConfig doesn't
-// throw for missing keys. ONRAMP_AUTH_MODE is overridden per test case.
+// fullEnv: every REQUIRED ENV_KEYS entry set to a dummy value so buildConfig
+// doesn't throw for missing keys. ONRAMP_AUTH_MODE is intentionally NOT a
+// required key, so it's omitted here and supplied per test case.
 const fullEnv: Record<string, string> = {
   AUTH_EMAIL: "user@example.com",
   AUTH_PASS: "pass",
@@ -18,16 +19,30 @@ const fullEnv: Record<string, string> = {
   FREIGHTER_HORIZON_URL: "https://horizon.stellar.org",
   DISABLE_TOKEN_PRICES: "false",
   FREIGHTER_RPC_PUBNET_URL: "https://rpc.stellar.org",
-  ONRAMP_AUTH_MODE: "permissive",
 };
 
 describe("buildConfig onrampAuthMode validation", () => {
+  const originalAuthMode = process.env.ONRAMP_AUTH_MODE;
+  beforeEach(() => {
+    // Ensure the ambient env can't leak a value into the "unset" cases.
+    delete process.env.ONRAMP_AUTH_MODE;
+  });
+  afterAll(() => {
+    if (originalAuthMode === undefined) {
+      delete process.env.ONRAMP_AUTH_MODE;
+    } else {
+      process.env.ONRAMP_AUTH_MODE = originalAuthMode;
+    }
+  });
+
   it('accepts "strict"', () => {
     const conf = buildConfig({ ...fullEnv, ONRAMP_AUTH_MODE: "strict" });
     expect(conf.onrampAuthMode).toBe("strict");
   });
-  it("defaults to permissive when unset", () => {
-    const conf = buildConfig({ ...fullEnv, ONRAMP_AUTH_MODE: undefined });
+  it("does not throw and defaults to permissive when the key is absent", () => {
+    // The key is omitted entirely (not set to undefined), matching a real
+    // deployment whose environment never defines ONRAMP_AUTH_MODE.
+    const conf = buildConfig({ ...fullEnv });
     expect(conf.onrampAuthMode).toBe("permissive");
   });
   it("throws on an invalid value", () => {

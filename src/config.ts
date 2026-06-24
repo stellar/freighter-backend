@@ -17,7 +17,9 @@ const ENV_KEYS = [
   "FREIGHTER_HORIZON_URL",
   "DISABLE_TOKEN_PRICES",
   "FREIGHTER_RPC_PUBNET_URL",
-  "ONRAMP_AUTH_MODE",
+  // ONRAMP_AUTH_MODE is intentionally NOT required: it is optional and
+  // defaults to "permissive" via parseMode(undefined) below, so existing
+  // deployments roll out without having to add the new env var first.
 ];
 
 export interface PriceConfig {

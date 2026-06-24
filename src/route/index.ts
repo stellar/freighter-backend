@@ -1555,7 +1555,9 @@ export async function initApiServer(
             // Abuse-investigation record. No secret material, no signature bytes.
             logger.info(
               {
-                principal: address,
+                // Proven principal only — null for unsigned permissive requests
+                // whose `address` is caller-supplied and NOT identity-verified.
+                principal: principal ?? null,
                 destination: address,
                 authMode: onrampAuthMode,
                 signed: Boolean(principal),

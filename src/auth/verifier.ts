@@ -81,10 +81,10 @@ export const verifyOnrampProof = (params: {
   const [payloadB64, sigB64] = token.split(".");
 
   let canonicalPayload: string;
-  let claims: OnrampProofClaims;
+  let parsed: unknown;
   try {
     canonicalPayload = Buffer.from(payloadB64, "base64url").toString("utf8");
-    claims = JSON.parse(canonicalPayload);
+    parsed = JSON.parse(canonicalPayload);
   } catch {
     return {
       ok: false,
@@ -93,6 +93,19 @@ export const verifyOnrampProof = (params: {
       error: "Malformed onramp authorization proof",
     };
   }
+  // Guard non-object payloads (e.g. `null`, a JSON array, or a bare
+  // number/string) before reading claim fields — otherwise a client-controlled
+  // header like `Stellar bnVsbA.<sig>` (base64url of "null") would throw on the
+  // property access below and surface as a 500 instead of a 401.
+  if (parsed === null || typeof parsed !== "object") {
+    return {
+      ok: false,
+      status: 401,
+      reason: ONRAMP_AUTH_REASON.MALFORMED,
+      error: "Malformed onramp authorization proof",
+    };
+  }
+  const claims = parsed as OnrampProofClaims;
   if (
     typeof claims.sub !== "string" ||
     typeof claims.method !== "string" ||

@@ -105,6 +105,24 @@ describe("verifyOnrampProof", () => {
     });
   });
 
+  it("401 (not 500) on a non-object JSON payload", () => {
+    // Payload decodes to valid JSON that is not an object — `null`, an array,
+    // and a bare number. Each must yield a clean MALFORMED 401 rather than
+    // throwing on the claim-field access. (`bnVsbA` is base64url of "null".)
+    for (const payload of ["null", "[]", "123"]) {
+      const header = `Stellar ${Buffer.from(payload, "utf8").toString(
+        "base64url",
+      )}.${Buffer.from("sig", "utf8").toString("base64url")}`;
+      expect(
+        verifyOnrampProof({ ...base, authorization: header }),
+      ).toMatchObject({
+        ok: false,
+        status: 401,
+        reason: ONRAMP_AUTH_REASON.MALFORMED,
+      });
+    }
+  });
+
   it("400 on invalid StrKey sub", () => {
     const { header, body } = mintProof(kp, { sub: "not-a-key" });
     expect(
