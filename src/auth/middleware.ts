@@ -4,8 +4,8 @@ import { AuthMode } from "./mode";
 import { ONRAMP_AUTH_REASON } from "./errors";
 import { verifyOnrampProof } from "./verifier";
 import { enforcePrincipalRateLimit } from "./rate-limit";
-import { setOnrampPrincipal } from "./context";
 import { recordOnrampAuth } from "../helper/metrics";
+import "./context"; // augments FastifyRequest with onrampPrincipal
 
 // Mirrors freighter-backend-v2 internal/api/middleware/auth.go Auth(...):
 // verify the onramp proof, apply the rollout mode, record the {result,reason}
@@ -42,5 +42,5 @@ export const onrampAuthPreHandler =
     }
 
     recordOnrampAuth("authenticated", ONRAMP_AUTH_REASON.OK);
-    setOnrampPrincipal(request, result.sub);
+    request.onrampPrincipal = result.sub;
   };

@@ -52,7 +52,7 @@ import {
   CoinbaseConfig,
 } from "../helper/onramp";
 import { onrampAuthPreHandler } from "../auth/middleware";
-import { getOnrampPrincipal } from "../auth/context";
+import "../auth/context"; // augments FastifyRequest with onrampPrincipal
 import { AuthMode } from "../auth/mode";
 import Blockaid from "@blockaid/client";
 import { PriceClient } from "../service/prices";
@@ -125,6 +125,7 @@ export async function initApiServer(
   server.setValidatorCompiler(({ schema }) => {
     return ajv.compile(schema);
   });
+  server.decorateRequest("onrampPrincipal", null);
   server.register(rateLimiter, {
     max: 3500,
     timeWindow: "1 minute",
@@ -1515,7 +1516,7 @@ export async function initApiServer(
 
           // Destination: ALWAYS the proven principal when signed. In permissive mode
           // an unsigned legacy request falls back to its body `address`.
-          const principal = getOnrampPrincipal(request);
+          const principal = request.onrampPrincipal;
           const address = principal ?? request.body?.address;
           if (!address) {
             return reply.code(400).send({ error: "Missing address" });
