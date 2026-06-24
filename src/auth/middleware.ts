@@ -1,17 +1,15 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import { Redis } from "ioredis";
 import { AuthMode } from "./mode";
 import { ONRAMP_AUTH_REASON } from "./errors";
 import { verifyOnrampProof } from "./verifier";
-import { enforcePrincipalRateLimit } from "./rate-limit";
 import { recordOnrampAuth } from "../helper/metrics";
 import "./context"; // augments FastifyRequest with onrampPrincipal
 
 // Mirrors freighter-backend-v2 internal/api/middleware/auth.go Auth(...):
 // verify the onramp proof, apply the rollout mode, record the {result,reason}
-// metric, enforce the per-principal rate limit, and stash the principal.
+// metric, and stash the proven principal on the request.
 export const onrampAuthPreHandler =
-  ({ mode, redis }: { mode: AuthMode; redis?: Redis }) =>
+  ({ mode }: { mode: AuthMode }) =>
   async (request: FastifyRequest, reply: FastifyReply) => {
     const result = verifyOnrampProof({
       authorization: request.headers.authorization,
@@ -33,12 +31,6 @@ export const onrampAuthPreHandler =
       }
       recordOnrampAuth("rejected", result.reason);
       return reply.code(result.status).send({ error: result.error });
-    }
-
-    const allowed = await enforcePrincipalRateLimit(redis, result.sub);
-    if (!allowed) {
-      recordOnrampAuth("rejected", ONRAMP_AUTH_REASON.RATE_LIMITED);
-      return reply.code(429).send({ error: "Too many onramp token requests" });
     }
 
     recordOnrampAuth("authenticated", ONRAMP_AUTH_REASON.OK);

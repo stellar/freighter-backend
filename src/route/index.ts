@@ -1502,7 +1502,7 @@ export async function initApiServer(
             additionalProperties: false,
           },
         },
-        preHandler: onrampAuthPreHandler({ mode: onrampAuthMode, redis }),
+        preHandler: onrampAuthPreHandler({ mode: onrampAuthMode }),
         handler: async (
           request: FastifyRequest<{ Body: { address?: string } }>,
           reply,

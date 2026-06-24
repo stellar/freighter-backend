@@ -6,7 +6,6 @@ export const ONRAMP_AUTH_REASON = {
   BAD_SIGNATURE: "bad_signature",
   BAD_CLAIMS: "bad_claims",
   MALFORMED: "malformed",
-  RATE_LIMITED: "rate_limited", // onramp-specific extension (no Go equivalent)
 } as const;
 
 export type OnrampAuthReason =
