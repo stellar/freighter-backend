@@ -15,6 +15,7 @@ const ENV_KEYS = [
   "BLOCKAID_KEY",
   "FREIGHTER_HORIZON_URL",
   "DISABLE_TOKEN_PRICES",
+  "DISABLE_BLOCKAID_ASSET_SCANNING",
   "FREIGHTER_RPC_PUBNET_URL",
 ];
 
@@ -137,7 +138,10 @@ export function buildConfig(config: Record<string, string | undefined>) {
     blockaidConfig: {
       useBlockaidDappScanning: true,
       useBlockaidTxScanning: true,
-      useBlockaidAssetScanning: true,
+      useBlockaidAssetScanning: !(
+        config.DISABLE_BLOCKAID_ASSET_SCANNING === "true" ||
+        process.env.DISABLE_BLOCKAID_ASSET_SCANNING === "true"
+      ),
       useBlockaidAssetWarningReporting: true,
       useBlockaidTransactionWarningReporting: true,
     },
