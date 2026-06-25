@@ -151,6 +151,7 @@ async function main() {
     },
     conf.stellarRpcConfig,
     redis,
+    conf.priceConfig.freighterHorizonUrl,
   );
 
   const priceClient = new PriceClient(

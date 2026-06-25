@@ -107,6 +107,7 @@ export class MercuryClient {
   };
   rpcConfig: StellarRpcConfig;
   redisClient?: Redis;
+  freighterHorizonUrl?: string;
   logger: Logger;
   mercuryErrorCounter: Prometheus.Counter<"endpoint">;
   rpcErrorCounter: Prometheus.Counter<"rpc">;
@@ -123,11 +124,13 @@ export class MercuryClient {
     },
     rpcConfig: StellarRpcConfig,
     redisClient?: Redis,
+    freighterHorizonUrl?: string,
   ) {
     this.mercurySession = mercurySession;
     this.logger = logger;
     this.redisClient = redisClient;
     this.rpcConfig = rpcConfig;
+    this.freighterHorizonUrl = freighterHorizonUrl;
     this.mercuryErrorCounter = metrics.mercuryErrorCounter;
     this.rpcErrorCounter = metrics.rpcErrorCounter;
     this.criticalError = metrics.criticalError;
@@ -707,7 +710,12 @@ export class MercuryClient {
   };
 
   getAccountBalancesHorizon = async (pubKey: string, network: NetworkNames) => {
-    const networkUrl = NETWORK_URLS[network];
+    // Classic balances use the configured Horizon for PUBLIC when set (a pubnet
+    // instance); other networks fall back to the network's default Horizon.
+    const networkUrl =
+      network === "PUBLIC" && this.freighterHorizonUrl
+        ? this.freighterHorizonUrl
+        : NETWORK_URLS[network];
     if (!networkUrl) {
       throw new Error(ERROR.UNSUPPORTED_NETWORK);
     }
