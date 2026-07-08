@@ -83,11 +83,40 @@ describe("verifyAddressProof", () => {
     });
   });
 
-  it("401 when the proof field is missing", () => {
+  it("401 NO_TOKEN when the proof field is absent (anonymous-eligible)", () => {
     expect(verifyAddressProof({ ...base, body: {} })).toMatchObject({
       ok: false,
       status: 401,
       reason: ADDRESS_PROOF_REASON.NO_TOKEN,
+    });
+  });
+
+  it("401 MALFORMED (not NO_TOKEN) when the proof field is present but empty", () => {
+    // Present-but-invalid must NOT fall through to the permissive anonymous
+    // path — an empty `address_proof` alongside a legacy `address` must still
+    // be rejected in both modes.
+    expect(
+      verifyAddressProof({
+        ...base,
+        body: { address_proof: "", address: "GABC" },
+      }),
+    ).toMatchObject({
+      ok: false,
+      status: 401,
+      reason: ADDRESS_PROOF_REASON.MALFORMED,
+    });
+  });
+
+  it("401 MALFORMED when the proof field is present but a non-string", () => {
+    expect(
+      verifyAddressProof({
+        ...base,
+        body: { address_proof: 123 } as unknown as Record<string, unknown>,
+      }),
+    ).toMatchObject({
+      ok: false,
+      status: 401,
+      reason: ADDRESS_PROOF_REASON.MALFORMED,
     });
   });
 

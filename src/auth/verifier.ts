@@ -71,14 +71,28 @@ export const verifyAddressProof = (params: {
     body !== null && typeof body === "object"
       ? (body as Record<string, unknown>)
       : {};
+  const hasProofField = ADDRESS_PROOF_BODY_FIELD in bodyObj;
   const { [ADDRESS_PROOF_BODY_FIELD]: proofField, ...businessBody } = bodyObj;
 
-  if (!proofField || typeof proofField !== "string") {
+  // Absent field → NO_TOKEN (anonymous-eligible in permissive mode).
+  if (!hasProofField || proofField === undefined) {
     return {
       ok: false,
       status: 401,
       reason: ADDRESS_PROOF_REASON.NO_TOKEN,
       error: "Missing address proof",
+    };
+  }
+  // Field is PRESENT but not a usable proof (empty string, or wrong type) →
+  // present-but-invalid, which must be rejected in BOTH modes. Routing this to
+  // NO_TOKEN would let `address_proof: ""` fall through to the permissive
+  // anonymous path and mint a token, violating the rollout invariant.
+  if (typeof proofField !== "string" || proofField.length === 0) {
+    return {
+      ok: false,
+      status: 401,
+      reason: ADDRESS_PROOF_REASON.MALFORMED,
+      error: "Malformed address proof",
     };
   }
   const segments = proofField.split(".");
