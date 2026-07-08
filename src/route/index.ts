@@ -1482,7 +1482,7 @@ export async function initApiServer(
         },
       });
 
-      instance.route<{ Body: { address?: string } }>({
+      instance.route<{ Body: { address?: string; address_proof?: string } }>({
         method: "POST",
         url: "/onramp/token",
         config: {
@@ -1495,16 +1495,22 @@ export async function initApiServer(
           body: {
             // `address` kept optional so legacy unsigned clients pass schema in
             // permissive mode. It is IGNORED for signed requests (destination = proof sub).
+            // `address_proof` carries the signed proof of address ownership; it must be
+            // allowed here or `additionalProperties: false` would 400 signed requests
+            // before the auth preHandler runs.
             type: "object",
             properties: {
               address: { type: "string" },
+              address_proof: { type: "string" },
             },
             additionalProperties: false,
           },
         },
         preHandler: onrampAuthPreHandler({ mode: onrampAuthMode }),
         handler: async (
-          request: FastifyRequest<{ Body: { address?: string } }>,
+          request: FastifyRequest<{
+            Body: { address?: string; address_proof?: string };
+          }>,
           reply,
         ) => {
           if (

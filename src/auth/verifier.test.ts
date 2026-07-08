@@ -3,13 +3,14 @@ import {
   sha256Hex,
   encodeSep53Message,
   SIGN_MESSAGE_PREFIX,
-  ONRAMP_AUTH_DOMAIN,
-  verifyOnrampProof,
+  ADDRESS_PROOF_DOMAIN,
+  ADDRESS_PROOF_BODY_FIELD,
+  verifyAddressProof,
 } from "./verifier";
 import { hash, Keypair } from "stellar-sdk";
-import { ONRAMP_AUTH_REASON } from "./errors";
+import { ADDRESS_PROOF_REASON } from "./errors";
 
-describe("onramp-auth primitives", () => {
+describe("address-proof primitives", () => {
   it("canonicalizes objects with sorted keys and no whitespace", () => {
     expect(canonicalizeJson({ b: 1, a: "x" })).toEqual('{"a":"x","b":1}');
     expect(canonicalizeJson({})).toEqual("{}");
@@ -39,169 +40,154 @@ describe("onramp-auth primitives", () => {
 
 const PATH = "/api/v1/onramp/token";
 const NOW = 1_700_000_000;
+const b64url = (s: string | Buffer) =>
+  (typeof s === "string" ? Buffer.from(s, "utf8") : s).toString("base64url");
 
+// Mints a proof and returns the full request body carrying it in the
+// `address_proof` field. body_hash commits to `businessBody` (the request body
+// WITHOUT the proof field), matching the verifier's carve-out.
 const mintProof = (
   kp: Keypair,
   overrides: Partial<{
     method: string;
     path: string;
-    body: unknown;
+    body: Record<string, unknown>;
     exp: number;
     sub: string;
   }> = {},
 ) => {
-  const body = overrides.body ?? {};
+  const businessBody = overrides.body ?? {};
   const claims = {
     sub: overrides.sub ?? kp.publicKey(),
     method: overrides.method ?? "POST",
     path: overrides.path ?? PATH,
-    body_hash: sha256Hex(canonicalizeJson(body)),
+    body_hash: sha256Hex(canonicalizeJson(businessBody)),
     exp: overrides.exp ?? NOW + 15,
   };
   const canonical = canonicalizeJson(claims);
-  const sig = kp.sign(encodeSep53Message(ONRAMP_AUTH_DOMAIN + canonical));
-  const header = `Stellar ${Buffer.from(canonical, "utf8").toString(
-    "base64url",
-  )}.${sig.toString("base64url")}`;
-  return { header, body };
+  const sig = kp.sign(encodeSep53Message(ADDRESS_PROOF_DOMAIN + canonical));
+  const token = `${b64url(canonical)}.${b64url(sig)}`;
+  const body = { ...businessBody, [ADDRESS_PROOF_BODY_FIELD]: token };
+  return { token, body, businessBody };
 };
 
-describe("verifyOnrampProof", () => {
+describe("verifyAddressProof", () => {
   const kp = Keypair.random();
-  const base = { method: "POST", path: PATH, body: {}, nowSeconds: NOW };
+  const base = { method: "POST", path: PATH, nowSeconds: NOW };
 
   it("accepts a valid proof and returns the principal", () => {
-    const { header, body } = mintProof(kp);
-    expect(verifyOnrampProof({ ...base, authorization: header, body })).toEqual(
-      {
-        ok: true,
-        sub: kp.publicKey(),
-      },
-    );
-  });
-
-  it("401 when header missing", () => {
-    expect(
-      verifyOnrampProof({ ...base, authorization: undefined }),
-    ).toMatchObject({
-      ok: false,
-      status: 401,
-      reason: ONRAMP_AUTH_REASON.NO_TOKEN,
+    const { body } = mintProof(kp);
+    expect(verifyAddressProof({ ...base, body })).toEqual({
+      ok: true,
+      sub: kp.publicKey(),
     });
   });
 
-  it("401 on malformed header", () => {
-    expect(
-      verifyOnrampProof({ ...base, authorization: "Bearer xyz" }),
-    ).toMatchObject({
+  it("401 when the proof field is missing", () => {
+    expect(verifyAddressProof({ ...base, body: {} })).toMatchObject({
       ok: false,
       status: 401,
+      reason: ADDRESS_PROOF_REASON.NO_TOKEN,
     });
+  });
+
+  it("401 on a malformed proof token", () => {
+    // one segment
     expect(
-      verifyOnrampProof({ ...base, authorization: "Stellar nodot" }),
+      verifyAddressProof({ ...base, body: { address_proof: "nodot" } }),
     ).toMatchObject({
       ok: false,
       status: 401,
+      reason: ADDRESS_PROOF_REASON.MALFORMED,
+    });
+    // three segments
+    expect(
+      verifyAddressProof({ ...base, body: { address_proof: "a.b.c" } }),
+    ).toMatchObject({
+      ok: false,
+      status: 401,
+      reason: ADDRESS_PROOF_REASON.MALFORMED,
     });
   });
 
   it("401 (not 500) on a non-object JSON payload", () => {
     // Payload decodes to valid JSON that is not an object — `null`, an array,
     // and a bare number. Each must yield a clean MALFORMED 401 rather than
-    // throwing on the claim-field access. (`bnVsbA` is base64url of "null".)
+    // throwing on the claim-field access.
     for (const payload of ["null", "[]", "123"]) {
-      const header = `Stellar ${Buffer.from(payload, "utf8").toString(
-        "base64url",
-      )}.${Buffer.from("sig", "utf8").toString("base64url")}`;
+      const token = `${b64url(payload)}.${b64url("sig")}`;
       expect(
-        verifyOnrampProof({ ...base, authorization: header }),
+        verifyAddressProof({ ...base, body: { address_proof: token } }),
       ).toMatchObject({
         ok: false,
         status: 401,
-        reason: ONRAMP_AUTH_REASON.MALFORMED,
+        reason: ADDRESS_PROOF_REASON.MALFORMED,
       });
     }
   });
 
   it("400 on invalid StrKey sub", () => {
-    const { header, body } = mintProof(kp, { sub: "not-a-key" });
-    expect(
-      verifyOnrampProof({ ...base, authorization: header, body }),
-    ).toMatchObject({
+    const { body } = mintProof(kp, { sub: "not-a-key" });
+    expect(verifyAddressProof({ ...base, body })).toMatchObject({
       ok: false,
       status: 400,
-      reason: ONRAMP_AUTH_REASON.BAD_CLAIMS,
+      reason: ADDRESS_PROOF_REASON.BAD_CLAIMS,
     });
   });
 
   it("401 when expired (past window + skew)", () => {
-    const { header, body } = mintProof(kp, { exp: NOW - 3 });
-    expect(
-      verifyOnrampProof({ ...base, authorization: header, body }),
-    ).toMatchObject({
+    // 6s in the past — beyond the 5s skew leeway.
+    const { body } = mintProof(kp, { exp: NOW - 6 });
+    expect(verifyAddressProof({ ...base, body })).toMatchObject({
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.EXPIRED,
+      reason: ADDRESS_PROOF_REASON.EXPIRED,
     });
   });
 
-  it("accepts within 2s backward skew", () => {
-    const { header, body } = mintProof(kp, { exp: NOW - 2 });
-    expect(verifyOnrampProof({ ...base, authorization: header, body }).ok).toBe(
-      true,
-    );
+  it("accepts within 5s backward skew", () => {
+    const { body } = mintProof(kp, { exp: NOW - 5 });
+    expect(verifyAddressProof({ ...base, body }).ok).toBe(true);
   });
 
   it("401 when exp too far in future", () => {
-    const { header, body } = mintProof(kp, { exp: NOW + 100 });
-    expect(
-      verifyOnrampProof({ ...base, authorization: header, body }),
-    ).toMatchObject({
+    const { body } = mintProof(kp, { exp: NOW + 100 });
+    expect(verifyAddressProof({ ...base, body })).toMatchObject({
       ok: false,
       status: 401,
     });
   });
 
   it("401 on method/path mismatch", () => {
-    const { header, body } = mintProof(kp);
-    expect(
-      verifyOnrampProof({
-        ...base,
-        authorization: header,
-        body,
-        method: "GET",
-      }),
-    ).toMatchObject({ ok: false, status: 401 });
-    expect(
-      verifyOnrampProof({
-        ...base,
-        authorization: header,
-        body,
-        path: "/other",
-      }),
-    ).toMatchObject({ ok: false, status: 401 });
+    const { body } = mintProof(kp);
+    expect(verifyAddressProof({ ...base, body, method: "GET" })).toMatchObject({
+      ok: false,
+      status: 401,
+    });
+    expect(verifyAddressProof({ ...base, body, path: "/other" })).toMatchObject(
+      { ok: false, status: 401 },
+    );
   });
 
   it("401 on body tampering", () => {
-    const { header } = mintProof(kp, { body: {} });
+    const { body } = mintProof(kp, { body: {} });
+    // Add a field not covered by the signed body_hash.
     expect(
-      verifyOnrampProof({ ...base, authorization: header, body: { evil: 1 } }),
+      verifyAddressProof({ ...base, body: { ...body, evil: 1 } }),
     ).toMatchObject({ ok: false, status: 401 });
   });
 
   it("401 when signed by a different key", () => {
     const attacker = Keypair.random();
-    const { header, body } = mintProof(attacker, { sub: kp.publicKey() });
-    expect(
-      verifyOnrampProof({ ...base, authorization: header, body }),
-    ).toMatchObject({
+    const { body } = mintProof(attacker, { sub: kp.publicKey() });
+    expect(verifyAddressProof({ ...base, body })).toMatchObject({
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.BAD_SIGNATURE,
+      reason: ADDRESS_PROOF_REASON.BAD_SIGNATURE,
     });
   });
 
-  it("rejects a proof whose signature does not cover the onramp domain tag (cross-protocol confusion)", () => {
+  it("rejects a proof whose signature does not cover the address-proof domain tag (cross-protocol confusion)", () => {
     const kp2 = Keypair.random();
     const claims = {
       sub: kp2.publicKey(),
@@ -211,21 +197,20 @@ describe("verifyOnrampProof", () => {
       exp: NOW + 15,
     };
     const canonical = canonicalizeJson(claims);
-    // Signed WITHOUT ONRAMP_AUTH_DOMAIN — i.e. a generic SEP-53 message signature.
+    // Signed WITHOUT ADDRESS_PROOF_DOMAIN — i.e. a generic SEP-53 message signature.
     const sig = kp2.sign(encodeSep53Message(canonical));
-    const header = `Stellar ${Buffer.from(canonical, "utf8").toString("base64url")}.${sig.toString("base64url")}`;
+    const token = `${b64url(canonical)}.${b64url(sig)}`;
     expect(
-      verifyOnrampProof({
-        authorization: header,
+      verifyAddressProof({
         method: "POST",
         path: PATH,
-        body: {},
+        body: { address_proof: token },
         nowSeconds: NOW,
       }),
     ).toMatchObject({
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.BAD_SIGNATURE,
+      reason: ADDRESS_PROOF_REASON.BAD_SIGNATURE,
     });
   });
 });

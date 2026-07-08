@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import Prometheus from "prom-client";
 
-import { OnrampAuthReason } from "../auth/errors";
+import { AddressProofReason } from "../auth/errors";
 import { isNetwork } from "./validate";
 
 export enum WorkerMessage {
@@ -57,7 +57,7 @@ export const onrampAuthRequestsCounter = new Prometheus.Counter({
 
 export const recordOnrampAuth = (
   result: "authenticated" | "anonymous" | "rejected",
-  reason: OnrampAuthReason,
+  reason: AddressProofReason,
 ): void => {
   onrampAuthRequestsCounter.inc({ result, reason });
 };

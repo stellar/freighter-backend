@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { hash, Keypair } from "stellar-sdk";
 import { isPubKey } from "../helper/validate";
-import { ONRAMP_AUTH_REASON, VerifyOnrampProofResult } from "./errors";
+import { ADDRESS_PROOF_REASON, VerifyAddressProofResult } from "./errors";
 
 export const SIGN_MESSAGE_PREFIX = "Stellar Signed Message:\n";
 
@@ -30,17 +30,25 @@ export const encodeSep53Message = (message: string): Buffer =>
     ]),
   );
 
-export const ONRAMP_PROOF_SCHEME = "Stellar";
-export const ONRAMP_PROOF_MAX_AGE_S = 15;
-export const ONRAMP_PROOF_SKEW_S = 2;
+export const ADDRESS_PROOF_MAX_AGE_S = 15;
+// Clock-skew leeway, matching freighter-backend-v2's ClockSkewLeeway (5s) so the
+// two siblings accept the same drift; mobile clients especially can be off.
+export const ADDRESS_PROOF_SKEW_S = 5;
 
-// Domain separator folded into the signed bytes so an onramp proof cannot be
+// The request-body field the proof travels in. The proof is NOT an Authorization
+// header: that header is reserved for v2's JWT, which an authenticated request
+// carries alongside this proof.
+export const ADDRESS_PROOF_BODY_FIELD = "address_proof";
+
+// Domain separator folded into the signed bytes so an address proof cannot be
 // produced via the generic SEP-53 signMessage dApp API (cross-protocol
 // signature confusion). The clients' public signMessage path refuses to sign
-// messages carrying this tag; only the internal onramp signer emits it.
-export const ONRAMP_AUTH_DOMAIN = "freighter:onramp-auth:v1\n";
+// messages carrying this tag; only the internal signer emits it. Named
+// generically (not per-endpoint): it lives in the signed bytes, so renaming it
+// is a wire-breaking v2. Endpoints are separated by the `path` claim, not the tag.
+export const ADDRESS_PROOF_DOMAIN = "freighter:address-proof:v1\n";
 
-interface OnrampProofClaims {
+interface AddressProofClaims {
   sub: string;
   method: string;
   path: string;
@@ -48,37 +56,41 @@ interface OnrampProofClaims {
   exp: number;
 }
 
-export const verifyOnrampProof = (params: {
-  authorization?: string;
+export const verifyAddressProof = (params: {
   method: string;
   path: string;
   body: unknown;
   nowSeconds: number;
-}): VerifyOnrampProofResult => {
-  const { authorization, method, path, body, nowSeconds } = params;
+}): VerifyAddressProofResult => {
+  const { method, path, body, nowSeconds } = params;
 
-  if (!authorization) {
+  // Split the request body into the proof token and the "business" body the
+  // proof commits to. body_hash covers the business body only — the proof field
+  // is removed first (the proof can't hash itself).
+  const bodyObj: Record<string, unknown> =
+    body !== null && typeof body === "object"
+      ? (body as Record<string, unknown>)
+      : {};
+  const { [ADDRESS_PROOF_BODY_FIELD]: proofField, ...businessBody } = bodyObj;
+
+  if (!proofField || typeof proofField !== "string") {
     return {
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.NO_TOKEN,
-      error: "Missing onramp authorization proof",
+      reason: ADDRESS_PROOF_REASON.NO_TOKEN,
+      error: "Missing address proof",
     };
   }
-  const [scheme, token] = authorization.split(" ");
-  if (
-    scheme !== ONRAMP_PROOF_SCHEME ||
-    !token ||
-    token.split(".").length !== 2
-  ) {
+  const segments = proofField.split(".");
+  if (segments.length !== 2 || !segments[0] || !segments[1]) {
     return {
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.MALFORMED,
-      error: "Malformed onramp authorization proof",
+      reason: ADDRESS_PROOF_REASON.MALFORMED,
+      error: "Malformed address proof",
     };
   }
-  const [payloadB64, sigB64] = token.split(".");
+  const [payloadB64, sigB64] = segments;
 
   let canonicalPayload: string;
   let parsed: unknown;
@@ -89,23 +101,23 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.MALFORMED,
-      error: "Malformed onramp authorization proof",
+      reason: ADDRESS_PROOF_REASON.MALFORMED,
+      error: "Malformed address proof",
     };
   }
   // Guard non-object payloads (e.g. `null`, a JSON array, or a bare
   // number/string) before reading claim fields — otherwise a client-controlled
-  // header like `Stellar bnVsbA.<sig>` (base64url of "null") would throw on the
-  // property access below and surface as a 500 instead of a 401.
+  // payload like base64url("null") would throw on the property access below and
+  // surface as a 500 instead of a 401.
   if (parsed === null || typeof parsed !== "object") {
     return {
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.MALFORMED,
-      error: "Malformed onramp authorization proof",
+      reason: ADDRESS_PROOF_REASON.MALFORMED,
+      error: "Malformed address proof",
     };
   }
-  const claims = parsed as OnrampProofClaims;
+  const claims = parsed as AddressProofClaims;
   if (
     typeof claims.sub !== "string" ||
     typeof claims.method !== "string" ||
@@ -116,8 +128,8 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.MALFORMED,
-      error: "Malformed onramp authorization proof",
+      reason: ADDRESS_PROOF_REASON.MALFORMED,
+      error: "Malformed address proof",
     };
   }
 
@@ -126,20 +138,20 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 400,
-      reason: ONRAMP_AUTH_REASON.BAD_CLAIMS,
+      reason: ADDRESS_PROOF_REASON.BAD_CLAIMS,
       error: "Invalid Stellar address",
     };
   }
 
   if (
-    nowSeconds > claims.exp + ONRAMP_PROOF_SKEW_S ||
-    claims.exp > nowSeconds + ONRAMP_PROOF_MAX_AGE_S + ONRAMP_PROOF_SKEW_S
+    nowSeconds > claims.exp + ADDRESS_PROOF_SKEW_S ||
+    claims.exp > nowSeconds + ADDRESS_PROOF_MAX_AGE_S + ADDRESS_PROOF_SKEW_S
   ) {
     return {
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.EXPIRED,
-      error: "Expired onramp authorization proof",
+      reason: ADDRESS_PROOF_REASON.EXPIRED,
+      error: "Expired address proof",
     };
   }
 
@@ -147,23 +159,23 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.BAD_CLAIMS,
-      error: "Onramp proof does not match request",
+      reason: ADDRESS_PROOF_REASON.BAD_CLAIMS,
+      error: "Address proof does not match request",
     };
   }
 
-  if (claims.body_hash !== sha256Hex(canonicalizeJson(body ?? {}))) {
+  if (claims.body_hash !== sha256Hex(canonicalizeJson(businessBody))) {
     return {
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.BAD_CLAIMS,
-      error: "Onramp proof does not match request body",
+      reason: ADDRESS_PROOF_REASON.BAD_CLAIMS,
+      error: "Address proof does not match request body",
     };
   }
 
   let verified = false;
   try {
-    const digest = encodeSep53Message(ONRAMP_AUTH_DOMAIN + canonicalPayload);
+    const digest = encodeSep53Message(ADDRESS_PROOF_DOMAIN + canonicalPayload);
     verified = Keypair.fromPublicKey(claims.sub).verify(
       digest,
       Buffer.from(sigB64, "base64url"),
@@ -175,8 +187,8 @@ export const verifyOnrampProof = (params: {
     return {
       ok: false,
       status: 401,
-      reason: ONRAMP_AUTH_REASON.BAD_SIGNATURE,
-      error: "Invalid onramp authorization proof",
+      reason: ADDRESS_PROOF_REASON.BAD_SIGNATURE,
+      error: "Invalid address proof",
     };
   }
 

@@ -1,5 +1,5 @@
 // Mirrors freighter-backend-v2 internal/auth/errors.go reason constants.
-export const ONRAMP_AUTH_REASON = {
+export const ADDRESS_PROOF_REASON = {
   OK: "ok", // success marker for the authenticated result (mirrors backend-v2)
   NO_TOKEN: "no_token",
   EXPIRED: "expired",
@@ -8,9 +8,9 @@ export const ONRAMP_AUTH_REASON = {
   MALFORMED: "malformed",
 } as const;
 
-export type OnrampAuthReason =
-  (typeof ONRAMP_AUTH_REASON)[keyof typeof ONRAMP_AUTH_REASON];
+export type AddressProofReason =
+  (typeof ADDRESS_PROOF_REASON)[keyof typeof ADDRESS_PROOF_REASON];
 
-export type VerifyOnrampProofResult =
+export type VerifyAddressProofResult =
   | { ok: true; sub: string }
-  | { ok: false; status: 400 | 401; reason: OnrampAuthReason; error: string };
+  | { ok: false; status: 400 | 401; reason: AddressProofReason; error: string };

@@ -6,7 +6,7 @@ import {
   queryMockResponse,
   pubKey,
   TEST_SOROBAN_TX,
-  makeOnrampProof,
+  makeAddressProof,
 } from "../helper/test-helper";
 import { transformAccountHistory } from "../service/mercury/helpers/transformers";
 import { query } from "../service/mercury/queries";
@@ -1145,9 +1145,10 @@ describe("API routes", () => {
         headers: {
           "Content-Type": "application/json",
           "X-Forwarded-For": "203.0.113.42",
-          Authorization: makeOnrampProof(kp, { body: {} }),
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          address_proof: makeAddressProof(kp, { body: {} }),
+        }),
       });
       const resJson = await response.json();
 
@@ -1189,9 +1190,8 @@ describe("API routes", () => {
         headers: {
           "Content-Type": "application/json",
           "X-Forwarded-For": "203.0.113.42",
-          Authorization: "Stellar garbage.signature",
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ address_proof: "garbage.signature" }),
       });
       expect(response.status).toEqual(401);
       await server.close();
@@ -1332,10 +1332,11 @@ describe("API routes", () => {
         headers: {
           "Content-Type": "application/json",
           "X-Forwarded-For": "203.0.113.42",
-          // real signature by kp, but claims.sub is an invalid StrKey → must be 400
-          Authorization: makeOnrampProof(kp, { body: {}, sub: "not-a-key" }),
         },
-        body: JSON.stringify({}),
+        // real signature by kp, but claims.sub is an invalid StrKey → must be 400
+        body: JSON.stringify({
+          address_proof: makeAddressProof(kp, { body: {}, sub: "not-a-key" }),
+        }),
       });
       expect(response.status).toEqual(400);
       await server.close();

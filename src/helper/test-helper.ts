@@ -16,7 +16,7 @@ import {
   canonicalizeJson,
   sha256Hex,
   encodeSep53Message,
-  ONRAMP_AUTH_DOMAIN,
+  ADDRESS_PROOF_DOMAIN,
 } from "../auth/verifier";
 import { AuthMode } from "../auth/mode";
 
@@ -699,7 +699,9 @@ async function getDevServer(
   await server.listen();
   return server;
 }
-export const makeOnrampProof = (
+// Mints the `address_proof` body-field value (a `<payload>.<sig>` token). `body`
+// is the business body the proof commits to (without the proof field itself).
+export const makeAddressProof = (
   kp: Keypair,
   opts: { path?: string; body?: unknown; exp?: number; sub?: string } = {},
 ): string => {
@@ -712,8 +714,8 @@ export const makeOnrampProof = (
     exp: opts.exp ?? Math.floor(Date.now() / 1000) + 15,
   };
   const canonical = canonicalizeJson(claims);
-  const sig = kp.sign(encodeSep53Message(ONRAMP_AUTH_DOMAIN + canonical));
-  return `Stellar ${Buffer.from(canonical, "utf8").toString("base64url")}.${sig.toString("base64url")}`;
+  const sig = kp.sign(encodeSep53Message(ADDRESS_PROOF_DOMAIN + canonical));
+  return `${Buffer.from(canonical, "utf8").toString("base64url")}.${sig.toString("base64url")}`;
 };
 
 export {
