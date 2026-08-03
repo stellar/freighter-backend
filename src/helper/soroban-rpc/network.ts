@@ -47,10 +47,9 @@ const getTxBuilder = async (
 };
 
 const simulateTx = async <ArgType>(
-  tx: StellarSdk.Transaction<
-    StellarSdk.Memo<StellarSdk.MemoType>,
-    StellarSdk.Operation[]
-  >,
+  // stellar-sdk 16 dropped the <Memo, Operation[]> type parameters on
+  // Transaction; the class carries those as instance fields now.
+  tx: StellarSdk.Transaction,
   server: StellarSdk.rpc.Server | StellarSdkNext.rpc.Server,
   networkPassphrase: StellarSdk.Networks,
 ): Promise<ArgType> => {
