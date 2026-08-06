@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import Prometheus from "prom-client";
 
+import { AddressProofReason } from "../auth/errors";
 import { isNetwork } from "./validate";
 
 export enum WorkerMessage {
@@ -46,6 +47,20 @@ export const dataIntegrityCheckFail = new Prometheus.Counter({
   labelNames: ["dataIntegrityCheckFail"],
   registers: [register],
 });
+
+export const onrampAuthRequestsCounter = new Prometheus.Counter({
+  name: "freighter_backend_onramp_auth_requests_total",
+  help: "Onramp /token requests by auth result and reason",
+  labelNames: ["result", "reason"], // result: authenticated|anonymous|rejected
+  registers: [register],
+});
+
+export const recordOnrampAuth = (
+  result: "authenticated" | "anonymous" | "rejected",
+  reason: AddressProofReason,
+): void => {
+  onrampAuthRequestsCounter.inc({ result, reason });
+};
 
 register.registerMetric(dataIntegrityCheckPass);
 register.registerMetric(dataIntegrityCheckFail);

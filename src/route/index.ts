@@ -51,6 +51,9 @@ import {
   isLikelyInternalIp,
   CoinbaseConfig,
 } from "../helper/onramp";
+import { onrampAuthPreHandler } from "../auth/middleware";
+import "../auth/context"; // augments FastifyRequest with onrampPrincipal
+import { AuthMode } from "../auth/mode";
 import Blockaid from "@blockaid/client";
 import { PriceClient } from "../service/prices";
 import { TokenPriceData } from "../service/prices/types";
@@ -81,6 +84,7 @@ export async function initApiServer(
   coinbaseConfig: CoinbaseConfig,
   priceConfig: PriceConfig,
   stellarRpcConfig: StellarRpcConfig,
+  onrampAuthMode: AuthMode,
   trustProxyRange?: string,
   redis?: Redis,
 ) {
@@ -121,6 +125,7 @@ export async function initApiServer(
   server.setValidatorCompiler(({ schema }) => {
     return ajv.compile(schema);
   });
+  server.decorateRequest("onrampPrincipal", null);
   server.register(rateLimiter, {
     max: 3500,
     timeWindow: "1 minute",
@@ -1477,7 +1482,7 @@ export async function initApiServer(
         },
       });
 
-      instance.route({
+      instance.route<{ Body: { address?: string; address_proof?: string } }>({
         method: "POST",
         url: "/onramp/token",
         config: {
@@ -1488,30 +1493,41 @@ export async function initApiServer(
         },
         schema: {
           body: {
+            // `address` kept optional so legacy unsigned clients pass schema in
+            // permissive mode. It is IGNORED for signed requests (destination = proof sub).
+            // `address_proof` carries the signed proof of address ownership; it must be
+            // allowed here or `additionalProperties: false` would 400 signed requests
+            // before the auth preHandler runs.
             type: "object",
-            required: ["address"],
             properties: {
               address: { type: "string" },
+              address_proof: { type: "string" },
             },
+            additionalProperties: false,
           },
         },
+        preHandler: onrampAuthPreHandler({ mode: onrampAuthMode }),
         handler: async (
           request: FastifyRequest<{
-            Body: { address: string };
+            Body: { address?: string; address_proof?: string };
           }>,
           reply,
         ) => {
-          const { address } = request.body;
           if (
             !coinbaseConfig.coinbaseApiKey ||
             !coinbaseConfig.coinbaseApiSecret
           ) {
             return reply.code(400).send({ error: "Coinbase config not set" });
           }
-          // Forwarded to Coinbase to bind the resulting Onramp session to the
-          // requesting client. If request.ip resolves to an intra-cluster
-          // address, FREIGHTER_TRUST_PROXY_RANGE doesn't match the actual
-          // proxy chain — refuse rather than issue an unbound session.
+
+          // Destination: ALWAYS the proven principal when signed. In permissive mode
+          // an unsigned legacy request falls back to its body `address`.
+          const principal = request.onrampPrincipal;
+          const address = principal ?? request.body?.address;
+          if (!address) {
+            return reply.code(400).send({ error: "Missing address" });
+          }
+
           const rawIp = request.ip;
           if (isLikelyInternalIp(rawIp)) {
             logger.warn(
@@ -1536,15 +1552,24 @@ export async function initApiServer(
               clientIp,
               coinbaseConfig,
             });
-
             const { token } = data;
-
             if (!token) {
               return reply
                 .code(400)
                 .send({ error: `Unable to retrieve token: ${error}` });
             }
-
+            // Abuse-investigation record. No secret material, no signature bytes.
+            logger.info(
+              {
+                // Proven principal only — null for unsigned permissive requests
+                // whose `address` is caller-supplied and NOT identity-verified.
+                principal: principal ?? null,
+                destination: address,
+                authMode: onrampAuthMode,
+                signed: Boolean(principal),
+              },
+              "onramp.token: minted Coinbase session token",
+            );
             return reply.code(200).send({ data: { token } });
           } catch (error) {
             logger.error(error);

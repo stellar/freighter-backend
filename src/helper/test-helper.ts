@@ -1,6 +1,6 @@
 import { Client, fetchExchange } from "@urql/core";
 import pino from "pino";
-import { nativeToScVal } from "stellar-sdk";
+import { Keypair, nativeToScVal } from "stellar-sdk";
 import Prometheus from "prom-client";
 import Blockaid from "@blockaid/client";
 
@@ -12,6 +12,13 @@ import { hasIndexerSupport } from "./mercury";
 import { BlockAidService } from "../service/blockaid";
 import { PriceClient } from "../service/prices";
 import { PriceConfig, StellarRpcConfig } from "../config";
+import {
+  canonicalizeJson,
+  sha256Hex,
+  encodeSep53Message,
+  ADDRESS_PROOF_DOMAIN,
+} from "../auth/verifier";
+import { AuthMode } from "../auth/mode";
 
 export const TEST_SOROBAN_TX =
   "AAAAAgAAAACM6IR9GHiRoVVAO78JJNksy2fKDQNs2jBn8bacsRLcrDucaFsAAAWIAAAAMQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAGAAAAAAAAAABHkEVdJ+UfDnWpBr/qF582IEoDQ0iW0WPzO9CEUdvvh8AAAAIdHJhbnNmZXIAAAADAAAAEgAAAAAAAAAAjOiEfRh4kaFVQDu/CSTZLMtnyg0DbNowZ/G2nLES3KwAAAASAAAAAAAAAADoFl2ACT9HZkbCeuaT9MAIdStpdf58wM3P24nl738AnQAAAAoAAAAAAAAAAAAAAAAAAAAFAAAAAQAAAAAAAAAAAAAAAR5BFXSflHw51qQa/6hefNiBKA0NIltFj8zvQhFHb74fAAAACHRyYW5zZmVyAAAAAwAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtysAAAAEgAAAAAAAAAA6BZdgAk/R2ZGwnrmk/TACHUraXX+fMDNz9uJ5e9/AJ0AAAAKAAAAAAAAAAAAAAAAAAAABQAAAAAAAAABAAAAAAAAAAIAAAAGAAAAAR5BFXSflHw51qQa/6hefNiBKA0NIltFj8zvQhFHb74fAAAAFAAAAAEAAAAHa35L+/RxV6EuJOVk78H5rCN+eubXBWtsKrRxeLnnpRAAAAACAAAABgAAAAEeQRV0n5R8OdakGv+oXnzYgSgNDSJbRY/M70IRR2++HwAAABAAAAABAAAAAgAAAA8AAAAHQmFsYW5jZQAAAAASAAAAAAAAAACM6IR9GHiRoVVAO78JJNksy2fKDQNs2jBn8bacsRLcrAAAAAEAAAAGAAAAAR5BFXSflHw51qQa/6hefNiBKA0NIltFj8zvQhFHb74fAAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAOgWXYAJP0dmRsJ65pP0wAh1K2l1/nzAzc/bieXvfwCdAAAAAQBkcwsAACBwAAABKAAAAAAAAB1kAAAAAA==";
@@ -668,6 +675,7 @@ async function getDevServer(
   stellarRpcConfig = mockStellarRpcConfig,
   useMercury = true,
   trustProxyRange = "loopback,linklocal,uniquelocal",
+  onrampAuthMode: AuthMode = "permissive",
 ) {
   register.clear();
 
@@ -684,12 +692,32 @@ async function getDevServer(
     coinbaseConfig,
     priceConfig,
     stellarRpcConfig,
+    onrampAuthMode,
     trustProxyRange,
   );
 
   await server.listen();
   return server;
 }
+// Mints the `address_proof` body-field value (a `<payload>.<sig>` token). `body`
+// is the business body the proof commits to (without the proof field itself).
+export const makeAddressProof = (
+  kp: Keypair,
+  opts: { path?: string; body?: unknown; exp?: number; sub?: string } = {},
+): string => {
+  const body = opts.body ?? {};
+  const claims = {
+    sub: opts.sub ?? kp.publicKey(),
+    method: "POST",
+    path: opts.path ?? "/api/v1/onramp/token",
+    body_hash: sha256Hex(canonicalizeJson(body)),
+    exp: opts.exp ?? Math.floor(Date.now() / 1000) + 15,
+  };
+  const canonical = canonicalizeJson(claims);
+  const sig = kp.sign(encodeSep53Message(ADDRESS_PROOF_DOMAIN + canonical));
+  return `${Buffer.from(canonical, "utf8").toString("base64url")}.${sig.toString("base64url")}`;
+};
+
 export {
   pubKey,
   mockMercuryClient,

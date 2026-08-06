@@ -1,10 +1,12 @@
 import * as StellarSdk from "stellar-sdk";
+import { Keypair } from "stellar-sdk";
 import "@blockaid/client";
 import {
   getDevServer,
   queryMockResponse,
   pubKey,
   TEST_SOROBAN_TX,
+  makeAddressProof,
 } from "../helper/test-helper";
 import { transformAccountHistory } from "../service/mercury/helpers/transformers";
 import { query } from "../service/mercury/queries";
@@ -1130,45 +1132,68 @@ describe("API routes", () => {
       await server.close();
     });
 
-    it("can fetch an onramp token and binds it to the forwarded client IP", async () => {
+    it("mints a token for the signed principal and ignores any body address", async () => {
       const fetchSpy = jest
         .spyOn(OnrampHelpers, "fetchOnrampSessionToken")
-        .mockReturnValueOnce(
-          Promise.resolve({
-            data: {
-              token: "token",
-            },
-            error: null,
-          }),
-        );
+        .mockResolvedValueOnce({ data: { token: "token" }, error: null });
 
+      const kp = Keypair.random();
       const server = await getDevServer();
-      const url = new URL(
-        `http://localhost:${
-          (server?.server?.address() as any).port
-        }/api/v1/onramp/token`,
-      );
-      const options = {
+      const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Forwarded-For": "203.0.113.42",
         },
         body: JSON.stringify({
-          address: "GFOO",
+          address_proof: makeAddressProof(kp, { body: {} }),
         }),
-      };
-      const response = await fetch(url.href, options);
+      });
       const resJson = await response.json();
 
       expect(response.status).toEqual(200);
       expect(resJson.data.token).toEqual("token");
       expect(fetchSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          address: "GFOO",
+          address: kp.publicKey(),
           clientIp: "203.0.113.42",
         }),
       );
+      await server.close();
+    });
+
+    it("allows an unsigned legacy request in permissive mode", async () => {
+      jest
+        .spyOn(OnrampHelpers, "fetchOnrampSessionToken")
+        .mockResolvedValueOnce({ data: { token: "token" }, error: null });
+
+      const server = await getDevServer();
+      const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Forwarded-For": "203.0.113.42",
+        },
+        body: JSON.stringify({ address: "GFOO" }),
+      });
+      expect(response.status).toEqual(200);
+      await server.close();
+    });
+
+    it("rejects a request with a present-but-invalid proof even in permissive mode", async () => {
+      const server = await getDevServer();
+      const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Forwarded-For": "203.0.113.42",
+        },
+        body: JSON.stringify({ address_proof: "garbage.signature" }),
+      });
+      expect(response.status).toEqual(401);
       await server.close();
     });
     it("fails closed with 400 when client IP resolves to an internal address", async () => {
@@ -1264,6 +1289,56 @@ describe("API routes", () => {
       expect(resJson.error).toEqual(
         "Unable to retrieve token: Error: JWT generation failed",
       );
+      await server.close();
+    });
+
+    it("returns 401 for an unsigned request in strict mode (the ticket repro)", async () => {
+      const server = await getDevServer(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "strict",
+      );
+      const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Forwarded-For": "203.0.113.42",
+        },
+        body: JSON.stringify({ address: "GFOO" }),
+      });
+      expect(response.status).toEqual(401);
+      await server.close();
+    });
+
+    it("returns 400 for a valid signature over an invalid StrKey in strict mode", async () => {
+      const kp = Keypair.random();
+      const server = await getDevServer(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "strict",
+      );
+      const url = `http://localhost:${(server?.server?.address() as any).port}/api/v1/onramp/token`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Forwarded-For": "203.0.113.42",
+        },
+        // real signature by kp, but claims.sub is an invalid StrKey → must be 400
+        body: JSON.stringify({
+          address_proof: makeAddressProof(kp, { body: {}, sub: "not-a-key" }),
+        }),
+      });
+      expect(response.status).toEqual(400);
       await server.close();
     });
   });

@@ -1,4 +1,5 @@
 import { ERROR } from "./helper/error";
+import { parseMode, AuthMode } from "./auth/mode";
 
 const ENV_KEYS = [
   "AUTH_EMAIL",
@@ -16,6 +17,9 @@ const ENV_KEYS = [
   "FREIGHTER_HORIZON_URL",
   "DISABLE_TOKEN_PRICES",
   "FREIGHTER_RPC_PUBNET_URL",
+  // ONRAMP_AUTH_MODE is intentionally NOT required: it is optional and
+  // defaults to "permissive" via parseMode(undefined) below, so existing
+  // deployments roll out without having to add the new env var first.
 ];
 
 export interface PriceConfig {
@@ -49,6 +53,10 @@ export function buildConfig(config: Record<string, string | undefined>) {
   if (!isMissingKeys) {
     throw new Error(ERROR.INVALID_ENV(missingKeys.join()));
   }
+
+  const onrampAuthMode: AuthMode = parseMode(
+    config.ONRAMP_AUTH_MODE || process.env.ONRAMP_AUTH_MODE,
+  );
 
   return {
     blockAidKey: config.BLOCKAID_KEY || process.env.BLOCKAID_KEY!,
@@ -146,6 +154,7 @@ export function buildConfig(config: Record<string, string | undefined>) {
       coinbaseApiSecret:
         config.COINBASE_API_SECRET || process.env.COINBASE_API_SECRET!,
     },
+    onrampAuthMode,
   };
 }
 
