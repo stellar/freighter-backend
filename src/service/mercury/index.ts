@@ -39,6 +39,9 @@ import { getSdk } from "../../helper/stellar";
 import { StellarRpcConfig } from "../../config";
 const DEFAULT_RETRY_AMOUNT = 5;
 
+export const TOKEN_DETAILS_CACHE_VERSION = "v2";
+export const TOKEN_DETAILS_TTL_SECONDS = 5 * 60;
+
 export const ERROR_MESSAGES = {
   JWT_EXPIRED: "1_kJdMBB7ytvgRIqF1clh2iz2iI",
 };
@@ -111,6 +114,9 @@ export class MercuryClient {
   mercuryErrorCounter: Prometheus.Counter<"endpoint">;
   rpcErrorCounter: Prometheus.Counter<"rpc">;
   criticalError: Prometheus.Counter<"message">;
+
+  private tokenDetailsCacheKey = (network: NetworkNames, contractId: string) =>
+    `token-details:${TOKEN_DETAILS_CACHE_VERSION}:${network}:${contractId}`;
 
   constructor(
     mercurySession: MercurySession,
@@ -448,7 +454,7 @@ export class MercuryClient {
   }> => {
     try {
       const server = await getServer(network, this.rpcConfig);
-      const compositeKey = `${network}__${contractId}`;
+      const compositeKey = this.tokenDetailsCacheKey(network, contractId);
 
       let balance: string | undefined;
 
@@ -467,19 +473,36 @@ export class MercuryClient {
         balance = rawBalance.toString();
       }
 
-      // get static token details from cache if we have them, otherwise go to ledger and cache
+      // Contract metadata can change, so the cache is versioned and bounded
+      // by a short TTL.
       if (this.redisClient) {
-        const cachedStaticTokenDetails =
-          await this.redisClient.get(compositeKey);
-        if (cachedStaticTokenDetails) {
-          return {
-            ...JSON.parse(cachedStaticTokenDetails),
-            ...(balance !== undefined && { balance }),
-          };
+        const cachedTokenDetails = await this.redisClient.get(compositeKey);
+        if (cachedTokenDetails) {
+          try {
+            const { name, symbol, decimals } = JSON.parse(cachedTokenDetails);
+            if (
+              typeof name === "string" &&
+              typeof symbol === "string" &&
+              typeof decimals === "string"
+            ) {
+              return {
+                name,
+                symbol,
+                decimals,
+                ...(balance !== undefined && { balance }),
+              };
+            }
+          } catch (error) {
+            this.logger.warn(
+              { error, compositeKey },
+              "Failed to parse cached token details",
+            );
+          }
+
+          await this.redisClient.del(compositeKey);
         }
       }
 
-      // we need a builder per operation, 1 op per tx in Soroban
       const decimalsBuilder = await getTxBuilder(pubKey, network, server);
       const decimals = await getTokenDecimals(
         contractId,
@@ -505,11 +528,13 @@ export class MercuryClient {
         symbol,
       };
 
-      // Only cache the static token details, not the balance since it changes over time
+      // Balance is account-specific and must not be cached with contract metadata.
       if (this.redisClient) {
         await this.redisClient.set(
           compositeKey,
           JSON.stringify(staticTokenDetails),
+          "EX",
+          TOKEN_DETAILS_TTL_SECONDS,
         );
       }
 
@@ -523,6 +548,18 @@ export class MercuryClient {
       }
       throw new Error(JSON.stringify(error));
     }
+  };
+
+  invalidateTokenDetails = async (
+    contractId: string,
+    network: NetworkNames,
+  ): Promise<void> => {
+    if (!this.redisClient) {
+      return;
+    }
+
+    const compositeKey = this.tokenDetailsCacheKey(network, contractId);
+    await this.redisClient.del(compositeKey);
   };
 
   getAccountHistoryHorizon = async (
