@@ -42,7 +42,7 @@ const mockRpc = () => {
     .mockResolvedValue({} as any);
   const decimals = jest
     .spyOn(SorobanRpcTokenHelper, "getTokenDecimals")
-    .mockResolvedValue("7");
+    .mockResolvedValue(7);
   const name = jest
     .spyOn(SorobanRpcTokenHelper, "getTokenName")
     .mockResolvedValue("Test Token");
@@ -58,10 +58,10 @@ describe("Mercury token details cache", () => {
     jest.restoreAllMocks();
   });
 
-  it("caches descriptive metadata with a versioned key and finite TTL", async () => {
+  it("caches token metadata with a versioned key and finite TTL", async () => {
     const redisClient = makeRedisClient();
     const client = makeClient(redisClient);
-    const cacheKey = getCacheKey(client);
+    const cacheKey = `token-details:v2:${network}:${contractId}`;
     mockRpc();
 
     await client.tokenDetails(pubKey, contractId, network);

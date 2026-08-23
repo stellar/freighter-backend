@@ -504,12 +504,9 @@ export class MercuryClient {
       }
 
       const decimalsBuilder = await getTxBuilder(pubKey, network, server);
-      const decimals = await getTokenDecimals(
-        contractId,
-        server,
-        decimalsBuilder,
-        network,
-      );
+      const decimals = (
+        await getTokenDecimals(contractId, server, decimalsBuilder, network)
+      ).toString();
 
       const nameBuilder = await getTxBuilder(pubKey, network, server);
       const name = await getTokenName(contractId, server, nameBuilder, network);
