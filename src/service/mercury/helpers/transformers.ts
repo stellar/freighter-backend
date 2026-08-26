@@ -151,17 +151,17 @@ const transformAccountBalancesCurrentData = async (
   const classicBalances = accountCurrentTrustlines.reduce(
     (prev, curr) => {
       const tl = curr;
-      const trustline = xdr.Asset.fromXDR(tl.asset, "base64");
-      switch (trustline.switch().name) {
+      const trustline = xdr.TrustLineAsset.fromXdr(tl.asset, "base64");
+      switch (trustline.type) {
         case "assetTypeNative": {
           // not in this query, in account object query
           return prev;
         }
 
         case "assetTypeCreditAlphanum4": {
-          const code = trustline.alphaNum4().assetCode().toString();
+          const code = trustline.alphaNum4.assetCode.toString();
           const issuer = Sdk.StrKey.encodeEd25519PublicKey(
-            trustline.alphaNum4().issuer().ed25519(),
+            trustline.alphaNum4.issuer.ed25519.toBytes(),
           );
           prev[`${code}:${issuer}`] = {
             token: {
@@ -177,9 +177,9 @@ const transformAccountBalancesCurrentData = async (
         }
 
         case "assetTypeCreditAlphanum12": {
-          const code = trustline.alphaNum12().assetCode().toString();
+          const code = trustline.alphaNum12.assetCode.toString();
           const issuer = Sdk.StrKey.encodeEd25519PublicKey(
-            trustline.alphaNum12().issuer().ed25519(),
+            trustline.alphaNum12.issuer.ed25519.toBytes(),
           );
           prev[`${code}:${issuer}`] = {
             token: {
@@ -199,8 +199,10 @@ const transformAccountBalancesCurrentData = async (
           return prev;
         }
 
-        default:
-          throw new Error("Asset type not suppported");
+        default: {
+          const unhandled: never = trustline;
+          throw new Error(`Asset type not supported: ${String(unhandled)}`);
+        }
       }
     },
     {} as NonNullable<AccountBalancesInterface["balances"]>,
@@ -214,8 +216,9 @@ const transformAccountBalancesCurrentData = async (
 
   const formattedBalances = tokenBalanceData.map(([entry]) => {
     const details = tokenDetails[entry.contractId];
-    const valEntry = xdr.LedgerEntry.fromXDR(entry.valXdr, "base64");
-    const val = valEntry.data().contractData().val();
+    const valEntry = xdr.LedgerEntry.fromXdr(entry.valXdr, "base64");
+    const val = xdr.expectUnionVariant(valEntry.data, "contractData")
+      .contractData.val;
     return {
       ...entry,
       ...details,
@@ -296,9 +299,7 @@ const transformAccountBalances = async (
 
   const formattedBalances = tokenBalanceData.map(([entry]) => {
     const details = tokenDetails[entry.contractId];
-    const totalScVal = Sdk.xdr.ScVal.fromXDR(
-      Buffer.from(entry.valueXdr, "base64"),
-    );
+    const totalScVal = Sdk.xdr.ScVal.fromXdr(entry.valueXdr, "base64");
     return {
       ...entry,
       ...details,
@@ -360,13 +361,11 @@ const transformBaseOperation = (
   const Sdk = getSdk(StellarSdk.Networks[network]);
   let isTxSuccessful = true;
   if (operation.txInfoByTx.resultXdr) {
-    const { name } = Sdk.xdr.TransactionResult.fromXDR(
+    const { result } = Sdk.xdr.TransactionResult.fromXdr(
       operation.txInfoByTx.resultXdr,
       "base64",
-    )
-      .result()
-      .switch();
-    if (name === Sdk.xdr.TransactionResultCode.txFailed().name) {
+    );
+    if (result.type === "txFailed") {
       isTxSuccessful = false;
     }
   }
@@ -780,23 +779,27 @@ const transformAccountHistory = async (
       // we only want to keep these history entries if the Host Fn is
       // for invoking a contract, we dont show contract create or wasm upload in wallet history right now.
       try {
-        const hostFn = Sdk.xdr.HostFunction.fromXDR(
-          Buffer.from(edge.node.hostFunction, "base64"),
+        const hostFn = Sdk.xdr.HostFunction.fromXdr(
+          edge.node.hostFunction,
+          "base64",
         );
-        hostFn.invokeContract();
-        return true;
+        return hostFn.type === "hostFunctionTypeInvokeContract";
       } catch (error) {
         return false;
       }
     })
     .map((edge) => {
       const baseFields = transformBaseOperation(edge.node, network);
-      const hostFn = Sdk.xdr.HostFunction.fromXDR(
-        Buffer.from(edge.node.hostFunction, "base64"),
+      const hostFn = Sdk.xdr.HostFunction.fromXdr(
+        edge.node.hostFunction,
+        "base64",
       );
 
-      const invocation = hostFn.invokeContract();
-      const fnName = invocation.functionName().toString();
+      const invocation = Sdk.xdr.expectUnionVariant(
+        hostFn,
+        "hostFunctionTypeInvokeContract",
+      ).invokeContract;
+      const fnName = invocation.functionName.toString();
 
       return {
         ...baseFields,
@@ -804,11 +807,11 @@ const transformAccountHistory = async (
         type_i: 24,
         transaction_attr: {
           ...baseFields.transaction_attr,
-          contractId: Sdk.StrKey.encodeContract(
-            invocation.contractAddress().toXDR(),
-          ),
+          contractId: Sdk.Address.fromScAddress(
+            invocation.contractAddress,
+          ).toString(),
           fnName,
-          args: getOpArgs(fnName, invocation.args(), network),
+          args: getOpArgs(fnName, invocation.args, network),
           result_meta_xdr: edge.node.sorobanMeta,
         },
       } as Partial<StellarSdk.Horizon.ServerApi.InvokeHostFunctionOperationRecord>;

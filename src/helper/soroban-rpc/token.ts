@@ -3,7 +3,12 @@ import * as StellarSdk from "stellar-sdk";
 import { NetworkNames } from "../validate";
 import { Logger } from "pino";
 import { getSdk } from "../stellar";
-import { getContractSpec, getServer, simulateTx } from "./network";
+import {
+  getContractSpec,
+  getInstanceExecutable,
+  getServer,
+  simulateTx,
+} from "./network";
 import { StellarRpcConfig } from "../../config";
 
 // https://github.com/stellar/soroban-examples/blob/main/token/src/contract.rs
@@ -345,20 +350,16 @@ const isSacContractExecutable = async (
 
   const server = await getServer(network, stellarRpcConfig);
   const instance = new Sdk.Contract(contractId).getFootprint();
-  const ledgerKeyContractCode = instance.toXDR("base64");
+  const ledgerKeyContractCode = instance.toXdr("base64");
 
   const { entries } = await server.getLedgerEntries(
-    xdr.LedgerKey.fromXDR(ledgerKeyContractCode, "base64"),
+    xdr.LedgerKey.fromXdr(ledgerKeyContractCode, "base64"),
   );
 
   if (entries && entries.length) {
-    const parsed = entries[0].val;
-    const executable = parsed.contractData().val().instance().executable();
+    const executable = getInstanceExecutable(entries[0].val);
 
-    return (
-      executable.switch().name ===
-      xdr.ContractExecutableType.contractExecutableStellarAsset().name
-    );
+    return executable.type === "contractExecutableStellarAsset";
   }
 
   return false;
@@ -398,18 +399,12 @@ const getOpArgs = (
 
   switch (fnName) {
     case SorobanTokenInterface.transfer:
-      from = Sdk.StrKey.encodeEd25519PublicKey(
-        args[0].address().accountId().ed25519(),
-      );
-      to = Sdk.StrKey.encodeEd25519PublicKey(
-        args[1].address().accountId().ed25519(),
-      );
+      from = Sdk.Address.fromScVal(args[0]).toString();
+      to = Sdk.Address.fromScVal(args[1]).toString();
       amount = Sdk.scValToNative(args[2]).toString();
       break;
     case SorobanTokenInterface.mint:
-      to = Sdk.StrKey.encodeEd25519PublicKey(
-        args[0].address().accountId().ed25519(),
-      );
+      to = Sdk.Address.fromScVal(args[0]).toString();
       amount = Sdk.scValToNative(args[1]).toString();
       break;
     default:

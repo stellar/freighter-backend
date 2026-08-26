@@ -164,7 +164,7 @@ export class MercuryClient {
     return Sdk.xdr.ScVal.scvVec([
       Sdk.xdr.ScVal.scvSymbol("Balance"),
       addr,
-    ]).toXDR("base64");
+    ]).toXdr("base64");
   };
 
   renewMercuryToken = async (network: NetworkNames) => {
@@ -241,19 +241,19 @@ export class MercuryClient {
     const transferToSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: Sdk.xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
-      topic2: Sdk.xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
+      topic1: Sdk.xdr.ScVal.scvSymbol("transfer").toXdr("base64"),
+      topic2: Sdk.xdr.ScVal.scvSymbol(pubKey).toXdr("base64"),
     };
     const transferFromSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: Sdk.xdr.ScVal.scvSymbol("transfer").toXDR("base64"),
-      topic3: Sdk.xdr.ScVal.scvSymbol(pubKey).toXDR("base64"),
+      topic1: Sdk.xdr.ScVal.scvSymbol("transfer").toXdr("base64"),
+      topic3: Sdk.xdr.ScVal.scvSymbol(pubKey).toXdr("base64"),
     };
     const mintSub = {
       contract_id: contractId,
       max_single_size: 200,
-      topic1: Sdk.xdr.ScVal.scvSymbol("mint").toXDR("base64"),
+      topic1: Sdk.xdr.ScVal.scvSymbol("mint").toXdr("base64"),
     };
 
     try {

@@ -16,12 +16,12 @@ describe("Soroban RPC helpers", () => {
   describe("getLedgerKeyContractCode", () => {
     it("will return ledger key for contract code", () => {
       const ledgerKeyXdr = getLedgerKeyContractCode(CONTRACT_ID, "TESTNET");
-      const ledgerKeyFromXdr = xdr.LedgerKey.fromXDR(ledgerKeyXdr, "base64");
+      const ledgerKeyFromXdr = xdr.LedgerKey.fromXdr(ledgerKeyXdr, "base64");
 
       expect(typeof ledgerKeyXdr).toEqual("string");
       expect(base64regex.test(ledgerKeyXdr)).toBeTruthy();
       expect(ledgerKeyFromXdr).toBeInstanceOf(xdr.LedgerKey);
-      expect(ledgerKeyFromXdr.switch().name).toEqual("contractData");
+      expect(ledgerKeyFromXdr.type).toEqual("contractData");
     });
     it("will throw when it fails to get ledger key", () => {
       expect(() =>
@@ -32,15 +32,15 @@ describe("Soroban RPC helpers", () => {
 
   describe("getLedgerKeyWasmId", () => {
     const EXECTUABLE_XDR = "AAAAAGR7a8CMAj18oYkZKn4kqfBSa8oa0Mdoo294cHR1X2nw";
-    const executable = xdr.ContractExecutable.fromXDR(EXECTUABLE_XDR, "base64");
+    const executable = xdr.ContractExecutable.fromXdr(EXECTUABLE_XDR, "base64");
     it("will return the contract code ledger key for a contract ID", () => {
       const ledgerKeyWasmId = getLedgerKeyWasmId(executable, "TESTNET");
-      const ledgerKeyFromXdr = xdr.LedgerKey.fromXDR(ledgerKeyWasmId, "base64");
+      const ledgerKeyFromXdr = xdr.LedgerKey.fromXdr(ledgerKeyWasmId, "base64");
 
       expect(typeof ledgerKeyWasmId).toEqual("string");
       expect(base64regex.test(ledgerKeyWasmId)).toBeTruthy();
       expect(ledgerKeyFromXdr).toBeInstanceOf(xdr.LedgerKey);
-      expect(ledgerKeyFromXdr.switch().name).toEqual("contractCode");
+      expect(ledgerKeyFromXdr.type).toEqual("contractCode");
     });
   });
 

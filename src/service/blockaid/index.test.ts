@@ -3,7 +3,7 @@ import { Networks, TransactionBuilder, xdr } from "stellar-sdk";
 /**
  * Envelope-parsing coverage across the full `SorobanCredentialsType` union.
  *
- * `TransactionBuilder.fromXDR` is on the hot path for any service that has to
+ * `TransactionBuilder.fromXdr` is on the hot path for any service that has to
  * inspect a submitted transaction, and the union gained two arms in Protocol 24
  * (`addressV2`, `addressWithDelegates`) that earlier SDK majors did not model.
  * These assertions pin that our SDK understands all four, so a future downgrade
@@ -34,7 +34,7 @@ describe("CAP-71 envelope parsing", () => {
   });
 
   it("parses an envelope carrying sorobanCredentialsAddressV2 auth", () => {
-    const tx = TransactionBuilder.fromXDR(CAP_71_TX_XDR, Networks.PUBLIC);
+    const tx = TransactionBuilder.fromXdr(CAP_71_TX_XDR, Networks.PUBLIC);
 
     // Callers read the source account off the parsed envelope, so it has to
     // survive the round trip.
@@ -44,13 +44,13 @@ describe("CAP-71 envelope parsing", () => {
   });
 
   it("round-trips the envelope without dropping the V2 credentials", () => {
-    const tx = TransactionBuilder.fromXDR(CAP_71_TX_XDR, Networks.PUBLIC);
-    expect(tx.toXDR()).toEqual(CAP_71_TX_XDR);
+    const tx = TransactionBuilder.fromXdr(CAP_71_TX_XDR, Networks.PUBLIC);
+    expect(tx.toXdr()).toEqual(CAP_71_TX_XDR);
 
-    const [op] = tx.toEnvelope().v1().tx().operations();
-    const [authEntry] = op.body().invokeHostFunctionOp().auth();
-    expect(authEntry.credentials().switch().name).toEqual(
-      "sorobanCredentialsAddressV2",
-    );
+    const [op] = xdr.expectUnionVariant(tx.toEnvelope(), "envelopeTypeTx").v1.tx
+      .operations;
+    const [authEntry] = xdr.expectUnionVariant(op.body, "invokeHostFunction")
+      .invokeHostFunctionOp.auth;
+    expect(authEntry.credentials.type).toEqual("sorobanCredentialsAddressV2");
   });
 });

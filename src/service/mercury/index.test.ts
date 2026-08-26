@@ -35,11 +35,12 @@ describe("Mercury Service", () => {
 
   it("can build a balance ledger key for a pub key", async () => {
     const ledgerKey = mockMercuryClient.tokenBalanceKey(pubKey, "TESTNET");
-    const scVal = xdr.ScVal.fromXDR(
-      Buffer.from(ledgerKey, "base64"),
-    ).value() as xdr.ScVal[];
+    const scVal = xdr.expectUnionVariant(
+      xdr.ScVal.fromXdr(ledgerKey, "base64"),
+      "scvVec",
+    ).vec;
 
-    const [scValBalance, scValAddress] = scVal;
+    const [scValBalance, scValAddress] = scVal ?? [];
     const balance = scValToNative(scValBalance);
     const address = scValToNative(scValAddress);
     expect([balance, address]).toEqual(["Balance", pubKey]);
@@ -412,7 +413,7 @@ describe("Mercury Service", () => {
             .trustlinesByPublicKey,
           {
             balance: 100019646386,
-            asset: asset.toXDR("base64"),
+            asset: asset.toXdr("base64"),
             limit: 1,
             accountId: pubKey,
           },

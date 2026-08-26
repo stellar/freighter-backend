@@ -1344,14 +1344,14 @@ export async function initApiServer(
                 `Unknown network passphrase: ${network_passphrase}`,
               );
             }
-            const tx = Sdk.TransactionBuilder.fromXDR(xdr, network_passphrase);
+            const tx = Sdk.TransactionBuilder.fromXdr(xdr, network_passphrase);
             const server = await getServer(networkName, stellarRpcConfig);
 
             const simulationResponse = await server.simulateTransaction(tx);
             const preparedTransaction = Sdk.rpc
               .assembleTransaction(tx, simulationResponse)
               .build()
-              .toXDR();
+              .toXdr();
 
             const data = {
               simulationResponse,
@@ -1453,13 +1453,12 @@ export async function initApiServer(
 
                 for (const auth of auths) {
                   if (
-                    auth.credentials().switch() !==
-                    Sdk.xdr.SorobanCredentialsType.sorobanCredentialsSourceAccount()
+                    auth.credentials.type !== "sorobanCredentialsSourceAccount"
                   ) {
                     throw new Error(ERROR.ACCOUNT_NOT_SOURCE);
                   }
 
-                  if (auth.rootInvocation().subInvocations().length) {
+                  if (auth.rootInvocation.subInvocations.length) {
                     throw new Error(ERROR.AUTH_SUB_INVOCATIONS);
                   }
                 }
@@ -1468,7 +1467,7 @@ export async function initApiServer(
 
             const data = {
               simulationResponse,
-              preparedTransaction: built.toXDR(),
+              preparedTransaction: built.toXdr(),
             };
             reply.code(200).send(data);
           } catch (error) {

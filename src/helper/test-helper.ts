@@ -248,7 +248,7 @@ const mercurySession = {
   },
 };
 
-const valueXdr = nativeToScVal(1).toXDR();
+const valueXdr = nativeToScVal(1).toXdr("base64");
 const pubKey = "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
 export const contractDataEntryValXdr =
   "AAA5zAAAAAYAAAAAAAAAAY6oGxM6ldCYnaiGZ39Qfe7OU9/hMzrwkVF8OBHpqKMTAAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtysAAAAAQAAAAoAAAAAAAAAAAAAAAAAAAAKAAAAAA==";
