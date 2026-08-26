@@ -1,8 +1,8 @@
-import { xdr } from "stellar-sdk";
+import { Account, Address, MuxedAccount, XdrLargeInt, xdr } from "stellar-sdk";
 
 import { base64regex, testLogger } from "../test-helper";
 import * as networkHelpers from "./network";
-import { getIsTokenSpec, isTokenSpec } from "./token";
+import { getIsTokenSpec, getOpArgs, isTokenSpec } from "./token";
 
 const { getLedgerKeyContractCode, getLedgerKeyWasmId, parseWasmXdr } =
   networkHelpers;
@@ -89,6 +89,44 @@ describe("Soroban RPC helpers", () => {
       );
 
       expect(isSep41).toBeFalsy();
+    });
+  });
+
+  describe("getOpArgs", () => {
+    const G_FROM = "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
+    const G_TO = "GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56";
+    const C_ADDR = "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP";
+    const M_ADDR = new MuxedAccount(new Account(G_TO, "1"), "123").accountId();
+    const amount = (v: string) => new XdrLargeInt("i128", v).toI128();
+    const addr = (a: string) => new Address(a).toScVal();
+
+    it("decodes a transfer between two account addresses", () => {
+      const args = getOpArgs(
+        "transfer",
+        [addr(G_FROM), addr(G_TO), amount("12345")],
+        "TESTNET",
+      );
+      expect(args).toEqual({ from: G_FROM, to: G_TO, amount: "12345" });
+    });
+
+    it("decodes contract and muxed-account transfer parties", () => {
+      expect(M_ADDR.startsWith("M")).toBeTruthy();
+      const args = getOpArgs(
+        "transfer",
+        [addr(C_ADDR), addr(M_ADDR), amount("1")],
+        "TESTNET",
+      );
+      expect(args).toEqual({ from: C_ADDR, to: M_ADDR, amount: "1" });
+    });
+
+    it("decodes a mint recipient", () => {
+      const args = getOpArgs("mint", [addr(C_ADDR), amount("777")], "TESTNET");
+      expect(args).toEqual({ from: undefined, to: C_ADDR, amount: "777" });
+    });
+
+    it("returns a zero amount for functions it does not decode", () => {
+      const args = getOpArgs("approve", [addr(G_FROM)], "TESTNET");
+      expect(args).toEqual({ from: undefined, to: undefined, amount: 0 });
     });
   });
 });
