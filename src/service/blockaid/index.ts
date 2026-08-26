@@ -58,7 +58,7 @@ export class BlockAidService {
   scanTx = async (txXdr: string, url: string, network: NetworkNames) => {
     try {
       const networkPassphrase = Networks[network];
-      const tx = TransactionBuilder.fromXDR(txXdr, networkPassphrase);
+      const tx = TransactionBuilder.fromXdr(txXdr, networkPassphrase);
       let source = "";
       if ("innerTransaction" in tx) {
         source = tx.innerTransaction.source;

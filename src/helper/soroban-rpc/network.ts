@@ -1,6 +1,5 @@
 import * as StellarSdkNext from "stellar-sdk-next";
 import * as StellarSdk from "stellar-sdk";
-import { XdrReader } from "@stellar/js-xdr";
 import { Logger } from "pino";
 
 import { NetworkNames } from "../validate";
@@ -77,10 +76,24 @@ const getLedgerKeyContractCode = (
     new xdr.LedgerKeyContractData({
       contract: new Address(contractId).toScAddress(),
       key: xdr.ScVal.scvLedgerKeyContractInstance(),
-      durability: xdr.ContractDataDurability.persistent(),
+      durability: xdr.ContractDataDurability.persistent,
     }),
   );
-  return ledgerKey.toXDR("base64");
+  return ledgerKey.toXdr("base64");
+};
+
+// Pulls the executable out of a contract instance ledger entry. Throws if the
+// entry is not contract data holding a contract instance.
+const getInstanceExecutable = (
+  entryData:
+    | StellarSdk.xdr.LedgerEntryData
+    | StellarSdkNext.xdr.LedgerEntryData,
+) => {
+  const { xdr } = StellarSdk;
+  const instanceVal = xdr.expectUnionVariant(entryData, "contractData")
+    .contractData.val;
+  return xdr.expectUnionVariant(instanceVal, "scvContractInstance").instance
+    .executable;
 };
 
 const getExecutable = (
@@ -89,11 +102,9 @@ const getExecutable = (
 ) => {
   const Sdk = getSdk(StellarSdkNext.Networks[network]);
   const { xdr } = Sdk;
-  return xdr.LedgerEntryData.fromXDR(contractLedgerEntryData, "base64")
-    .contractData()
-    .val()
-    .instance()
-    .executable();
+  return getInstanceExecutable(
+    xdr.LedgerEntryData.fromXdr(contractLedgerEntryData, "base64"),
+  );
 };
 
 const getLedgerKeyWasmId = (
@@ -104,32 +115,35 @@ const getLedgerKeyWasmId = (
 ) => {
   const Sdk = getSdk(StellarSdkNext.Networks[network]);
   const { xdr } = Sdk;
-  const contractCodeWasmHash = executable.wasmHash();
+  const contractCodeWasmHash = xdr.expectUnionVariant(
+    executable,
+    "contractExecutableWasm",
+  ).wasmHash;
   const ledgerKey = xdr.LedgerKey.contractCode(
     new xdr.LedgerKeyContractCode({
-      hash: contractCodeWasmHash,
+      hash: contractCodeWasmHash.toBytes(),
     }),
   );
-  return ledgerKey.toXDR("base64");
+  return ledgerKey.toXdr("base64");
 };
 
 async function parseWasmXdr(xdrContents: string, network: NetworkNames) {
   const Sdk = getSdk(StellarSdkNext.Networks[network]);
   const { xdr, contract } = Sdk;
-  const wasmBuffer = xdr.LedgerEntryData.fromXDR(xdrContents, "base64")
-    .contractCode()
-    .code();
-  const wasmModule = await WebAssembly.compile(wasmBuffer);
-  const reader = new XdrReader(
-    Buffer.from(
-      WebAssembly.Module.customSections(wasmModule, "contractspecv0")[0],
-    ),
+  const wasmBytes = xdr.expectUnionVariant(
+    xdr.LedgerEntryData.fromXdr(xdrContents, "base64"),
+    "contractCode",
+  ).contractCode.code;
+  const wasmModule = await WebAssembly.compile(wasmBytes);
+  const [specSection] = WebAssembly.Module.customSections(
+    wasmModule,
+    "contractspecv0",
   );
+  if (!specSection) {
+    throw new Error("contract wasm has no contractspecv0 section");
+  }
 
-  const specs = [];
-  do {
-    specs.push(xdr.ScSpecEntry.read(reader));
-  } while (!reader.eof);
+  const specs = xdr.decodeStream(xdr.ScSpecEntry, new Uint8Array(specSection));
   const contractSpec = new contract.Spec(specs);
   return contractSpec.jsonSchema();
 }
@@ -172,9 +186,6 @@ const getContractSpec = async (
   config: StellarRpcConfig,
 ) => {
   try {
-    const Sdk = getSdk(StellarSdkNext.Networks[network]);
-    const { xdr } = Sdk;
-
     const serverUrl = getStellarRpcUrls(config)[network];
     if (!serverUrl) {
       if (network === "PUBLIC") {
@@ -196,10 +207,7 @@ const getContractSpec = async (
 
     const contractCodeLedgerEntryData = entries[0].xdr;
     const executable = getExecutable(contractCodeLedgerEntryData, network);
-    if (
-      executable.switch().name ===
-      xdr.ContractExecutableType.contractExecutableStellarAsset().name
-    ) {
+    if (executable.type === "contractExecutableStellarAsset") {
       return {
         result: TOKEN_SPEC_DEFINITIONS,
         error: null,
@@ -228,6 +236,7 @@ const getContractSpec = async (
 export {
   getContractSpec,
   getExecutable,
+  getInstanceExecutable,
   getLedgerEntries,
   getLedgerKeyContractCode,
   getLedgerKeyWasmId,

@@ -1053,7 +1053,7 @@ describe("API routes", () => {
         .mockImplementation((_networkPassphrase: Networks) => {
           return {
             TransactionBuilder: {
-              fromXDR: (_xdr: string, _networkPassphrase: string) => "",
+              fromXdr: (_xdr: string, _networkPassphrase: string) => "",
             },
             rpc: {
               Server: class Server {
@@ -1067,7 +1067,7 @@ describe("API routes", () => {
                 return {
                   build: () => {
                     return {
-                      toXDR: () => preparedTransaction,
+                      toXdr: () => preparedTransaction,
                     };
                   },
                 };
@@ -1330,7 +1330,7 @@ describe("API routes", () => {
               assembleTransaction: (_tx: any, _simResponse: any) => {
                 return {
                   build: () => ({
-                    toXDR: () => preparedTransactionXdr,
+                    toXdr: () => preparedTransactionXdr,
                     operations: [{ type: "payment" }],
                   }),
                 };

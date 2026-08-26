@@ -9,7 +9,7 @@ let capturedServerUrl: string | undefined;
 jest.mock("./stellar", () => ({
   getSdk: () => ({
     TransactionBuilder: {
-      fromXDR: mockFromXDR,
+      fromXdr: mockFromXDR,
     },
     Horizon: {
       Server: class MockServer {

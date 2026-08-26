@@ -1,6 +1,6 @@
 import { Client, fetchExchange } from "@urql/core";
 import pino from "pino";
-import { nativeToScVal } from "stellar-sdk";
+import { Address, nativeToScVal, xdr, XdrLargeInt } from "stellar-sdk";
 import Prometheus from "prom-client";
 import Blockaid from "@blockaid/client";
 
@@ -248,8 +248,30 @@ const mercurySession = {
   },
 };
 
-const valueXdr = nativeToScVal(1).toXDR();
+const valueXdr = nativeToScVal(1).toXdr("base64");
 const pubKey = "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
+
+// A SEP-41 `transfer` invocation as Mercury hands it to us: the base64
+// HostFunction XDR of an invokeContract host fn. Exported so tests can assert
+// the decoded contract ID / parties against the values it was built from.
+export const invokeHostFnFixture = {
+  contractId: "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP",
+  from: pubKey,
+  to: "GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56",
+  amount: "12345",
+  fnName: "transfer",
+};
+const invokeHostFnXdr = xdr.HostFunction.hostFunctionTypeInvokeContract(
+  new xdr.InvokeContractArgs({
+    contractAddress: new Address(invokeHostFnFixture.contractId).toScAddress(),
+    functionName: invokeHostFnFixture.fnName,
+    args: [
+      new Address(invokeHostFnFixture.from).toScVal(),
+      new Address(invokeHostFnFixture.to).toScVal(),
+      new XdrLargeInt("i128", invokeHostFnFixture.amount).toI128(),
+    ],
+  }),
+).toXdr("base64");
 export const contractDataEntryValXdr =
   "AAA5zAAAAAYAAAAAAAAAAY6oGxM6ldCYnaiGZ39Qfe7OU9/hMzrwkVF8OBHpqKMTAAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtysAAAAAQAAAAoAAAAAAAAAAAAAAAAAAAAKAAAAAA==";
 const tokenBalanceLedgerKey =
@@ -463,7 +485,26 @@ const queryMockResponse = {
   },
   [query.getAccountHistory]: {
     invokeHostFnByPublicKey: {
-      edges: [],
+      edges: [
+        {
+          node: {
+            auth: "",
+            hostFunction: invokeHostFnXdr,
+            sorobanMeta: "",
+            source: pubKey,
+            tx: "a5b7e2b8c1d4f3a6e9c0b1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2",
+            opId: "998877",
+            txInfoByTx: {
+              fee: "1000",
+              opCount: 1,
+              resultXdr: "",
+              ledgerByLedger: {
+                closeTime: 1703024113,
+              },
+            },
+          },
+        },
+      ],
     },
     createAccountByPublicKey: {
       edges: [],

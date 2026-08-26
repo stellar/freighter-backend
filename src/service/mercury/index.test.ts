@@ -7,6 +7,7 @@ import {
   queryMockResponse,
   pubKey,
   contractDataEntryValXdr,
+  invokeHostFnFixture,
 } from "../../helper/test-helper";
 import { transformAccountBalancesCurrentData } from "./helpers/transformers";
 import { ERROR_MESSAGES } from ".";
@@ -33,13 +34,42 @@ describe("Mercury Service", () => {
     expect(payment.amount).toEqual("5");
   });
 
+  it("decodes invoke host function history entries to the contract ID and transfer parties", async () => {
+    const { data } = await mockMercuryClient.getAccountHistory(
+      pubKey,
+      "TESTNET",
+      true,
+    );
+    const invocations = (data || []).filter(
+      (d) => d.type === "invoke_host_function",
+    ) as unknown as {
+      transaction_attr: {
+        contractId: string;
+        fnName: string;
+        args: { from?: string; to?: string; amount: string | number };
+      };
+    }[];
+
+    expect(invocations).toHaveLength(1);
+    expect(invocations[0].transaction_attr).toMatchObject({
+      contractId: invokeHostFnFixture.contractId,
+      fnName: invokeHostFnFixture.fnName,
+      args: {
+        from: invokeHostFnFixture.from,
+        to: invokeHostFnFixture.to,
+        amount: invokeHostFnFixture.amount,
+      },
+    });
+  });
+
   it("can build a balance ledger key for a pub key", async () => {
     const ledgerKey = mockMercuryClient.tokenBalanceKey(pubKey, "TESTNET");
-    const scVal = xdr.ScVal.fromXDR(
-      Buffer.from(ledgerKey, "base64"),
-    ).value() as xdr.ScVal[];
+    const scVal = xdr.expectUnionVariant(
+      xdr.ScVal.fromXdr(ledgerKey, "base64"),
+      "scvVec",
+    ).vec;
 
-    const [scValBalance, scValAddress] = scVal;
+    const [scValBalance, scValAddress] = scVal ?? [];
     const balance = scValToNative(scValBalance);
     const address = scValToNative(scValAddress);
     expect([balance, address]).toEqual(["Balance", pubKey]);
@@ -412,7 +442,7 @@ describe("Mercury Service", () => {
             .trustlinesByPublicKey,
           {
             balance: 100019646386,
-            asset: asset.toXDR("base64"),
+            asset: asset.toXdr("base64"),
             limit: 1,
             accountId: pubKey,
           },

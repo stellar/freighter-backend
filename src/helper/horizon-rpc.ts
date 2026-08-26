@@ -244,7 +244,9 @@ export const fetchAccountHistory = async (
   }
 };
 
-export const networkPassphraseToName = (passphrase: string): NetworkNames | null => {
+export const networkPassphraseToName = (
+  passphrase: string,
+): NetworkNames | null => {
   const entries = Object.entries(StellarSdk.Networks) as [
     NetworkNames,
     string,
@@ -283,7 +285,7 @@ export const submitTransaction = async (
   }
 
   const Sdk = getSdk(networkPassphrase as StellarSdk.Networks);
-  const tx = Sdk.TransactionBuilder.fromXDR(signedXDR, networkPassphrase);
+  const tx = Sdk.TransactionBuilder.fromXdr(signedXDR, networkPassphrase);
   const server = new Sdk.Horizon.Server(networkUrl);
 
   let lastError: StellarSdk.Horizon.HorizonApi.ErrorResponseData | null = null;
