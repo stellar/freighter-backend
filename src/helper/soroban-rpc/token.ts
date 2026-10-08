@@ -205,7 +205,7 @@ const getTokenDecimals = async (
     .setTimeout(Sdk.TimeoutInfinite)
     .build();
 
-  const result = await simulateTx<string>(
+  const result = await simulateTx<number>(
     tx,
     server,
     StellarSdkNext.Networks[network],
