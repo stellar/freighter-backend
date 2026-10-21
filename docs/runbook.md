@@ -4,7 +4,7 @@ This document is the operator-focused guide for starting, checking, and recoveri
 
 ## Prerequisites
 
-- Node `>=25.3.0`
+- Node `>=24.22.1`
 - Yarn `>=1.22.5`
 - Docker (optional, but convenient for local Redis)
 
