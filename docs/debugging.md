@@ -52,7 +52,7 @@ What they tell you:
 
 ## Known gotchas
 
-1. The repo requires Node `>=25.3.0`. Older Node versions can block `yarn` commands before the app even starts.
+1. The repo requires Node `>=24.22.1`. Older Node versions can block `yarn` commands before the app even starts.
 2. `development` mode does not start Redis-backed workers, so worker-only issues must be reproduced from a production build.
 3. `/api/v1/rpc-health` returns HTTP `200` even when the RPC reports an unhealthy status in the response body.
 4. `/api/v1/price-worker-health` is not meaningful when Redis is unavailable or token prices are intentionally disabled.

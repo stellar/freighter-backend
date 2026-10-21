@@ -1,4 +1,4 @@
-FROM node:25.3.0
+FROM node:24.22.1
 MAINTAINER SDF Wallets Team <wallet-eng@stellar.org>
 
 RUN mkdir -p /app

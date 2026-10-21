@@ -29,7 +29,7 @@ name: Socket reachability scan
 
 on:
   schedule:
-    - cron: '24 8 * * 6'
+    - cron: "24 8 * * 6"
   workflow_dispatch:
 
 permissions:
@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "26.4.0"
+          node-version: "26.12.1"
       - name: Install Corepack (Node 26+ no longer bundles it)
         run: npm install -g corepack
       - name: Enable Corepack (yarn/pnpm per repo packageManager)
