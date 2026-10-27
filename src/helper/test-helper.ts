@@ -251,6 +251,13 @@ const mercurySession = {
 const valueXdr = nativeToScVal(1).toXdr("base64");
 const pubKey = "GCGORBD5DB4JDIKVIA536CJE3EWMWZ6KBUBWZWRQM7Y3NHFRCLOKYVAL";
 
+// muxed contract address (W) and the contract it wraps
+export const muxedContractFixture = {
+  contractId: "CA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJUWDA",
+  muxed:
+    "WA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJUAAAAAAAAAAAAAWWC",
+};
+
 // A SEP-41 `transfer` invocation as Mercury hands it to us: the base64
 // HostFunction XDR of an invokeContract host fn. Exported so tests can assert
 // the decoded contract ID / parties against the values it was built from.
@@ -261,17 +268,24 @@ export const invokeHostFnFixture = {
   amount: "12345",
   fnName: "transfer",
 };
-const invokeHostFnXdr = xdr.HostFunction.hostFunctionTypeInvokeContract(
-  new xdr.InvokeContractArgs({
-    contractAddress: new Address(invokeHostFnFixture.contractId).toScAddress(),
-    functionName: invokeHostFnFixture.fnName,
-    args: [
-      new Address(invokeHostFnFixture.from).toScVal(),
-      new Address(invokeHostFnFixture.to).toScVal(),
-      new XdrLargeInt("i128", invokeHostFnFixture.amount).toI128(),
-    ],
-  }),
-).toXdr("base64");
+export const buildTransferHostFnXdr = (
+  to = invokeHostFnFixture.to,
+  amount = invokeHostFnFixture.amount,
+) =>
+  xdr.HostFunction.hostFunctionTypeInvokeContract(
+    new xdr.InvokeContractArgs({
+      contractAddress: new Address(
+        invokeHostFnFixture.contractId,
+      ).toScAddress(),
+      functionName: invokeHostFnFixture.fnName,
+      args: [
+        new Address(invokeHostFnFixture.from).toScVal(),
+        new Address(to).toScVal(),
+        new XdrLargeInt("i128", amount).toI128(),
+      ],
+    }),
+  ).toXdr("base64");
+const invokeHostFnXdr = buildTransferHostFnXdr();
 export const contractDataEntryValXdr =
   "AAA5zAAAAAYAAAAAAAAAAY6oGxM6ldCYnaiGZ39Qfe7OU9/hMzrwkVF8OBHpqKMTAAAAEAAAAAEAAAACAAAADwAAAAdCYWxhbmNlAAAAABIAAAAAAAAAAIzohH0YeJGhVUA7vwkk2SzLZ8oNA2zaMGfxtpyxEtysAAAAAQAAAAoAAAAAAAAAAAAAAAAAAAAKAAAAAA==";
 const tokenBalanceLedgerKey =

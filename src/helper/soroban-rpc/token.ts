@@ -393,19 +393,35 @@ const getOpArgs = (
 ) => {
   const Sdk = getSdk(StellarSdk.Networks[network]);
 
-  let amount: number;
+  // a value we can't decode is left undefined instead of throwing
+  const toAddress = (scVal: StellarSdk.xdr.ScVal) => {
+    try {
+      return Sdk.Address.fromScVal(scVal).toString();
+    } catch (error) {
+      return undefined;
+    }
+  };
+  const toAmount = (scVal: StellarSdk.xdr.ScVal) => {
+    try {
+      return Sdk.scValToNative(scVal).toString() as string;
+    } catch (error) {
+      return undefined;
+    }
+  };
+
+  let amount: number | string | undefined;
   let from;
   let to;
 
   switch (fnName) {
     case SorobanTokenInterface.transfer:
-      from = Sdk.Address.fromScVal(args[0]).toString();
-      to = Sdk.Address.fromScVal(args[1]).toString();
-      amount = Sdk.scValToNative(args[2]).toString();
+      from = toAddress(args[0]);
+      to = toAddress(args[1]);
+      amount = toAmount(args[2]);
       break;
     case SorobanTokenInterface.mint:
-      to = Sdk.Address.fromScVal(args[0]).toString();
-      amount = Sdk.scValToNative(args[1]).toString();
+      to = toAddress(args[0]);
+      amount = toAmount(args[1]);
       break;
     default:
       amount = 0;

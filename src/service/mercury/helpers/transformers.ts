@@ -774,48 +774,47 @@ const transformAccountHistory = async (
   const Sdk = getSdk(StellarSdk.Networks[network]);
   const invokeHostFnEdges =
     rawResponse.data?.invokeHostFnByPublicKey.edges || [];
-  const invokeHostFn = invokeHostFnEdges
-    .filter((edge) => {
-      // we only want to keep these history entries if the Host Fn is
-      // for invoking a contract, we dont show contract create or wasm upload in wallet history right now.
-      try {
-        const hostFn = Sdk.xdr.HostFunction.fromXdr(
-          edge.node.hostFunction,
-          "base64",
-        );
-        return hostFn.type === "hostFunctionTypeInvokeContract";
-      } catch (error) {
-        return false;
+  // we only want to keep these history entries if the Host Fn is
+  // for invoking a contract, we dont show contract create or wasm upload in wallet history right now.
+  const decodeInvocation = (hostFunction: string) => {
+    try {
+      const hostFn = Sdk.xdr.HostFunction.fromXdr(hostFunction, "base64");
+      if (hostFn.type !== "hostFunctionTypeInvokeContract") {
+        return undefined;
       }
-    })
-    .map((edge) => {
-      const baseFields = transformBaseOperation(edge.node, network);
-      const hostFn = Sdk.xdr.HostFunction.fromXdr(
-        edge.node.hostFunction,
-        "base64",
-      );
+      const invocation = hostFn.invokeContract;
+      const contractId = Sdk.Address.fromScAddress(
+        invocation.contractAddress,
+      ).toString();
+      return { invocation, contractId };
+    } catch (error) {
+      return undefined;
+    }
+  };
+  const invokeHostFn = invokeHostFnEdges.flatMap((edge) => {
+    const decoded = decodeInvocation(edge.node.hostFunction);
+    if (!decoded) {
+      return [];
+    }
+    const { invocation, contractId } = decoded;
+    const baseFields = transformBaseOperation(edge.node, network);
+    const fnName = invocation.functionName.toString();
 
-      const invocation = Sdk.xdr.expectUnionVariant(
-        hostFn,
-        "hostFunctionTypeInvokeContract",
-      ).invokeContract;
-      const fnName = invocation.functionName.toString();
-
-      return {
+    return [
+      {
         ...baseFields,
         type: "invoke_host_function",
         type_i: 24,
         transaction_attr: {
           ...baseFields.transaction_attr,
-          contractId: Sdk.Address.fromScAddress(
-            invocation.contractAddress,
-          ).toString(),
+          contractId,
           fnName,
           args: getOpArgs(fnName, invocation.args, network),
           result_meta_xdr: edge.node.sorobanMeta,
         },
-      } as Partial<StellarSdk.Horizon.ServerApi.InvokeHostFunctionOperationRecord>;
-    });
+      } as Partial<StellarSdk.Horizon.ServerApi.InvokeHostFunctionOperationRecord>,
+    ];
+  });
 
   const createAccountEdges =
     rawResponse.data?.createAccountByPublicKey.edges || [];

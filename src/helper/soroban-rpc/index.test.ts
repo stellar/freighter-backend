@@ -1,6 +1,6 @@
 import { Account, Address, MuxedAccount, XdrLargeInt, xdr } from "stellar-sdk";
 
-import { base64regex, testLogger } from "../test-helper";
+import { base64regex, muxedContractFixture, testLogger } from "../test-helper";
 import * as networkHelpers from "./network";
 import { getIsTokenSpec, getOpArgs, isTokenSpec } from "./token";
 
@@ -97,6 +97,7 @@ describe("Soroban RPC helpers", () => {
     const G_TO = "GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56";
     const C_ADDR = "CCWAMYJME4H5CKG7OLXGC2T4M6FL52XCZ3OQOAV6LL3GLA4RO4WH3ASP";
     const M_ADDR = new MuxedAccount(new Account(G_TO, "1"), "123").accountId();
+    const W_ADDR = muxedContractFixture.muxed;
     const amount = (v: string) => new XdrLargeInt("i128", v).toI128();
     const addr = (a: string) => new Address(a).toScVal();
 
@@ -117,6 +118,29 @@ describe("Soroban RPC helpers", () => {
         "TESTNET",
       );
       expect(args).toEqual({ from: C_ADDR, to: M_ADDR, amount: "1" });
+    });
+
+    it("decodes a muxed-contract (W) recipient to its W strkey", () => {
+      const args = getOpArgs(
+        "transfer",
+        [addr(G_FROM), addr(W_ADDR), amount("5")],
+        "TESTNET",
+      );
+      expect(args).toEqual({ from: G_FROM, to: W_ADDR, amount: "5" });
+    });
+
+    it("leaves a party undefined instead of throwing on an undecodable address", () => {
+      const args = getOpArgs(
+        "transfer",
+        [addr(G_FROM), amount("1"), amount("9")],
+        "TESTNET",
+      );
+      expect(args).toEqual({ from: G_FROM, to: undefined, amount: "9" });
+    });
+
+    it("leaves the amount undefined instead of throwing when it is missing", () => {
+      const args = getOpArgs("transfer", [addr(G_FROM), addr(G_TO)], "TESTNET");
+      expect(args).toEqual({ from: G_FROM, to: G_TO, amount: undefined });
     });
 
     it("decodes a mint recipient", () => {

@@ -1,15 +1,27 @@
-import { Horizon, Keypair, Networks, scValToNative, xdr } from "stellar-sdk";
+import {
+  Address,
+  Horizon,
+  Keypair,
+  Networks,
+  scValToNative,
+  xdr,
+} from "stellar-sdk";
 import BigNumber from "bignumber.js";
 
-import { mutation } from "./queries";
+import { mutation, query } from "./queries";
 import {
+  buildTransferHostFnXdr,
   mockMercuryClient,
   queryMockResponse,
   pubKey,
   contractDataEntryValXdr,
   invokeHostFnFixture,
+  muxedContractFixture,
 } from "../../helper/test-helper";
-import { transformAccountBalancesCurrentData } from "./helpers/transformers";
+import {
+  transformAccountBalancesCurrentData,
+  transformAccountHistory,
+} from "./helpers/transformers";
 import { ERROR_MESSAGES } from ".";
 import { ERROR } from "../../helper/error";
 import * as SorobanRpcHelper from "../../helper/soroban-rpc/token";
@@ -59,6 +71,70 @@ describe("Mercury Service", () => {
         to: invokeHostFnFixture.to,
         amount: invokeHostFnFixture.amount,
       },
+    });
+  });
+
+  describe("account history with protocol-30 addresses", () => {
+    const W_ADDR = muxedContractFixture.muxed;
+    const historyResponse = queryMockResponse[query.getAccountHistory];
+    const baseEdge = historyResponse.invokeHostFnByPublicKey!.edges[0];
+
+    const transferEdge = (to: string, opId: string) => ({
+      node: {
+        ...baseEdge.node,
+        opId,
+        hostFunction: buildTransferHostFnXdr(to, "42"),
+      },
+    });
+
+    const transformInvocations = async (edges: unknown[]) => {
+      const history = await transformAccountHistory(
+        {
+          data: {
+            ...historyResponse,
+            invokeHostFnByPublicKey: { edges },
+          },
+        } as any,
+        "TESTNET",
+      );
+      return history.filter(
+        (op) => op.type === "invoke_host_function",
+      ) as unknown as {
+        id: string;
+        transaction_attr: {
+          args?: { from?: string; to?: string; amount: string | number };
+        };
+      }[];
+    };
+
+    it("decodes a transfer to a muxed contract as a W address", async () => {
+      const [op] = await transformInvocations([transferEdge(W_ADDR, "1")]);
+      expect(op.transaction_attr.args).toEqual({
+        from: invokeHostFnFixture.from,
+        to: W_ADDR,
+        amount: "42",
+      });
+    });
+
+    it("drops only the entry whose contract address cannot be decoded", async () => {
+      // valid XDR can't carry an undecodable address, so make the decoder
+      // throw for the first edge
+      const spy = jest
+        .spyOn(Address, "fromScAddress")
+        .mockImplementationOnce(() => {
+          throw new Error("Unsupported address type");
+        });
+      try {
+        const invocations = await transformInvocations([
+          transferEdge(invokeHostFnFixture.to, "1"),
+          transferEdge(W_ADDR, "2"),
+        ]);
+        expect(invocations).toHaveLength(1);
+        expect(invocations[0].id).toEqual("2");
+        expect(invocations[0].transaction_attr.args?.to).toEqual(W_ADDR);
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 
