@@ -2,6 +2,7 @@ import * as StellarSdk from "stellar-sdk";
 import "@blockaid/client";
 import {
   getDevServer,
+  muxedContractFixture,
   queryMockResponse,
   pubKey,
   TEST_SOROBAN_TX,
@@ -1344,14 +1345,17 @@ describe("API routes", () => {
       jest.restoreAllMocks();
     });
 
-    it("can simulate a token transfer", async () => {
+    const simulateTransfer = async ({
+      destination = pubKey,
+      network_passphrase = Networks.TESTNET as string,
+    } = {}) => {
       const server = await getDevServer();
       const url = new URL(
         `http://localhost:${
           (server?.server?.address() as any).port
         }/api/v1/simulate-token-transfer`,
       );
-      const options = {
+      const response = await fetch(url.href, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1362,49 +1366,47 @@ describe("API routes", () => {
           memo: "",
           params: {
             publicKey: pubKey,
-            destination: pubKey,
+            destination,
             amount: "1000000",
           },
-          network_passphrase: Networks.TESTNET,
+          network_passphrase,
         }),
-      };
-      const response = await fetch(url.href, options);
+      });
+      await server.close();
+      return response;
+    };
+
+    it("can simulate a token transfer", async () => {
+      const response = await simulateTransfer();
       const data = await response.json();
 
       expect(response.status).toEqual(200);
       expect(data.simulationResponse).toEqual(simResponse);
       expect(data.preparedTransaction).toEqual(preparedTransactionXdr);
-      await server.close();
     });
 
     it("returns an error for an unknown network passphrase", async () => {
-      const server = await getDevServer();
-      const url = new URL(
-        `http://localhost:${
-          (server?.server?.address() as any).port
-        }/api/v1/simulate-token-transfer`,
-      );
-      const options = {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          address: contractId,
-          pub_key: pubKey,
-          memo: "",
-          params: {
-            publicKey: pubKey,
-            destination: pubKey,
-            amount: "1000000",
-          },
-          network_passphrase: "unknown-passphrase",
-        }),
-      };
-      const response = await fetch(url.href, options);
-
+      const response = await simulateTransfer({
+        network_passphrase: "unknown-passphrase",
+      });
       expect(response.status).toEqual(400);
-      await server.close();
+    });
+
+    it("accepts a muxed-contract (W) destination", async () => {
+      const response = await simulateTransfer({
+        destination: muxedContractFixture.muxed,
+      });
+      expect(response.status).toEqual(200);
+    });
+
+    it("rejects a destination that is not a G, M, C or W address", async () => {
+      const response = await simulateTransfer({
+        destination: "not-an-address",
+      });
+      expect(response.status).toEqual(400);
+      expect(await response.text()).toContain(
+        ERROR.INVALID_TRANSFER_DESTINATION,
+      );
     });
   });
 });

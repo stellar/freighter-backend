@@ -25,6 +25,7 @@ import {
   isContractId,
   isPubKey,
   isNetwork,
+  isTransferAddress,
   NetworkNames,
   isValidTokenString,
 } from "../helper/validate";
@@ -1387,7 +1388,18 @@ export async function initApiServer(
               pub_key: { type: "string" },
               memo: { type: "string" },
               fee: { type: "string" },
-              params: { type: "object" },
+              params: {
+                type: "object",
+                properties: {
+                  destination: {
+                    type: "string",
+                    validator: [
+                      isTransferAddress,
+                      () => ERROR.INVALID_TRANSFER_DESTINATION,
+                    ],
+                  },
+                },
+              },
               network_passphrase: { type: "string" },
             },
           },

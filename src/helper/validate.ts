@@ -47,4 +47,17 @@ const isNetwork = (network: string): network is NetworkNames => {
   return Object.keys(Networks).includes(network);
 };
 
-export { isContractId, isPubKey, isNetwork, isValidTokenString };
+// any address that can send or receive a token transfer
+const isTransferAddress = (address: string) =>
+  StrKey.isValidEd25519PublicKey(address) ||
+  StrKey.isValidMed25519PublicKey(address) ||
+  StrKey.isValidContract(address) ||
+  StrKey.isValidMuxedContract(address);
+
+export {
+  isContractId,
+  isPubKey,
+  isNetwork,
+  isTransferAddress,
+  isValidTokenString,
+};
