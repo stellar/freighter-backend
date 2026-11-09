@@ -1,8 +1,85 @@
+import pino from "pino";
 import { PriceClient } from "./index";
 import { testLogger } from "../../helper/test-helper";
 import { TokenPriceData } from "./types";
 import BigNumber from "bignumber.js";
 import { PathsNotFoundError, PriceCalculationError } from "./errors";
+
+const STELLAR_EXPERT_TOP50_URL =
+  "https://api.stellar.expert/explorer/public/asset-list/top50";
+
+// A trimmed copy of a real response from STELLAR_EXPERT_TOP50_URL (2026-11-05).
+const STELLAR_EXPERT_TOP50_BODY = {
+  name: "StellarExpert Top 50",
+  provider: "StellarExpert",
+  description:
+    "Dynamically generated list based on technical asset metrics, including payments and trading volumes, interoperability, userbase, etc.",
+  version: "1.0",
+  network: "public",
+  feedback: "https://stellar.expert",
+  assets: [
+    {
+      code: "yUSDC",
+      issuer: "GDGTVWSM4MGS4T7Z6W4RPWOCHE2I6RDFCIFZGS3DOA63LWQTRNZNTTFF",
+      contract: "CDOFW7HNKLUZRLFZST4EW7V3AV4JI5IHMT6BPXXSY2IEFZ4NE5TWU2P4",
+      name: "yUSDC",
+      org: "Ultra Capital LLC dba Ultra Capital",
+      domain: "ultracapital.xyz",
+      icon: "https://meta.stellar.expert/7hx6tqrpowbicgjphreunco6zmbeyynmvq4stgl5q44zpzckcp6a",
+      decimals: 7,
+    },
+    {
+      code: "XRP",
+      issuer: "GBXRPL45NPHCVMFFAYZVUVFFVKSIZ362ZXFP7I2ETNQ3QKZMFLPRDTD5",
+      contract: "CAAV3AE3VKD2P4TY7LWTQMMJHIJ4WOCZ5ANCIJPC3NRSERKVXNHBU2W7",
+      name: "XRP",
+      org: "Muyu Network",
+      domain: "fchain.io",
+      icon: "https://meta.stellar.expert/nucngezl7i5tkm234qvcaoh2bj3vjwplvpay6yi7tqnih6puiyha",
+      decimals: 7,
+    },
+    {
+      code: "USDC",
+      issuer: "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+      contract: "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75",
+      name: "USD Coin",
+      org: "Centre Consortium LLC dba Centre Consortium",
+      domain: "centre.io",
+      icon: "https://meta.stellar.expert/k7xcyyv3csv4sy4yfqoxcwpycwlgrsah776drjlys3ykjp73mnaa",
+      decimals: 7,
+    },
+  ],
+};
+
+// StellarExpert's answer to a paid endpoint called without an API key.
+const PAYMENT_REQUIRED_BODY = { error: "Payment Required", status: 402 };
+
+const jsonResponse = (
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8", ...headers },
+  });
+
+const htmlResponse = (status: number) =>
+  new Response("<html><body>Service unavailable</body></html>", {
+    status,
+    headers: { "content-type": "text/html" },
+  });
+
+// The logged errors as they read once pino serializes them.
+const loggedErrors = () =>
+  (testLogger.error as unknown as jest.Mock).mock.calls
+    .map(([logged]) =>
+      logged instanceof Error
+        ? pino.stdSerializers.err(logged).message
+        : String(logged),
+    )
+    .join("\n");
+
 describe("Token Price Client", () => {
   let priceClient: PriceClient;
   const mockRedisClient: any = {
@@ -449,6 +526,28 @@ describe("Token Price Client", () => {
         }),
       );
     });
+
+    it("should mark the cache initialized with XLM only when StellarExpert refuses the request", async () => {
+      const fetchSpy = jest
+        .spyOn(global, "fetch")
+        .mockResolvedValue(jsonResponse(402, PAYMENT_REQUIRED_BODY));
+      try {
+        await priceClient.initPriceCache();
+      } finally {
+        fetchSpy.mockRestore();
+      }
+
+      const pipeline = mockRedisClient.multi.mock.results[0].value;
+      expect(pipeline.ts.create).toHaveBeenCalledTimes(1);
+      expect(pipeline.ts.create).toHaveBeenCalledWith(
+        "XLM",
+        expect.any(Object),
+      );
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        "price_cache_initialized",
+        "true",
+      );
+    });
   });
 
   // Tests for updatePrices
@@ -774,56 +873,142 @@ describe("Token Price Client", () => {
   });
 
   describe("fetchAllTokens", () => {
+    let fetchSpy: jest.SpiedFunction<typeof fetch>;
+
     beforeEach(() => {
-      // Mock fetch
-      global.fetch = jest.fn();
+      // Each test sets its own response; any other call must not reach the network.
+      fetchSpy = jest
+        .spyOn(global, "fetch")
+        .mockRejectedValue(new Error("Unexpected real fetch in a unit test"));
     });
 
-    it("should fetch tokens from StellarExpert API", async () => {
-      // Mock first page of results
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        json: jest.fn().mockResolvedValue({
-          _embedded: {
-            records: [
-              { asset: "XLM" }, // Should be skipped as it's already included
-              { asset: "USDC" }, // Should be skipped
-              {
-                tomlInfo: { code: "TOKEN1", issuer: "ISSUER1" },
-              },
-              {
-                asset: "TOKEN2-ISSUER2",
-              },
-            ],
-          },
-          _links: { next: { href: "/next-page" } },
-        }),
-      });
+    afterEach(() => {
+      fetchSpy.mockRestore();
+    });
 
-      // Mock second page with no more pages
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        json: jest.fn().mockResolvedValue({
-          _embedded: {
-            records: [
-              {
-                tomlInfo: { code: "TOKEN3", issuer: "ISSUER3" },
-              },
-            ],
-          },
-          _links: {},
-        }),
-      });
+    it("should make a single request, with a timeout, to StellarExpert's free top 50 list", async () => {
+      fetchSpy.mockResolvedValue(jsonResponse(200, STELLAR_EXPERT_TOP50_BODY));
+
+      await priceClient["fetchAllTokens"]();
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        STELLAR_EXPERT_TOP50_URL,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    });
+
+    it("should seed XLM followed by each top 50 asset as CODE:ISSUER", async () => {
+      fetchSpy.mockResolvedValue(jsonResponse(200, STELLAR_EXPERT_TOP50_BODY));
 
       const result = await priceClient["fetchAllTokens"]();
 
-      expect(result).toContain("XLM");
-      expect(result).toContain("TOKEN1:ISSUER1");
-      expect(result).toContain("TOKEN2:ISSUER2");
-      expect(result).toContain("TOKEN3:ISSUER3");
-      expect(global.fetch).toHaveBeenCalledTimes(3);
+      expect(result).toEqual([
+        "XLM",
+        "yUSDC:GDGTVWSM4MGS4T7Z6W4RPWOCHE2I6RDFCIFZGS3DOA63LWQTRNZNTTFF",
+        "XRP:GBXRPL45NPHCVMFFAYZVUVFFVKSIZ362ZXFP7I2ETNQ3QKZMFLPRDTD5",
+        "USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+      ]);
+      expect(testLogger.error).not.toHaveBeenCalled();
     });
 
+    it("should skip top 50 entries that have no issuer", async () => {
+      fetchSpy.mockResolvedValue(
+        jsonResponse(200, {
+          ...STELLAR_EXPERT_TOP50_BODY,
+          assets: [
+            {
+              code: "XLM",
+              contract:
+                "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
+              name: "Stellar Lumens",
+              domain: "stellar.org",
+              decimals: 7,
+            },
+            STELLAR_EXPERT_TOP50_BODY.assets[2],
+          ],
+        }),
+      );
+
+      const result = await priceClient["fetchAllTokens"]();
+
+      expect(result).toEqual([
+        "XLM",
+        "USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+      ]);
+    });
+
+    // A repeated token would queue a second TS.CREATE for the same key, which fails the whole seed.
+    it("should seed an asset once when the list repeats it", async () => {
+      const usdc = STELLAR_EXPERT_TOP50_BODY.assets[2];
+      fetchSpy.mockResolvedValue(
+        jsonResponse(200, {
+          ...STELLAR_EXPERT_TOP50_BODY,
+          assets: [usdc, usdc],
+        }),
+      );
+
+      const result = await priceClient["fetchAllTokens"]();
+
+      expect(result).toEqual([
+        "XLM",
+        "USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+      ]);
+    });
+
+    it.each([
+      [
+        402,
+        () =>
+          jsonResponse(402, PAYMENT_REQUIRED_BODY, {
+            "cache-control": "no-store",
+          }),
+      ],
+      [
+        429,
+        () =>
+          jsonResponse(
+            429,
+            { error: "Too Many Requests", status: 429 },
+            { "retry-after": "60" },
+          ),
+      ],
+      [503, () => htmlResponse(503)],
+    ])(
+      "should seed XLM only, and log the status, when StellarExpert answers HTTP %i",
+      async (status, makeResponse) => {
+        fetchSpy.mockResolvedValue(makeResponse());
+
+        const result = await priceClient["fetchAllTokens"]();
+
+        expect(result).toEqual(["XLM"]);
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+        expect(loggedErrors()).toContain(String(status));
+      },
+    );
+
+    it.each([
+      ["has no assets list", () => jsonResponse(200, {})],
+      [
+        "has an empty assets list",
+        () => jsonResponse(200, { ...STELLAR_EXPERT_TOP50_BODY, assets: [] }),
+      ],
+      ["is not JSON", () => htmlResponse(200)],
+    ])(
+      "should seed XLM only, and log an error, when StellarExpert's response %s",
+      async (_description, makeResponse) => {
+        fetchSpy.mockResolvedValue(makeResponse());
+
+        const result = await priceClient["fetchAllTokens"]();
+
+        expect(result).toEqual(["XLM"]);
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+        expect(testLogger.error).toHaveBeenCalledTimes(1);
+      },
+    );
+
     it("should handle errors when fetching tokens", async () => {
-      (global.fetch as jest.Mock).mockRejectedValueOnce(new Error("API error"));
+      fetchSpy.mockRejectedValueOnce(new Error("API error"));
 
       const result = await priceClient["fetchAllTokens"]();
 

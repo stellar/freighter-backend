@@ -115,23 +115,16 @@ export class PriceClient {
   private static readonly PRICE_LOOKUP_TOLERANCE_MS = 30 * 60 * 1000;
 
   /**
-   * Maximum number of tokens to fetch and track prices for initially.
-   * Limits the total number of tokens to manage system resource usage.
+   * StellarExpert's free list of the top 50 Mainnet assets, used to seed the price cache.
+   * Unlike StellarExpert's paid endpoints (such as `/asset`), it needs no API key.
    */
-  private static readonly INITIAL_TOKEN_COUNT = 100;
+  private static readonly STELLAR_EXPERT_TOP_ASSETS_URL =
+    "https://api.stellar.expert/explorer/public/asset-list/top50";
 
   /**
-   * Stellar Expert API endpoint for fetching all tradable assets.
+   * Maximum time (in milliseconds) to wait for StellarExpert's top assets list.
    */
-  private static readonly STELLAR_EXPERT_ALL_ASSETS_URL =
-    "https://api.stellar.expert/explorer/public/asset";
-
-  /**
-   * Base URL for Stellar Expert API calls.
-   * Used to construct pagination URLs when fetching multiple pages of assets.
-   */
-  private static readonly STELLAR_EXPERT_BASE_URL =
-    "https://api.stellar.expert";
+  private static readonly STELLAR_EXPERT_TIMEOUT_MS = 10000;
 
   private readonly logger: Logger;
   private readonly server: StellarSdk.Horizon.Server;
@@ -514,55 +507,46 @@ export class PriceClient {
   }
 
   /**
-   * Fetches all tradable tokens from Stellar Expert API sorted by the rating. This ensures we start with the most
-   * popular tokens in the cache.
+   * Fetches StellarExpert's free list of the top 50 Mainnet assets, ranked by payments and trading volumes,
+   * interoperability and userbase. This ensures we start with the most popular tokens in the cache.
    *
-   * @returns Array of token identifiers in the format "code:issuer" or "XLM" for native asset
+   * If the list can't be fetched, this logs an error and returns XLM only. Other tokens are still added to
+   * the cache on their first price request.
+   *
+   * @returns Array of token identifiers: "XLM" for the native asset, followed by "code:issuer" entries
    * @private
    */
   private async fetchAllTokens(): Promise<TokenKey[]> {
     const tokens: TokenKey[] = ["XLM"];
-    let nextUrl = `${PriceClient.STELLAR_EXPERT_ALL_ASSETS_URL}?sort=rating&order=desc`;
+    try {
+      const response = await fetch(PriceClient.STELLAR_EXPERT_TOP_ASSETS_URL, {
+        signal: AbortSignal.timeout(PriceClient.STELLAR_EXPERT_TIMEOUT_MS),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
 
-    while (tokens.length < PriceClient.INITIAL_TOKEN_COUNT && nextUrl) {
-      try {
-        this.logger.info(
-          `Fetching assets from ${nextUrl}, current count: ${tokens.length}`,
-        );
-        const response = await fetch(`${nextUrl}`);
-        const data = await response.json();
-
-        if (data._embedded?.records) {
-          for (const record of data._embedded.records) {
-            let token: TokenKey | null = null;
-
-            if (record.asset === "XLM" || record.asset === "USDC") {
-              continue;
-            } else if (record.tomlInfo?.code && record.tomlInfo?.issuer) {
-              // Use TOML info if available
-              token = `${record.tomlInfo.code}:${record.tomlInfo.issuer}`;
-            } else if (record.asset && record.asset.includes("-")) {
-              // Parse from asset string format: CODE-ISSUER
-              const parts = record.asset.split("-");
-              if (parts.length >= 2) {
-                token = `${parts[0]}:${parts[1]}`;
-              }
-            }
-
-            if (token && !tokens.includes(token)) {
-              tokens.push(token);
-            }
+      const { assets } = await response.json();
+      for (const asset of Array.isArray(assets) ? assets : []) {
+        // Entries without an issuer, such as native XLM, can't be priced as "code:issuer".
+        if (asset?.code && asset?.issuer) {
+          const token = `${asset.code}:${asset.issuer}`;
+          if (!tokens.includes(token)) {
+            tokens.push(token);
           }
         }
-
-        // Check for next page
-        nextUrl = data._links?.next?.href || null;
-        nextUrl = `${PriceClient.STELLAR_EXPERT_BASE_URL}${nextUrl}`;
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      } catch (error) {
-        this.logger.error(`Error fetching assets: ${error}`);
-        break;
       }
+
+      if (tokens.length === 1) {
+        throw new Error("the response has no assets with a code and issuer");
+      }
+    } catch (e) {
+      this.logger.error(
+        ensureError(
+          e,
+          "Could not fetch StellarExpert's top assets, seeding the price cache with XLM only",
+        ),
+      );
     }
     return tokens;
   }
