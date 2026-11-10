@@ -26,6 +26,7 @@ import {
   isPubKey,
   isNetwork,
   isTransferAddress,
+  isTransferAmount,
   NetworkNames,
   isValidTokenString,
 } from "../helper/validate";
@@ -1396,6 +1397,13 @@ export async function initApiServer(
                     validator: [
                       isTransferAddress,
                       () => ERROR.INVALID_TRANSFER_DESTINATION,
+                    ],
+                  },
+                  amount: {
+                    type: ["string", "number"],
+                    validator: [
+                      isTransferAmount,
+                      () => ERROR.INVALID_TRANSFER_AMOUNT,
                     ],
                   },
                 },

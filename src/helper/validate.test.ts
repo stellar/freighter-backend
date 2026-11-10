@@ -1,7 +1,7 @@
 import { Account, MuxedAccount } from "stellar-sdk";
 
 import { muxedContractFixture, pubKey } from "./test-helper";
-import { isContractId, isTransferAddress } from "./validate";
+import { isContractId, isTransferAddress, isTransferAmount } from "./validate";
 
 describe("validate", () => {
   const G_ADDR = pubKey;
@@ -21,6 +21,34 @@ describe("validate", () => {
       "SBGWSG6BTNCKCOB3DIFBGCVMUPQFYPA2G4O34RMTB343OYPXU5DJDVMN",
     ])("rejects %p", (address) => {
       expect(isTransferAddress(address)).toBe(false);
+    });
+  });
+
+  describe("isTransferAmount", () => {
+    it.each(["0", "1000000", "1".repeat(39), 0, 1000000, 1e21])(
+      "accepts %p",
+      (amount) => {
+        expect(isTransferAmount(amount)).toBe(true);
+      },
+    );
+
+    it.each([
+      "",
+      " 1",
+      "1.5",
+      "-1",
+      "1e21",
+      "abc",
+      "1".repeat(40),
+      "9".repeat(1_000_000),
+      -1,
+      1.5,
+      NaN,
+      Infinity,
+      null,
+      undefined,
+    ])("rejects %p", (amount) => {
+      expect(isTransferAmount(amount)).toBe(false);
     });
   });
 

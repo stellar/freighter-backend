@@ -1348,6 +1348,7 @@ describe("API routes", () => {
     const simulateTransfer = async ({
       destination = pubKey,
       network_passphrase = Networks.TESTNET as string,
+      amount = "1000000" as string | number,
     } = {}) => {
       const server = await getDevServer();
       const url = new URL(
@@ -1367,7 +1368,7 @@ describe("API routes", () => {
           params: {
             publicKey: pubKey,
             destination,
-            amount: "1000000",
+            amount,
           },
           network_passphrase,
         }),
@@ -1408,5 +1409,25 @@ describe("API routes", () => {
         ERROR.INVALID_TRANSFER_DESTINATION,
       );
     });
+
+    it("accepts an amount sent as a JSON number", async () => {
+      const response = await simulateTransfer({ amount: 1000000 });
+      expect(response.status).toEqual(200);
+    });
+
+    it("rejects an amount longer than an i128 can hold before parsing it", async () => {
+      const response = await simulateTransfer({ amount: "9".repeat(40) });
+      expect(response.status).toEqual(400);
+      expect(await response.text()).toContain(ERROR.INVALID_TRANSFER_AMOUNT);
+    });
+
+    it.each(["1.5", "-1", "1e21", "abc", ""])(
+      "rejects a non-integer amount %p",
+      async (amount) => {
+        const response = await simulateTransfer({ amount });
+        expect(response.status).toEqual(400);
+        expect(await response.text()).toContain(ERROR.INVALID_TRANSFER_AMOUNT);
+      },
+    );
   });
 });
