@@ -1421,6 +1421,12 @@ describe("API routes", () => {
       expect(await response.text()).toContain(ERROR.INVALID_TRANSFER_AMOUNT);
     });
 
+    it("rejects a 39 digit amount above the i128 max", async () => {
+      const response = await simulateTransfer({ amount: "9".repeat(39) });
+      expect(response.status).toEqual(400);
+      expect(await response.text()).toContain(ERROR.INVALID_TRANSFER_AMOUNT);
+    });
+
     it.each(["1.5", "-1", "1e21", "abc", ""])(
       "rejects a non-integer amount %p",
       async (amount) => {

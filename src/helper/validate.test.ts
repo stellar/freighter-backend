@@ -25,12 +25,21 @@ describe("validate", () => {
   });
 
   describe("isTransferAmount", () => {
-    it.each(["0", "1000000", "1".repeat(39), 0, 1000000, 1e21])(
-      "accepts %p",
-      (amount) => {
-        expect(isTransferAmount(amount)).toBe(true);
-      },
-    );
+    const MAX_I128 = (2n ** 127n - 1n).toString();
+    const OVER_MAX_I128 = (2n ** 127n).toString();
+
+    it.each([
+      "0",
+      "1000000",
+      "1".repeat(39),
+      MAX_I128,
+      0,
+      1000000,
+      1e21,
+      2 ** 126,
+    ])("accepts %p", (amount) => {
+      expect(isTransferAmount(amount)).toBe(true);
+    });
 
     it.each([
       "",
@@ -41,6 +50,10 @@ describe("validate", () => {
       "abc",
       "1".repeat(40),
       "9".repeat(1_000_000),
+      OVER_MAX_I128,
+      "9".repeat(39),
+      2 ** 127,
+      1e300,
       -1,
       1.5,
       NaN,

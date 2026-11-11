@@ -8,7 +8,7 @@ export const ERROR = {
   INVALID_TRANSFER_DESTINATION:
     "Transfer destination must be a G, M, C or W address",
   INVALID_TRANSFER_AMOUNT:
-    "Transfer amount must be a non-negative integer of at most 39 digits",
+    "Transfer amount must be a non-negative integer that fits in an i128",
   INVALID_ENV: (key: string) => `ENV configuration invalid - missing ${key}`,
   UNSUPPORTED_NETWORK: "network not supported",
   INVALID_SIMULATION: "Invalid response from simulateTransaction",
