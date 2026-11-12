@@ -54,10 +54,32 @@ const isTransferAddress = (address: string) =>
   StrKey.isValidContract(address) ||
   StrKey.isValidMuxedContract(address);
 
+// A token transfer amount is a non-negative integer in the token's smallest
+// unit and is encoded as an i128. The digit cap keeps a client-sized string
+// from reaching the BigInt parse, and the exact bound keeps a 39-digit value
+// above the i128 max from throwing later in the handler. A JSON number is
+// accepted too because the extension sends the amount that way.
+const MAX_I128 = 2n ** 127n - 1n;
+const MAX_TRANSFER_AMOUNT_DIGITS = MAX_I128.toString().length;
+const isTransferAmount = (amount: unknown) => {
+  if (typeof amount === "number") {
+    return (
+      Number.isInteger(amount) && amount >= 0 && BigInt(amount) <= MAX_I128
+    );
+  }
+  return (
+    typeof amount === "string" &&
+    amount.length <= MAX_TRANSFER_AMOUNT_DIGITS &&
+    /^[0-9]+$/.test(amount) &&
+    BigInt(amount) <= MAX_I128
+  );
+};
+
 export {
   isContractId,
   isPubKey,
   isNetwork,
   isTransferAddress,
+  isTransferAmount,
   isValidTokenString,
 };
